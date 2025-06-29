@@ -580,8 +580,6 @@ class LoginWindow(QWidget):
 
             time.sleep(5)
             if "home" in driver.current_url.lower() or "x.com" in driver.current_url:
-                # Çerezleri almak için driver'ı geçici olarak sakla
-                self.temp_driver_for_cookies = driver
                 return True
 
             return False
