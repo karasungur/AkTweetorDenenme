@@ -570,23 +570,59 @@ class LoginWindow(QWidget):
 
     def perform_login(self, driver, user):
         """Giriş işlemini gerçekleştir"""
-        try:
-            driver.get("https://x.com/i/flow/login?lang=tr")
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    self.log_message(f"🔄 {user['username']} için {attempt + 1}. deneme...")
 
-            self.wait_and_type(driver, "//*[@autocomplete='username']", user['username'])
-            self.wait_and_click(driver, "//button[.//span[text()='İleri']]")
-            self.wait_and_type(driver, "//*[@autocomplete='current-password']", user['password'])
-            self.wait_and_click(driver, "//button[.//span[text()='Giriş yap']]")
+                driver.get("https://x.com/i/flow/login?lang=tr")
+                time.sleep(2)
 
-            time.sleep(5)
-            if "home" in driver.current_url.lower() or "x.com" in driver.current_url:
-                return True
+                # Kullanıcı adı girişi
+                if not self.wait_and_type(driver, "//*[@autocomplete='username']", user['username']):
+                    raise Exception("Kullanıcı adı alanı bulunamadı")
 
-            return False
+                # İleri butonuna tıkla
+                if not self.wait_and_click(driver, "//button[.//span[text()='İleri']]"):
+                    raise Exception("İleri butonu bulunamadı")
 
-        except Exception as e:
-            self.log_message(f"❌ Giriş hatası: {str(e)}")
-            return False
+                # Şifre girişi
+                if not self.wait_and_type(driver, "//*[@autocomplete='current-password']", user['password']):
+                    raise Exception("Şifre alanı bulunamadı")
+
+                # Giriş yap butonuna tıkla
+                if not self.wait_and_click(driver, "//button[.//span[text()='Giriş yap']]"):
+                    raise Exception("Giriş yap butonu bulunamadı")
+
+                # Giriş sonucunu kontrol et
+                time.sleep(5)
+                current_url = driver.current_url.lower()
+
+                if "home" in current_url or "x.com" in current_url and "login" not in current_url:
+                    return True
+                elif "challenge" in current_url:
+                    self.log_message(f"⚠️ {user['username']} güvenlik doğrulaması gerekiyor")
+                    return False
+                elif "suspended" in current_url:
+                    self.log_message(f"❌ {user['username']} hesabı askıya alınmış")
+                    return False
+                elif "locked" in current_url:
+                    self.log_message(f"❌ {user['username']} hesabı kilitlenmiş")
+                    return False
+                else:
+                    raise Exception(f"Beklenmeyen sayfa: {current_url}")
+
+            except Exception as e:
+                error_msg = str(e)
+                if attempt == max_retries - 1:
+                    self.log_message(f"❌ {user['username']} giriş başarısız (son deneme): {error_msg}")
+                    return False
+                else:
+                    self.log_message(f"⚠️ {user['username']} giriş hatası: {error_msg}")
+                    time.sleep(3)  # Tekrar denemeden önce bekle
+
+        return False
 
     def wait_and_type(self, driver, xpath, text):
         """Element bekle ve yazı yaz"""
