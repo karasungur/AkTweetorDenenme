@@ -595,16 +595,16 @@ class LoginWindow(QWidget):
             self.log_message(f"❌ Tarayıcı başlatma hatası: {str(e)}")
             return None
 
-    def perform_login(self, driver, user):
-        """Giriş işlemini gerçekleştir"""
+    def perform_login_steps(self, driver, user):
+        """Sadece giriş adımlarını gerçekleştir (URL'ye gitme dahil değil)"""
         max_retries = 2
         for attempt in range(max_retries):
             try:
                 if attempt > 0:
                     self.log_message(f"🔄 {user['username']} için {attempt + 1}. deneme...")
-
-                driver.get("https://x.com/i/flow/login?lang=tr")
-                time.sleep(2)
+                    # Tekrar denemede URL'ye git
+                    driver.get("https://x.com/i/flow/login?lang=tr")
+                    time.sleep(2)
 
                 # Kullanıcı adı girişi
                 if not self.wait_and_type(driver, "//*[@autocomplete='username']", user['username']):
