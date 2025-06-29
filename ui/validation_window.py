@@ -5,13 +5,14 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 import threading
 import time
-import requests
 import os
 import shutil
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from database.user_manager import user_manager
+from services.ip_service import ip_service
+from services.driver_manager import driver_manager
 
 class ValidationWindow(QWidget):
     def __init__(self, colors, return_callback):
@@ -23,6 +24,14 @@ class ValidationWindow(QWidget):
         self.normal_ip = "Alınıyor..."
         self.browser_ip = "Tarayıcı açılmadı"
         self.drivers = []
+
+        # Services'ları bağla
+        self.ip_service = ip_service
+        self.driver_manager = driver_manager
+
+        # IP service signals'ları bağla
+        self.ip_service.normal_ip_updated.connect(self.update_normal_ip_display)
+        self.ip_service.browser_ip_updated.connect(self.update_browser_ip_display)
 
         self.init_ui()
         self.setup_style()
@@ -803,40 +812,27 @@ class ValidationWindow(QWidget):
 
     def get_initial_ip(self):
         """Bilgisayarın normal IP adresini bir kez al"""
-        def get_ip_threaded():
-            try:
-                print("🌐 Normal IP adresi alınıyor...")
-                response = requests.get("https://api.ipify.org", timeout=15)
-                ip = response.text.strip()
+        print("🌐 Normal IP adresi alınıyor...")
+        self.ip_service.get_normal_ip(callback=self.on_normal_ip_received)
 
-                # Ana thread'de UI güncelle
-                def update_ui():
-                    self.set_normal_ip(ip)
-                    print(f"✅ Normal IP adresi alındı: {ip}")
-
-                QTimer.singleShot(0, update_ui)
-
-            except Exception as e:
-                def update_error():
-                    self.set_normal_ip("Bağlantı hatası")
-                    print(f"❌ Normal IP alma hatası: {str(e)}")
-
-                QTimer.singleShot(0, update_error)
-
-        thread = threading.Thread(target=get_ip_threaded, daemon=True)
-        thread.start()
-
-    def set_normal_ip(self, ip):
-        """Normal IP'yi set et (Ana thread'de çalışır)"""
+    def on_normal_ip_received(self, ip):
+        """Normal IP alındığında çağrılır"""
         self.normal_ip = ip
         if hasattr(self, 'normal_ip_display'):
-            self.normal_ip_display.setText(self.normal_ip)
+            self.normal_ip_display.setText(ip)
+        print(f"✅ Normal IP adresi alındı: {ip}")
 
-    def set_browser_ip(self, ip):
-        """Tarayıcı IP'sini set et (Ana thread'de çalışır)"""
+    def update_normal_ip_display(self, ip):
+        """Normal IP display'ini güncelle (signal handler)"""
+        self.normal_ip = ip
+        if hasattr(self, 'normal_ip_display'):
+            self.normal_ip_display.setText(ip)
+
+    def update_browser_ip_display(self, ip):
+        """Browser IP display'ini güncelle (signal handler)"""
         self.browser_ip = ip
         if hasattr(self, 'browser_ip_display'):
-            self.browser_ip_display.setText(self.browser_ip)
+            self.browser_ip_display.setText(ip)
 
     def check_browser_ip_once(self, driver):
         """Tarayıcının IP adresini bir kez kontrol et"""
