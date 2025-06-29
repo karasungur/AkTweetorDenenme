@@ -10,11 +10,11 @@ class MySQLConfig:
         self.username = "root"
         self.password = ""
         self.port = 3306
-        
+
         # Bağlantı havuzu
         self.connection_pool = None
         self.init_connection_pool()
-    
+
     def init_connection_pool(self):
         """Bağlantı havuzunu başlat"""
         try:
@@ -31,43 +31,66 @@ class MySQLConfig:
                 collation='utf8mb4_unicode_ci'
             )
             print("✅ MySQL bağlantı havuzu oluşturuldu")
-            
+
             # Tabloları oluştur
             self.create_tables()
-            
+
         except Error as e:
             print(f"❌ MySQL bağlantı havuzu hatası: {e}")
             self.connection_pool = None
-    
+
     def get_connection(self):
         """Bağlantı havuzundan bağlantı al"""
         try:
             if self.connection_pool:
-                return self.connection_pool.get_connection()
-            else:
-                # Havuz yoksa direkt bağlantı oluştur
-                return mysql.connector.connect(
-                    host=self.host,
-                    database=self.database,
-                    user=self.username,
-                    password=self.password,
-                    port=self.port,
-                    charset='utf8mb4',
-                    collation='utf8mb4_unicode_ci'
-                )
+                connection = self.connection_pool.get_connection()
+                if connection and connection.is_connected():
+                    return connection
+                else:
+                    print("⚠️ Bağlantı havuzundan geçersiz bağlantı alındı, yeniden deneniyor...")
+
+            # Havuz yoksa veya bağlantı geçersizse direkt bağlantı oluştur
+            connection = mysql.connector.connect(
+                host=self.host,
+                database=self.database,
+                user=self.username,
+                password=self.password,
+                port=self.port,
+                charset='utf8mb4',
+                collation='utf8mb4_unicode_ci',
+                autocommit=False,
+                connection_timeout=10
+            )
+            return connection
+
         except Error as e:
             print(f"❌ MySQL bağlantı hatası: {e}")
+            print("📝 MySQL servisi çalışıyor mu kontrol edin!")
             return None
-    
+        except Exception as e:
+            print(f"❌ Beklenmeyen bağlantı hatası: {e}")
+            return None
+
+    def is_mysql_available(self):
+        """MySQL'in kullanılabilir olup olmadığını kontrol et"""
+        connection = self.get_connection()
+        if connection:
+            try:
+                connection.close()
+                return True
+            except:
+                pass
+        return False
+
     def create_tables(self):
         """Gerekli tabloları oluştur"""
         connection = self.get_connection()
         if not connection:
             return
-        
+
         try:
             cursor = connection.cursor()
-            
+
             # kullanicilar tablosu
             create_users_table = """
             CREATE TABLE IF NOT EXISTS kullanicilar (
@@ -97,9 +120,9 @@ class MySQLConfig:
                 INDEX idx_son_giris (son_giris)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
-            
+
             cursor.execute(create_users_table)
-            
+
             # hesap_kategorileri tablosu (gelecek özellikler için)
             create_categories_table = """
             CREATE TABLE IF NOT EXISTS hesap_kategorileri (
@@ -110,9 +133,9 @@ class MySQLConfig:
                 olusturma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
-            
+
             cursor.execute(create_categories_table)
-            
+
             # kullanici_kategorileri tablosu (many-to-many ilişki)
             create_user_categories_table = """
             CREATE TABLE IF NOT EXISTS kullanici_kategorileri (
@@ -125,9 +148,9 @@ class MySQLConfig:
                 UNIQUE KEY unique_user_category (kullanici_id, kategori_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
-            
+
             cursor.execute(create_user_categories_table)
-            
+
             # islem_logları tablosu
             create_logs_table = """
             CREATE TABLE IF NOT EXISTS islem_logları (
@@ -144,19 +167,19 @@ class MySQLConfig:
                 INDEX idx_durum (durum)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
-            
+
             cursor.execute(create_logs_table)
-            
+
             connection.commit()
             print("✅ MySQL tabloları oluşturuldu/kontrol edildi")
-            
+
         except Error as e:
             print(f"❌ Tablo oluşturma hatası: {e}")
         finally:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     def test_connection(self):
         """Bağlantıyı test et"""
         connection = self.get_connection()
