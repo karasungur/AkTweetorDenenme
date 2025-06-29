@@ -775,7 +775,35 @@ class LoginWindow(QWidget):
 
         except Exception as e:
             self.log_message(f"⚠️ Profil kaydetme hatası: {str(e)}")
+
+    def update_ip(self):
+        """IP'yi güncelle (QTimer ile thread-safe)"""
+        def get_ip():
             try:
+                # Eğer aktif driver varsa onun IP'sini kontrol et
+                if hasattr(self, 'active_driver') and self.active_driver:
+                    try:
+                        # Tarayıcının IP'sini kontrol et
+                        original_window = self.active_driver.current_window_handle
+                        self.active_driver.execute_script("window.open('');")
+                        self.active_driver.switch_to.window(self.active_driver.window_handles[-1])
+
+                        self.active_driver.get("https://api.ipify.org")
+                        time.sleep(1)
+
+                        browser_ip = self.active_driver.find_element("tag name", "body").text.strip()
+                        self.current_ip = f"{browser_ip} (Tarayıcı)"
+
+                        # Sekmeyi kapat ve geri dön
+                        self.active_driver.close()
+                        self.active_driver.switch_to.window(original_window)
+
+                        return self.current_ip
+                    except:
+                        # Tarayıcı IP kontrolü başarısız olursa normal IP kontrolü yap
+                        pass
+
+                # Normal IP kontrolü
                 response = requests.get("https://api.ipify.org", timeout=5)
                 return response.text.strip()
             except:
