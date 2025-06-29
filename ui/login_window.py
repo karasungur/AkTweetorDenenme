@@ -27,6 +27,7 @@ class LoginWindow(QWidget):
         self.users = []
         self.current_ip = "Kontrol ediliyor..."
         self.ip_thread_running = True
+        self.active_driver = None
 
         # IP monitoring timer
         self.ip_timer = QTimer()
@@ -601,7 +602,7 @@ class LoginWindow(QWidget):
                 driver.get("https://x.com/i/flow/login?lang=tr")
                 time.sleep(2)
 
-                # Kullan��cı adı girişi
+                # Kullanıcı adı girişi
                 if not self.wait_and_type(driver, "//*[@autocomplete='username']", user['username']):
                     raise Exception("Kullanıcı adı alanı bulunamadı")
 
