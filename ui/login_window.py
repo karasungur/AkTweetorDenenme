@@ -468,6 +468,7 @@ class LoginWindow(QWidget):
         self.log_message("🚀 Giriş işlemi başlatılıyor...")
 
         for i, user in enumerate(self.users, 1):
+            driver = None
             try:
                 self.log_message(f"\n[{i}/{len(self.users)}] {user['username']} işleniyor...")
 
@@ -486,6 +487,7 @@ class LoginWindow(QWidget):
                 # Tarayıcı başlat
                 driver = self.create_driver(user)
                 if not driver:
+                    self.log_message(f"❌ {user['username']} için tarayıcı başlatılamadı")
                     continue
 
                 # Giriş işlemi
@@ -493,15 +495,28 @@ class LoginWindow(QWidget):
 
                 if success:
                     self.log_message(f"✅ {user['username']} başarıyla giriş yaptı.")
-                    self.simulate_scroll(driver)
 
+                    # Scroll simülasyonu
+                    try:
+                        self.simulate_scroll(driver)
+                    except Exception as e:
+                        self.log_message(f"⚠️ Scroll simülasyonu hatası: {str(e)}")
+
+                    # IP reset
                     if self.proxy_enabled.isChecked() and self.reset_url_entry.text():
-                        self.reset_ip(driver)
+                        try:
+                            self.reset_ip(driver)
+                        except Exception as e:
+                            self.log_message(f"⚠️ IP reset hatası: {str(e)}")
 
-                    self.save_profile_permanently(user['username'], driver)
+                    # Profil kaydetme
+                    try:
+                        self.save_profile_permanently(user['username'], driver)
+                        driver = None  # Driver kapatıldı
+                    except Exception as e:
+                        self.log_message(f"❌ {user['username']} profil kaydetme hatası: {str(e)}")
                 else:
                     self.log_message(f"❌ {user['username']} giriş başarısız.")
-                    driver.quit()
 
                 # Kullanıcılar arası bekleme
                 if i < len(self.users):
@@ -510,7 +525,14 @@ class LoginWindow(QWidget):
                     time.sleep(wait_time)
 
             except Exception as e:
-                self.log_message(f"❌ {user['username']} işlenirken hata: {str(e)}")
+                self.log_message(f"❌ {user['username']} işlenirken beklenmeyen hata: {str(e)}")
+            finally:
+                # Driver açık kalmışsa temizle
+                if driver:
+                    try:
+                        self.safe_quit_driver(driver, user['username'])
+                    except:
+                        pass
 
         self.log_message("\n🎉 Tüm kullanıcılar işlendi!")
 
@@ -619,7 +641,7 @@ class LoginWindow(QWidget):
                     self.log_message(f"❌ {user['username']} giriş başarısız (son deneme): {error_msg}")
                     return False
                 else:
-                    self.log_message(f"⚠��� {user['username']} giriş hatası: {error_msg}")
+                    self.log_message(f"⚠️ {user['username']} giriş hatası: {error_msg}")
                     time.sleep(3)  # Tekrar denemeden önce bekle
 
         return False
@@ -747,7 +769,7 @@ class LoginWindow(QWidget):
                 if success:
                     self.log_message(f"💾 {username} MySQL veritabanına kaydedildi.")
                 else:
-                    self.log_message(f"⚠️ {username} MySQL kaydı ba��arısız.")
+                    self.log_message(f"⚠️ {username} MySQL kaydı başarısız.")
             except Exception as e:
                 self.log_message(f"⚠️ MySQL kayıt hatası: {str(e)}")
 
