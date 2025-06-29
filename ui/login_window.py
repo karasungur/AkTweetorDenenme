@@ -601,7 +601,7 @@ class LoginWindow(QWidget):
                 driver.get("https://x.com/i/flow/login?lang=tr")
                 time.sleep(2)
 
-                # Kullanıcı adı girişi
+                # Kullan��cı adı girişi
                 if not self.wait_and_type(driver, "//*[@autocomplete='username']", user['username']):
                     raise Exception("Kullanıcı adı alanı bulunamadı")
 
@@ -820,6 +820,11 @@ class LoginWindow(QWidget):
 
         thread = threading.Thread(target=get_ip_threaded, daemon=True)
         thread.start()
+
+    def start_ip_monitoring(self):
+        """IP takibini başlat"""
+        self.ip_timer.start(10000)  # 10 saniyede bir
+        self.update_ip()  # İlk güncelleme
 
     def set_ip(self, ip):
         """IP'yi set et (Ana thread'de çalışır)"""
