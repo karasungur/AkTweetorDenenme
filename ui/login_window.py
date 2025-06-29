@@ -400,7 +400,7 @@ class LoginWindow(QWidget):
         self.reset_url_entry.setEnabled(enabled)
 
     def load_user_list(self):
-        """Kullanıcı listesini yükle"""
+        """Kullanıcı listesini y��kle"""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Kullanıcı Listesi Seç",
@@ -645,6 +645,7 @@ class LoginWindow(QWidget):
 
     def save_profile_permanently(self, username, driver):
         """Profili kalıcı klasöre kaydet"""
+        temp_profile = None
         try:
             # ÖNEMLİ: Driver kapatılmadan ÖNCE cookies al!
             cookies = None
@@ -658,11 +659,10 @@ class LoginWindow(QWidget):
             temp_profile = driver.capabilities['chrome']['userDataDir']
             permanent_profile = f"./Profiller/{username}"
 
-            # Driver'ı tamamen kapat
-            driver.quit()
+            # Driver'ı güvenli şekilde kapat
+            self.safe_quit_driver(driver, username)
             if hasattr(self, 'active_driver') and self.active_driver == driver:
                 self.active_driver = None
-            time.sleep(3)  # Chrome'un tamamen kapanması için bekle
 
             # Geçici profili kalıcı konuma kopyala
             if os.path.exists(temp_profile) and not os.path.exists(permanent_profile):
