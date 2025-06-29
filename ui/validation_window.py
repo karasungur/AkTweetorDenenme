@@ -732,8 +732,8 @@ class ValidationWindow(QWidget):
             # Twitter'a git
             driver.get("https://x.com/")
 
-            # Tarayıcının IP adresini bir kez kontrol et (5 saniye bekle)
-            QTimer.singleShot(5000, lambda: self.check_browser_ip_once(driver))
+            # Tarayıcının IP adresini kontrol et ve proxy doğrula (3 saniye bekle)
+            QTimer.singleShot(3000, lambda: self.validate_proxy_for_browser(driver, profile))
 
             # Driver'ı listeye ekle
             self.drivers.append({
@@ -833,6 +833,24 @@ class ValidationWindow(QWidget):
         self.browser_ip = ip
         if hasattr(self, 'browser_ip_display'):
             self.browser_ip_display.setText(ip)
+
+    def validate_proxy_for_browser(self, driver, profile):
+        """Tarayıcı açıldığında proxy kontrolü yap"""
+        proxy_enabled = self.proxy_enabled.isChecked()
+
+        def on_validation_complete(success, message):
+            if success:
+                print(f"✅ {profile}: {message}")
+            else:
+                print(f"❌ {profile}: {message}")
+                # Proxy başarısız, kullanıcıya uyar
+                self.show_error(f"Proxy Hatası - {profile}\n\n"
+                              f"{message}\n\n"
+                              f"Normal IP: {self.normal_ip}\n"
+                              f"Tarayıcı IP: {self.browser_ip}")
+
+        print(f"🔍 {profile} için IP kontrolü ve proxy doğrulaması başlatılıyor...")
+        self.ip_service.validate_proxy_with_browser(driver, proxy_enabled, on_validation_complete)
 
     def check_browser_ip_once(self, driver):
         """Tarayıcının IP adresini bir kez kontrol et"""
