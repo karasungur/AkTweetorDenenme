@@ -521,33 +521,10 @@ class LoginWindow(QWidget):
                     self.log_message(f"❌ {user['username']} için tarayıcı başlatılamadı")
                     continue
 
-                # Giriş işlemi
-                success = self.perform_login(driver, user)
-
-                if success:
-                    self.log_message(f"✅ {user['username']} başarıyla giriş yaptı.")
-
-                    # Scroll simülasyonu
-                    try:
-                        self.simulate_scroll(driver)
-                    except Exception as e:
-                        self.log_message(f"⚠️ Scroll simülasyonu hatası: {str(e)}")
-
-                    # IP reset
-                    if self.proxy_enabled.isChecked() and self.reset_url_entry.text():
-                        try:
-                            self.reset_ip(driver)
-                        except Exception as e:
-                            self.log_message(f"⚠️ IP reset hatası: {str(e)}")
-
-                    # Profil kaydetme
-                    try:
-                        self.save_profile_permanently(user['username'], driver)
-                        driver = None  # Driver kapatıldı
-                    except Exception as e:
-                        self.log_message(f"❌ {user['username']} profil kaydetme hatası: {str(e)}")
-                else:
-                    self.log_message(f"❌ {user['username']} giriş başarısız.")
+                # NOT: Giriş işlemi artık validate_proxy_and_proceed içinde yapılıyor
+                # Driver oluşturuldu, proxy kontrolü ve giriş işlemi otomatik olarak başlayacak
+                self.log_message(f"🔄 {user['username']} için tarayıcı başlatıldı, IP kontrolü yapılıyor...")
+                continue  # Bir sonraki kullanıcıya geç
 
                 # Kullanıcılar arası bekleme
                 if i < len(self.users):
