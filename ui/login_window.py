@@ -400,7 +400,7 @@ class LoginWindow(QWidget):
         self.reset_url_entry.setEnabled(enabled)
 
     def load_user_list(self):
-        """Kullanıcı listesini y��kle"""
+        """Kullanıcı listesini yükle"""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Kullanıcı Listesi Seç",
@@ -719,6 +719,40 @@ class LoginWindow(QWidget):
         self.current_ip = ip
         if hasattr(self, 'ip_display'):
             self.ip_display.setText(self.current_ip)
+
+    def safe_quit_driver(self, driver, username):
+        """Driver'ı güvenli şekilde kapat ve zombie process'leri temizle"""
+        try:
+            # Önce normal quit dene
+            driver.quit()
+            time.sleep(2)
+
+            # Zombie process'leri kontrol et ve temizle
+            try:
+                import psutil
+                for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                    try:
+                        if proc.info['name'] and 'chrome' in proc.info['name'].lower():
+                            if proc.info['cmdline']:
+                                cmdline = ' '.join(proc.info['cmdline'])
+                                if username in cmdline:
+                                    proc.terminate()
+                                    try:
+                                        proc.wait(timeout=3)
+                                        self.log_message(f"🧹 {username} zombie process temizlendi")
+                                    except psutil.TimeoutExpired:
+                                        proc.kill()
+                                        self.log_message(f"🔥 {username} zorla kapatıldı")
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        continue
+            except ImportError:
+                # psutil yoksa sadece bekle
+                time.sleep(1)
+            except Exception as e:
+                self.log_message(f"⚠️ Process temizleme hatası: {str(e)}")
+
+        except Exception as e:
+            self.log_message(f"❌ Driver kapatma hatası: {str(e)}")
 
     def log_message(self, message):
         """Log mesajı ekle"""
