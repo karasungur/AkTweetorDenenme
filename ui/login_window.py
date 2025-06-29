@@ -205,7 +205,7 @@ class LoginWindow(QWidget):
         layout = QHBoxLayout()
 
         # Normal IP bölümü
-        normal_ip_label = QLabel("🖥️ Normal IP:")
+        normal_ip_label = QLabel("🖥️ Bilgisayar IP:")
         normal_ip_label.setObjectName("ipLabel")
 
         self.normal_ip_display = QLabel(self.normal_ip)
@@ -222,11 +222,17 @@ class LoginWindow(QWidget):
         self.browser_ip_display = QLabel(self.browser_ip)
         self.browser_ip_display.setObjectName("browserIpDisplay")
 
+        # Proxy durum göstergesi
+        self.proxy_status_label = QLabel("📡 Proxy: Devre Dışı")
+        self.proxy_status_label.setObjectName("proxyStatusLabel")
+
         layout.addWidget(normal_ip_label)
         layout.addWidget(self.normal_ip_display)
         layout.addWidget(separator)
         layout.addWidget(browser_ip_label)
         layout.addWidget(self.browser_ip_display)
+        layout.addWidget(QLabel(" | "))
+        layout.addWidget(self.proxy_status_label)
         layout.addStretch()
 
         panel.setLayout(layout)
@@ -420,6 +426,13 @@ class LoginWindow(QWidget):
             color: {self.colors['text_secondary']};
             margin: 0 15px;
         }}
+
+        #proxyStatusLabel {{
+            font-size: 14px;
+            color: {self.colors['text_secondary']};
+            font-weight: 500;
+            margin-left: 10px;
+        }}
         """
 
         self.setStyleSheet(style)
@@ -429,6 +442,15 @@ class LoginWindow(QWidget):
         enabled = self.proxy_enabled.isChecked()
         self.proxy_entry.setEnabled(enabled)
         self.reset_url_entry.setEnabled(enabled)
+
+        # Proxy durumunu güncelle
+        if hasattr(self, 'proxy_status_label'):
+            if enabled:
+                self.proxy_status_label.setText("📡 Proxy: Aktif")
+                self.proxy_status_label.setStyleSheet(f"color: {self.colors['primary']}; font-weight: bold;")
+            else:
+                self.proxy_status_label.setText("📡 Proxy: Devre Dışı")
+                self.proxy_status_label.setStyleSheet(f"color: {self.colors['text_secondary']}; font-weight: normal;")
 
     def load_user_list(self):
         """Kullanıcı listesini yükle"""
