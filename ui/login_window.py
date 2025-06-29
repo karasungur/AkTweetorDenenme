@@ -619,7 +619,7 @@ class LoginWindow(QWidget):
                     self.log_message(f"❌ {user['username']} giriş başarısız (son deneme): {error_msg}")
                     return False
                 else:
-                    self.log_message(f"⚠️ {user['username']} giriş hatası: {error_msg}")
+                    self.log_message(f"⚠��� {user['username']} giriş hatası: {error_msg}")
                     time.sleep(3)  # Tekrar denemeden önce bekle
 
         return False
@@ -630,19 +630,30 @@ class LoginWindow(QWidget):
         time.sleep(wait_time)
 
         try:
-            element = WebDriverWait(driver, 10).until(
+            element = WebDriverWait(driver, 15).until(
                 EC.presence_of_element_located((By.XPATH, xpath))
             )
             element.clear()
+            time.sleep(0.5)
 
+            # Karakter karakter yaz (daha gerçekçi)
             for char in text:
                 element.send_keys(char)
                 time.sleep(random.randint(50, 150) / 1000)
 
+            return True
+
         except TimeoutException:
-            element = driver.find_element(By.CSS_SELECTOR, "input")
-            element.clear()
-            element.send_keys(text)
+            try:
+                # Alternatif selector dene
+                element = driver.find_element(By.CSS_SELECTOR, "input[autocomplete*='username'], input[name*='text']")
+                element.clear()
+                element.send_keys(text)
+                return True
+            except NoSuchElementException:
+                return False
+        except Exception:
+            return False
 
     def wait_and_click(self, driver, xpath):
         """Element bekle ve tıkla"""
@@ -650,13 +661,23 @@ class LoginWindow(QWidget):
         time.sleep(wait_time)
 
         try:
-            element = WebDriverWait(driver, 10).until(
+            element = WebDriverWait(driver, 15).until(
                 EC.element_to_be_clickable((By.XPATH, xpath))
             )
-            element.click()
+            # JavaScript ile tıklama (daha güvenilir)
+            driver.execute_script("arguments[0].click();", element)
+            return True
+
         except TimeoutException:
-            element = driver.find_element(By.CSS_SELECTOR, "button[type='button']")
-            element.click()
+            try:
+                # Alternatif selector dene
+                element = driver.find_element(By.CSS_SELECTOR, "button[role='button'], button[type='submit']")
+                driver.execute_script("arguments[0].click();", element)
+                return True
+            except NoSuchElementException:
+                return False
+        except Exception:
+            return False
 
     def simulate_scroll(self, driver):
         """Organik scroll simülasyonu"""
@@ -726,7 +747,7 @@ class LoginWindow(QWidget):
                 if success:
                     self.log_message(f"💾 {username} MySQL veritabanına kaydedildi.")
                 else:
-                    self.log_message(f"⚠️ {username} MySQL kaydı başarısız.")
+                    self.log_message(f"⚠️ {username} MySQL kaydı ba��arısız.")
             except Exception as e:
                 self.log_message(f"⚠️ MySQL kayıt hatası: {str(e)}")
 
