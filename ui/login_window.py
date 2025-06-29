@@ -6,18 +6,15 @@ from PyQt5.QtGui import QFont
 import threading
 import time
 import random
-import requests
 import os
-import uuid
 import shutil
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from database.user_manager import user_manager
+from services.ip_service import ip_service
+from services.driver_manager import driver_manager
 
 class LoginWindow(QWidget):
     def __init__(self, colors, return_callback):
@@ -27,7 +24,14 @@ class LoginWindow(QWidget):
         self.users = []
         self.normal_ip = "Alınıyor..."
         self.browser_ip = "Tarayıcı açılmadı"
-        self.active_driver = None
+
+        # Services'ları bağla
+        self.ip_service = ip_service
+        self.driver_manager = driver_manager
+
+        # IP service signals'ları bağla
+        self.ip_service.normal_ip_updated.connect(self.update_normal_ip_display)
+        self.ip_service.browser_ip_updated.connect(self.update_browser_ip_display)
 
         self.init_ui()
         self.setup_style()
@@ -564,55 +568,24 @@ class LoginWindow(QWidget):
     def create_driver(self, user):
         """Chrome driver oluştur"""
         try:
-            options = Options()
+            # Proxy ayarlarını hazırla
+            proxy_settings = None
+            if self.proxy_enabled.isChecked() and self.proxy_entry.text():
+                proxy_settings = {
+                    'enabled': True,
+                    'address': self.proxy_entry.text()
+                }
 
-            unique_id = str(uuid.uuid4())[:8]
-            profile_path = os.path.abspath(f"./TempProfiller/{user['username']}_{unique_id}")
+            # Driver oluştur
+            driver = self.driver_manager.create_driver(
+                user_data=user,
+                proxy_settings=proxy_settings,
+                headless=not self.browser_visible.isChecked()
+            )
 
-            os.makedirs(profile_path, exist_ok=True)
-
-            options.add_argument(f"--user-data-dir={profile_path}")
-            options.add_argument("--no-first-run")
-            options.add_argument("--no-default-browser-check")
-            options.add_argument("--disable-default-apps")
-
-            if not self.browser_visible.isChecked():
-                options.add_argument("--headless=new")
-
-            # Proxy ayarı
-            proxy_to_use = None
-            if user['proxy'] and user['proxy_port']:
-                proxy_to_use = f"{user['proxy']}:{user['proxy_port']}"
-                self.log_message(f"🌐 Özel proxy kullanılıyor: {proxy_to_use}")
-            elif self.proxy_enabled.isChecked() and self.proxy_entry.text():
-                proxy_to_use = self.proxy_entry.text()
-                self.log_message(f"🌐 Genel proxy kullanılıyor: {proxy_to_use}")
-
-            if proxy_to_use:
-                if proxy_to_use.count(':') >= 3:
-                    self.log_message(f"⚠️ Kimlik doğrulamalı proxy tespit edildi, atlanıyor.")
-                    return None
-                options.add_argument(f"--proxy-server={proxy_to_use}")
-
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
-            options.add_argument("--disable-blink-features=AutomationControlled")
-            options.add_argument("--disable-extensions")
-            options.add_argument("--disable-plugins")
-            options.add_argument("--disable-images")
-            options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            options.add_experimental_option('useAutomationExtension', False)
-
-            service = Service("chromedriver.exe")
-            service.hide_command_prompt_window = True
-
-            driver = webdriver.Chrome(service=service, options=options)
-            driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-
-            self.active_driver = driver  # Aktif driver'ı kaydet
-
-            # Tarayıcı açıldığında bir kez IP kontrol et (5 saniye bekle)
-            QTimer.singleShot(5000, lambda: self.check_browser_ip_once(driver))
+            if driver:
+                # Tarayıcının IP adresini bir kez kontrol et (5 saniye bekle)
+                QTimer.singleShot(5000, lambda: self.check_browser_ip_once(driver))
 
             return driver
 
@@ -808,115 +781,45 @@ class LoginWindow(QWidget):
 
     def get_initial_ip(self):
         """Bilgisayarın normal IP adresini bir kez al"""
-        def get_ip_threaded():
-            try:
-                self.log_message("🌐 Normal IP adresi alınıyor...")
-                response = requests.get("https://api.ipify.org", timeout=15)
-                ip = response.text.strip()
+        self.log_message("🌐 Normal IP adresi alınıyor...")
+        self.ip_service.get_normal_ip(callback=self.on_normal_ip_received)
 
-                # Ana thread'de UI güncelle
-                def update_ui():
-                    self.set_normal_ip(ip)
-                    self.log_message(f"✅ Normal IP adresi alındı: {ip}")
-
-                QTimer.singleShot(0, update_ui)
-
-            except Exception as e:
-                def update_error():
-                    self.set_normal_ip("Bağlantı hatası")
-                    self.log_message(f"❌ Normal IP alma hatası: {str(e)}")
-
-                QTimer.singleShot(0, update_error)
-
-        thread = threading.Thread(target=get_ip_threaded, daemon=True)
-        thread.start()
-
-    def set_normal_ip(self, ip):
-        """Normal IP'yi set et (Ana thread'de çalışır)"""
+    def on_normal_ip_received(self, ip):
+        """Normal IP alındığında çağrılır"""
         self.normal_ip = ip
         if hasattr(self, 'normal_ip_display'):
-            self.normal_ip_display.setText(self.normal_ip)
+            self.normal_ip_display.setText(ip)
+        self.log_message(f"✅ Normal IP adresi alındı: {ip}")
 
-    def set_browser_ip(self, ip):
-        """Tarayıcı IP'sini set et (Ana thread'de çalışır)"""
+    def update_normal_ip_display(self, ip):
+        """Normal IP display'ini güncelle (signal handler)"""
+        self.normal_ip = ip
+        if hasattr(self, 'normal_ip_display'):
+            self.normal_ip_display.setText(ip)
+
+    def update_browser_ip_display(self, ip):
+        """Browser IP display'ini güncelle (signal handler)"""
         self.browser_ip = ip
         if hasattr(self, 'browser_ip_display'):
-            self.browser_ip_display.setText(self.browser_ip)
+            self.browser_ip_display.setText(ip)
 
     def check_browser_ip_once(self, driver):
         """Tarayıcı açıldığında bir kez IP kontrol et"""
-        def ip_check_thread():
-            try:
-                # Log mesajı
-                QTimer.singleShot(0, lambda: self.log_message("🌐 Tarayıcı IP adresi kontrol ediliyor..."))
+        self.log_message("🌐 Tarayıcı IP adresi kontrol ediliyor...")
+        self.ip_service.get_browser_ip(driver, callback=self.on_browser_ip_received)
 
-                # Mevcut pencereyi kaydet
-                original_window = driver.current_window_handle
-
-                # Yeni sekme aç
-                driver.execute_script("window.open('');")
-                driver.switch_to.window(driver.window_handles[-1])
-
-                # IP kontrol sitesine git
-                driver.get("https://api.ipify.org")
-                time.sleep(3)
-
-                # IP adresini al
-                browser_ip = driver.find_element("tag name", "body").text.strip()
-
-                # Sekmeyi kapat ve geri dön
-                driver.close()
-                driver.switch_to.window(original_window)
-
-                # UI'yi güncelle
-                def update_browser_ip():
-                    self.set_browser_ip(browser_ip)
-                    self.log_message(f"✅ Tarayıcı IP adresi: {browser_ip}")
-
-                QTimer.singleShot(0, update_browser_ip)
-
-            except Exception as e:
-                def update_error():
-                    self.set_browser_ip("IP alınamadı")
-                    self.log_message(f"❌ Tarayıcı IP kontrol hatası: {str(e)}")
-
-                QTimer.singleShot(0, update_error)
-
-        # Ayrı thread'de çalıştır
-        thread = threading.Thread(target=ip_check_thread, daemon=True)
-        thread.start()
+    def on_browser_ip_received(self, ip):
+        """Browser IP alındığında çağrılır"""
+        self.browser_ip = ip
+        if hasattr(self, 'browser_ip_display'):
+            self.browser_ip_display.setText(ip)
+        self.log_message(f"✅ Tarayıcı IP adresi: {ip}")
 
     def safe_quit_driver(self, driver, username):
-        """Driver'ı güvenli şekilde kapat ve zombie process'leri temizle"""
+        """Driver'ı güvenli şekilde kapat"""
         try:
-            # Önce normal quit dene
-            driver.quit()
-            time.sleep(2)
-
-            # Zombie process'leri kontrol et ve temizle
-            try:
-                import psutil
-                for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-                    try:
-                        if proc.info['name'] and 'chrome' in proc.info['name'].lower():
-                            if proc.info['cmdline']:
-                                cmdline = ' '.join(proc.info['cmdline'])
-                                if username in cmdline:
-                                    proc.terminate()
-                                    try:
-                                        proc.wait(timeout=3)
-                                        self.log_message(f"🧹 {username} zombie process temizlendi")
-                                    except psutil.TimeoutExpired:
-                                        proc.kill()
-                                        self.log_message(f"🔥 {username} zorla kapatıldı")
-                    except (psutil.NoSuchProcess, psutil.AccessDenied):
-                        continue
-            except ImportError:
-                # psutil yoksa sadece bekle
-                time.sleep(1)
-            except Exception as e:
-                self.log_message(f"⚠️ Process temizleme hatası: {str(e)}")
-
+            self.driver_manager.safe_quit_driver(driver, username)
+            self.log_message(f"✅ {username} driver'ı güvenli ��ekilde kapatıldı")
         except Exception as e:
             self.log_message(f"❌ Driver kapatma hatası: {str(e)}")
 
