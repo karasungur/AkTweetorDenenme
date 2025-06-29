@@ -25,17 +25,13 @@ class LoginWindow(QWidget):
         self.colors = colors
         self.return_callback = return_callback
         self.users = []
-        self.current_ip = "Kontrol ediliyor..."
-        self.ip_thread_running = True
+        self.normal_ip = "Alınıyor..."
+        self.browser_ip = "Tarayıcı açılmadı"
         self.active_driver = None
-
-        # IP monitoring timer
-        self.ip_timer = QTimer()
-        self.ip_timer.timeout.connect(self.update_ip)
 
         self.init_ui()
         self.setup_style()
-        self.start_ip_monitoring()
+        self.get_initial_ip()  # Sadece bir kez IP al
 
     def init_ui(self):
         """UI'yi başlat"""
@@ -202,14 +198,29 @@ class LoginWindow(QWidget):
         panel.setObjectName("bottomPanel")
         layout = QHBoxLayout()
 
-        ip_label = QLabel("🌐 Şu anki IP:")
-        ip_label.setObjectName("ipLabel")
+        # Normal IP bölümü
+        normal_ip_label = QLabel("🖥️ Normal IP:")
+        normal_ip_label.setObjectName("ipLabel")
 
-        self.ip_display = QLabel(self.current_ip)
-        self.ip_display.setObjectName("ipDisplay")
+        self.normal_ip_display = QLabel(self.normal_ip)
+        self.normal_ip_display.setObjectName("ipDisplay")
 
-        layout.addWidget(ip_label)
-        layout.addWidget(self.ip_display)
+        # Ayırıcı
+        separator = QLabel(" | ")
+        separator.setObjectName("ipSeparator")
+
+        # Tarayıcı IP bölümü
+        browser_ip_label = QLabel("🌐 Tarayıcı IP:")
+        browser_ip_label.setObjectName("ipLabel")
+
+        self.browser_ip_display = QLabel(self.browser_ip)
+        self.browser_ip_display.setObjectName("browserIpDisplay")
+
+        layout.addWidget(normal_ip_label)
+        layout.addWidget(self.normal_ip_display)
+        layout.addWidget(separator)
+        layout.addWidget(browser_ip_label)
+        layout.addWidget(self.browser_ip_display)
         layout.addStretch()
 
         panel.setLayout(layout)
@@ -389,6 +400,19 @@ class LoginWindow(QWidget):
             color: {self.colors['secondary']};
             font-weight: 500;
             margin-left: 10px;
+        }}
+
+        #browserIpDisplay {{
+            font-size: 14px;
+            color: {self.colors['primary']};
+            font-weight: 500;
+            margin-left: 10px;
+        }}
+
+        #ipSeparator {{
+            font-size: 14px;
+            color: {self.colors['text_secondary']};
+            margin: 0 15px;
         }}
         """
 
@@ -586,6 +610,15 @@ class LoginWindow(QWidget):
             driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
             self.active_driver = driver  # Aktif driver'ı kaydet
+
+            # Tarayıcı açıldığında bir kez IP kontrol et
+            def check_ip_async():
+                time.sleep(3)  # Tarayıcının tam açılmasını bekle
+                self.check_browser_ip_once(driver)
+
+            ip_thread = threading.Thread(target=check_ip_async, daemon=True)
+            ip_thread.start()
+
             return driver
 
         except Exception as e:
@@ -778,61 +811,59 @@ class LoginWindow(QWidget):
         except Exception as e:
             self.log_message(f"⚠️ Profil kaydetme hatası: {str(e)}")
 
-    def update_ip(self):
-        """IP'yi güncelle (QTimer ile thread-safe)"""
-        def get_ip():
-            try:
-                # Eğer aktif driver varsa onun IP'sini kontrol et
-                if hasattr(self, 'active_driver') and self.active_driver:
-                    try:
-                        # Tarayıcının IP'sini kontrol et
-                        original_window = self.active_driver.current_window_handle
-                        self.active_driver.execute_script("window.open('');")
-                        self.active_driver.switch_to.window(self.active_driver.window_handles[-1])
-
-                        self.active_driver.get("https://api.ipify.org")
-                        time.sleep(1)
-
-                        browser_ip = self.active_driver.find_element("tag name", "body").text.strip()
-                        self.current_ip = f"{browser_ip} (Tarayıcı)"
-
-                        # Sekmeyi kapat ve geri dön
-                        self.active_driver.close()
-                        self.active_driver.switch_to.window(original_window)
-
-                        return self.current_ip
-                    except:
-                        # Tarayıcı IP kontrolü başarısız olursa normal IP kontrolü yap
-                        pass
-
-                # Normal IP kontrolü
-                response = requests.get("https://api.ipify.org", timeout=5)
-                return response.text.strip()
-            except:
-                return "Bağlantı hatası"
-
-        # Thread'de IP al ama UI güncellemesini ana thread'de yap
+    def get_initial_ip(self):
+        """Bilgisayarın normal IP adresini bir kez al"""
         def get_ip_threaded():
             try:
-                ip = get_ip()
+                response = requests.get("https://api.ipify.org", timeout=10)
+                ip = response.text.strip()
                 # Thread-safe UI güncelleme için QTimer kullan
-                QTimer.singleShot(0, lambda: self.set_ip(ip))
+                QTimer.singleShot(0, lambda: self.set_normal_ip(ip))
             except Exception as e:
-                QTimer.singleShot(0, lambda: self.set_ip("Bağlantı hatası"))
+                QTimer.singleShot(0, lambda: self.set_normal_ip("Bağlantı hatası"))
 
         thread = threading.Thread(target=get_ip_threaded, daemon=True)
         thread.start()
 
-    def start_ip_monitoring(self):
-        """IP takibini başlat"""
-        self.ip_timer.start(10000)  # 10 saniyede bir
-        self.update_ip()  # İlk güncelleme
+    def set_normal_ip(self, ip):
+        """Normal IP'yi set et (Ana thread'de çalışır)"""
+        self.normal_ip = ip
+        if hasattr(self, 'normal_ip_display'):
+            self.normal_ip_display.setText(self.normal_ip)
 
-    def set_ip(self, ip):
-        """IP'yi set et (Ana thread'de çalışır)"""
-        self.current_ip = ip
-        if hasattr(self, 'ip_display'):
-            self.ip_display.setText(self.current_ip)
+    def set_browser_ip(self, ip):
+        """Tarayıcı IP'sini set et (Ana thread'de çalışır)"""
+        self.browser_ip = ip
+        if hasattr(self, 'browser_ip_display'):
+            self.browser_ip_display.setText(self.browser_ip)
+
+    def check_browser_ip_once(self, driver):
+        """Tarayıcı açıldığında bir kez IP kontrol et"""
+        try:
+            # Yeni sekme aç
+            original_window = driver.current_window_handle
+            driver.execute_script("window.open('');")
+            driver.switch_to.window(driver.window_handles[-1])
+
+            # IP kontrol sitesine git
+            driver.get("https://api.ipify.org")
+            time.sleep(2)
+
+            # IP adresini al
+            browser_ip = driver.find_element("tag name", "body").text.strip()
+
+            # UI'yi güncelle
+            QTimer.singleShot(0, lambda: self.set_browser_ip(browser_ip))
+
+            # Sekmeyi kapat ve geri dön
+            driver.close()
+            driver.switch_to.window(original_window)
+
+            self.log_message(f"🌐 Tarayıcı IP adresi: {browser_ip}")
+
+        except Exception as e:
+            self.log_message(f"⚠️ Tarayıcı IP kontrol hatası: {str(e)}")
+            QTimer.singleShot(0, lambda: self.set_browser_ip("IP alınamadı"))
 
     def safe_quit_driver(self, driver, username):
         """Driver'ı güvenli şekilde kapat ve zombie process'leri temizle"""
@@ -879,8 +910,6 @@ class LoginWindow(QWidget):
 
     def return_to_main(self):
         """Ana menüye dön"""
-        self.ip_thread_running = False
-        self.ip_timer.stop()
         self.return_callback()
 
     def show_error(self, message):
