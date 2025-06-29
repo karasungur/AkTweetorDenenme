@@ -32,6 +32,8 @@ class LoginWindow(QWidget):
         # IP service signals'ları bağla
         self.ip_service.normal_ip_updated.connect(self.update_normal_ip_display)
         self.ip_service.browser_ip_updated.connect(self.update_browser_ip_display)
+        self.ip_service.proxy_validation_failed.connect(self.on_proxy_validation_failed)
+        self.ip_service.proxy_validation_success.connect(self.on_proxy_validation_success)
 
         self.init_ui()
         self.setup_style()
@@ -584,8 +586,8 @@ class LoginWindow(QWidget):
             )
 
             if driver:
-                # Tarayıcının IP adresini bir kez kontrol et (5 saniye bekle)
-                QTimer.singleShot(5000, lambda: self.check_browser_ip_once(driver))
+                # Tarayıcının IP adresini kontrol et ve proxy doğrula (3 saniye bekle)
+                QTimer.singleShot(3000, lambda: self.validate_proxy_and_proceed(driver, user))
 
             return driver
 
@@ -815,11 +817,82 @@ class LoginWindow(QWidget):
             self.browser_ip_display.setText(ip)
         self.log_message(f"✅ Tarayıcı IP adresi: {ip}")
 
+    def validate_proxy_and_proceed(self, driver, user):
+        """Proxy doğrulaması yap ve ardından işleme devam et"""
+        proxy_enabled = self.proxy_enabled.isChecked()
+
+        def on_validation_complete(success, message):
+            if success:
+                self.log_message(message)
+                # Proxy kontrolü başarılı, giriş işlemine devam et
+                QTimer.singleShot(1000, lambda: self.proceed_with_login(driver, user))
+            else:
+                self.log_message(f"❌ {message}")
+                # Proxy başarısız, driver'ı kapat
+                self.safe_quit_driver(driver, user['username'])
+                QMessageBox.critical(self, "Proxy Hatası",
+                                   f"Proxy çalışmıyor!\n\n"
+                                   f"Normal IP: {self.normal_ip}\n"
+                                   f"Tarayıcı IP: {self.browser_ip}\n\n"
+                                   f"Lütfen proxy ayarlarınızı kontrol edin.")
+
+        self.log_message("🔍 IP kontrolü ve proxy doğrulaması başlatılıyor...")
+        self.ip_service.validate_proxy_with_browser(driver, proxy_enabled, on_validation_complete)
+
+    def proceed_with_login(self, driver, user):
+        """Proxy kontrolü geçtikten sonra giriş işlemine devam et"""
+        try:
+            self.log_message(f"🚀 {user['username']} için giriş işlemine başlanıyor...")
+
+            # X.com'a git
+            driver.get("https://x.com/i/flow/login?lang=tr")
+            time.sleep(2)
+
+            # Giriş işlemini gerçekleştir
+            success = self.perform_login_steps(driver, user)
+
+            if success:
+                self.log_message(f"✅ {user['username']} başarıyla giriş yaptı.")
+
+                # Scroll simülasyonu
+                try:
+                    self.simulate_scroll(driver)
+                except Exception as e:
+                    self.log_message(f"⚠️ Scroll simülasyonu hatası: {str(e)}")
+
+                # IP reset
+                if self.proxy_enabled.isChecked() and self.reset_url_entry.text():
+                    try:
+                        self.reset_ip(driver)
+                    except Exception as e:
+                        self.log_message(f"⚠️ IP reset hatası: {str(e)}")
+
+                # Profil kaydetme
+                try:
+                    self.save_profile_permanently(user['username'], driver)
+                except Exception as e:
+                    self.log_message(f"❌ {user['username']} profil kaydetme hatası: {str(e)}")
+            else:
+                self.log_message(f"❌ {user['username']} giriş başarısız.")
+                self.safe_quit_driver(driver, user['username'])
+
+        except Exception as e:
+            self.log_message(f"❌ {user['username']} işlenirken beklenmeyen hata: {str(e)}")
+            self.safe_quit_driver(driver, user['username'])
+
+    def on_proxy_validation_failed(self, normal_ip, browser_ip):
+        """Proxy doğrulaması başarısız olduğunda çağrılır"""
+        self.log_message(f"🚨 PROXY ÇALIŞMIYOR! Normal IP ({normal_ip}) = Tarayıcı IP ({browser_ip})")
+
+    def on_proxy_validation_success(self, normal_ip, browser_ip):
+        """Proxy doğrulaması başarılı olduğunda çağrılır"""
+        self.log_message(f"✅ Proxy başarılı! {normal_ip} → {browser_ip}")
+
     def safe_quit_driver(self, driver, username):
         """Driver'ı güvenli şekilde kapat"""
         try:
             self.driver_manager.safe_quit_driver(driver, username)
-            self.log_message(f"✅ {username} driver'ı güvenli ��ekilde kapatıldı")
+            self.log_message(f"✅ {username} driver'ı güvenli şekilde kapatıldı")
         except Exception as e:
             self.log_message(f"❌ Driver kapatma hatası: {str(e)}")
 
