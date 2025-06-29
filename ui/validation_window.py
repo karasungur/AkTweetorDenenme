@@ -723,13 +723,8 @@ class ValidationWindow(QWidget):
             # Twitter'a git
             driver.get("https://x.com/")
 
-            # Tarayıcının IP adresini bir kez kontrol et
-            def check_ip_async():
-                time.sleep(3)  # Tarayıcının tam açılmasını bekle
-                self.check_browser_ip_once(driver)
-
-            ip_thread = threading.Thread(target=check_ip_async, daemon=True)
-            ip_thread.start()
+            # Tarayıcının IP adresini bir kez kontrol et (5 saniye bekle)
+            QTimer.singleShot(5000, lambda: self.check_browser_ip_once(driver))
 
             # Driver'ı listeye ekle
             self.drivers.append({
@@ -810,12 +805,23 @@ class ValidationWindow(QWidget):
         """Bilgisayarın normal IP adresini bir kez al"""
         def get_ip_threaded():
             try:
-                response = requests.get("https://api.ipify.org", timeout=10)
+                print("🌐 Normal IP adresi alınıyor...")
+                response = requests.get("https://api.ipify.org", timeout=15)
                 ip = response.text.strip()
-                # Thread-safe UI güncelleme için QTimer kullan
-                QTimer.singleShot(0, lambda: self.set_normal_ip(ip))
+
+                # Ana thread'de UI güncelle
+                def update_ui():
+                    self.set_normal_ip(ip)
+                    print(f"✅ Normal IP adresi alındı: {ip}")
+
+                QTimer.singleShot(0, update_ui)
+
             except Exception as e:
-                QTimer.singleShot(0, lambda: self.set_normal_ip("Bağlantı hatası"))
+                def update_error():
+                    self.set_normal_ip("Bağlantı hatası")
+                    print(f"❌ Normal IP alma hatası: {str(e)}")
+
+                QTimer.singleShot(0, update_error)
 
         thread = threading.Thread(target=get_ip_threaded, daemon=True)
         thread.start()
@@ -834,30 +840,45 @@ class ValidationWindow(QWidget):
 
     def check_browser_ip_once(self, driver):
         """Tarayıcının IP adresini bir kez kontrol et"""
-        try:
-            # Yeni sekme aç
-            driver.execute_script("window.open('');")
-            driver.switch_to.window(driver.window_handles[-1])
+        def ip_check_thread():
+            try:
+                print("🌐 Tarayıcı IP adresi kontrol ediliyor...")
 
-            # IP kontrol sitesine git
-            driver.get("https://api.ipify.org")
-            time.sleep(2)
+                # Mevcut pencereyi kaydet
+                original_window = driver.current_window_handle
 
-            # IP adresini al
-            browser_ip = driver.find_element("tag name", "body").text.strip()
+                # Yeni sekme aç
+                driver.execute_script("window.open('');")
+                driver.switch_to.window(driver.window_handles[-1])
 
-            # UI'yi güncelle
-            QTimer.singleShot(0, lambda: self.set_browser_ip(browser_ip))
+                # IP kontrol sitesine git
+                driver.get("https://api.ipify.org")
+                time.sleep(3)
 
-            print(f"🌐 Tarayıcı IP adresi: {browser_ip}")
+                # IP adresini al
+                browser_ip = driver.find_element("tag name", "body").text.strip()
 
-            # Sekmeyi kapat ve ana sekmeye dön
-            driver.close()
-            driver.switch_to.window(driver.window_handles[0])
+                # Sekmeyi kapat ve geri dön
+                driver.close()
+                driver.switch_to.window(original_window)
 
-        except Exception as e:
-            print(f"⚠️ Tarayıcı IP kontrol hatası: {str(e)}")
-            QTimer.singleShot(0, lambda: self.set_browser_ip("IP alınamadı"))
+                # UI'yi güncelle
+                def update_browser_ip():
+                    self.set_browser_ip(browser_ip)
+                    print(f"✅ Tarayıcı IP adresi: {browser_ip}")
+
+                QTimer.singleShot(0, update_browser_ip)
+
+            except Exception as e:
+                def update_error():
+                    self.set_browser_ip("IP alınamadı")
+                    print(f"❌ Tarayıcı IP kontrol hatası: {str(e)}")
+
+                QTimer.singleShot(0, update_error)
+
+        # Ayrı thread'de çalıştır
+        thread = threading.Thread(target=ip_check_thread, daemon=True)
+        thread.start()
 
     def return_to_main(self):
         """Ana menüye dön"""
