@@ -585,6 +585,7 @@ class LoginWindow(QWidget):
             driver = webdriver.Chrome(service=service, options=options)
             driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
+            self.active_driver = driver  # Aktif driver'ı kaydet
             return driver
 
         except Exception as e:
