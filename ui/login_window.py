@@ -27,6 +27,7 @@ class LoginWindow(QWidget):
         self.users = []
         self.current_ip = "Kontrol ediliyor..."
         self.ip_thread_running = True
+        self.active_driver = None
 
         # IP monitoring timer
         self.ip_timer = QTimer()
@@ -584,6 +585,7 @@ class LoginWindow(QWidget):
             driver = webdriver.Chrome(service=service, options=options)
             driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
+            self.active_driver = driver  # Aktif driver'ı kaydet
             return driver
 
         except Exception as e:
@@ -775,7 +777,35 @@ class LoginWindow(QWidget):
 
         except Exception as e:
             self.log_message(f"⚠️ Profil kaydetme hatası: {str(e)}")
+
+    def update_ip(self):
+        """IP'yi güncelle (QTimer ile thread-safe)"""
+        def get_ip():
             try:
+                # Eğer aktif driver varsa onun IP'sini kontrol et
+                if hasattr(self, 'active_driver') and self.active_driver:
+                    try:
+                        # Tarayıcının IP'sini kontrol et
+                        original_window = self.active_driver.current_window_handle
+                        self.active_driver.execute_script("window.open('');")
+                        self.active_driver.switch_to.window(self.active_driver.window_handles[-1])
+
+                        self.active_driver.get("https://api.ipify.org")
+                        time.sleep(1)
+
+                        browser_ip = self.active_driver.find_element("tag name", "body").text.strip()
+                        self.current_ip = f"{browser_ip} (Tarayıcı)"
+
+                        # Sekmeyi kapat ve geri dön
+                        self.active_driver.close()
+                        self.active_driver.switch_to.window(original_window)
+
+                        return self.current_ip
+                    except:
+                        # Tarayıcı IP kontrolü başarısız olursa normal IP kontrolü yap
+                        pass
+
+                # Normal IP kontrolü
                 response = requests.get("https://api.ipify.org", timeout=5)
                 return response.text.strip()
             except:
@@ -792,6 +822,11 @@ class LoginWindow(QWidget):
 
         thread = threading.Thread(target=get_ip_threaded, daemon=True)
         thread.start()
+
+    def start_ip_monitoring(self):
+        """IP takibini başlat"""
+        self.ip_timer.start(10000)  # 10 saniyede bir
+        self.update_ip()  # İlk güncelleme
 
     def set_ip(self, ip):
         """IP'yi set et (Ana thread'de çalışır)"""
