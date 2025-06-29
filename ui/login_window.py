@@ -702,14 +702,23 @@ class LoginWindow(QWidget):
             except:
                 return "Bağlantı hatası"
 
-        # Thread'de IP al
-        thread = threading.Thread(target=lambda: self.set_ip(get_ip()), daemon=True)
+        # Thread'de IP al ama UI güncellemesini ana thread'de yap
+        def get_ip_threaded():
+            try:
+                ip = get_ip()
+                # Thread-safe UI güncelleme için QTimer kullan
+                QTimer.singleShot(0, lambda: self.set_ip(ip))
+            except Exception as e:
+                QTimer.singleShot(0, lambda: self.set_ip("Bağlantı hatası"))
+
+        thread = threading.Thread(target=get_ip_threaded, daemon=True)
         thread.start()
 
     def set_ip(self, ip):
-        """IP'yi set et"""
+        """IP'yi set et (Ana thread'de çalışır)"""
         self.current_ip = ip
-        self.ip_display.setText(self.current_ip)
+        if hasattr(self, 'ip_display'):
+            self.ip_display.setText(self.current_ip)
 
     def log_message(self, message):
         """Log mesajı ekle"""
