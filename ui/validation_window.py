@@ -206,7 +206,7 @@ class ValidationWindow(QWidget):
 
         # Normal IP
         normal_ip_layout = QHBoxLayout()
-        normal_ip_label = QLabel("🖥️ Normal IP:")
+        normal_ip_label = QLabel("🖥️ Bilgisayar IP:")
         normal_ip_label.setObjectName("ipLabel")
 
         self.normal_ip_display = QLabel(self.normal_ip)
@@ -228,6 +228,13 @@ class ValidationWindow(QWidget):
         browser_ip_layout.addWidget(self.browser_ip_display)
         browser_ip_layout.addStretch()
 
+        # Proxy durumu
+        proxy_status_layout = QHBoxLayout()
+        self.proxy_status_label = QLabel("📡 Proxy: Devre Dışı")
+        self.proxy_status_label.setObjectName("proxyStatusLabel")
+        proxy_status_layout.addWidget(self.proxy_status_label)
+        proxy_status_layout.addStretch()
+
         # IP değiştir butonu
         ip_change_btn = QPushButton("🔄 IP Değiştir")
         ip_change_btn.setObjectName("secondaryButton")
@@ -236,6 +243,7 @@ class ValidationWindow(QWidget):
 
         ip_layout.addLayout(normal_ip_layout)
         ip_layout.addLayout(browser_ip_layout)
+        ip_layout.addLayout(proxy_status_layout)
         ip_layout.addWidget(ip_change_btn)
         ip_group.setLayout(ip_layout)
 
@@ -775,6 +783,15 @@ class ValidationWindow(QWidget):
         enabled = self.proxy_enabled.isChecked()
         self.proxy_entry.setEnabled(enabled)
         self.reset_url_entry.setEnabled(enabled)
+
+        # Proxy durumunu güncelle
+        if hasattr(self, 'proxy_status_label'):
+            if enabled:
+                self.proxy_status_label.setText("📡 Proxy: Aktif")
+                self.proxy_status_label.setStyleSheet(f"color: {self.colors['primary']}; font-weight: bold;")
+            else:
+                self.proxy_status_label.setText("📡 Proxy: Devre Dışı")
+                self.proxy_status_label.setStyleSheet(f"color: {self.colors['text_secondary']}; font-weight: normal;")
 
     def change_ip(self):
         """IP değiştir"""
