@@ -1,0 +1,2 @@
+[2025-07-05 17:35:16] [ERROR   ] [AkTweetor] ❌ MySQL bağlantı havuzu hatası: 2003 (HY000): Can't connect to MySQL server on 'localhost:3306' (10061)
+[2025-07-05 17:35:16] [ERROR   ] [AkTweetor] AkTweetor hatası in init_connection_pool: MySQL bağlantı havuzu hatası: 2003 (HY000): Can't connect to MySQL server on 'localhost:3306' (10061)
