@@ -109,6 +109,7 @@ class MySQLManager:
                 twitter_olusturma_tarihi DATETIME,
                 proxy_ip VARCHAR(255),
                 proxy_port INT,
+                cerezler TEXT,
                 son_giris TIMESTAMP NULL,
                 olusturma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 guncelleme_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -171,6 +172,7 @@ class MySQLManager:
                 ('kullanicilar', 'twitter_olusturma_tarihi', 'DATETIME'),
                 ('kullanicilar', 'proxy_ip', 'VARCHAR(255)'),
                 ('kullanicilar', 'proxy_port', 'INT'),
+                ('kullanicilar', 'cerezler', 'TEXT'),
                 ('hedef_hesaplar', 'twitter_olusturma_tarihi', 'DATETIME'),
                 ('hedef_hesaplar', 'proxy_ip', 'VARCHAR(255)'),
                 ('hedef_hesaplar', 'proxy_port', 'INT')
@@ -226,6 +228,224 @@ class MySQLManager:
             'port': self.port,
             'pool_size': self.pool_size
         }
+    
+    @handle_exception
+    def get_all_targets(self):
+        """Tüm hedef hesapları getir"""
+        connection = self.get_connection()
+        if not connection:
+            return []
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            query = "SELECT * FROM hedef_hesaplar WHERE durum = 'aktif' ORDER BY kullanici_adi"
+            cursor.execute(query)
+            results = cursor.fetchall()
+            return results
+        except Error as e:
+            logger.error(f"❌ Hedef hesaplar getirme hatası: {e}")
+            return []
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
+    def get_target_creation_date(self, username):
+        """Hedef hesabın Twitter oluşturma tarihini getir"""
+        connection = self.get_connection()
+        if not connection:
+            return None
+        
+        try:
+            cursor = connection.cursor()
+            query = "SELECT twitter_olusturma_tarihi FROM hedef_hesaplar WHERE kullanici_adi = %s"
+            cursor.execute(query, (username,))
+            result = cursor.fetchone()
+            return result[0] if result and result[0] else None
+        except Error as e:
+            logger.error(f"❌ Hedef hesap Twitter oluşturma tarihi getirme hatası: {e}")
+            return None
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
+    def update_target_creation_date(self, username, creation_date):
+        """Hedef hesabın Twitter oluşturma tarihini güncelle"""
+        connection = self.get_connection()
+        if not connection:
+            return False
+        
+        try:
+            cursor = connection.cursor()
+            
+            # DATETIME formatında kaydet
+            if isinstance(creation_date, str):
+                try:
+                    formats = [
+                        '%Y-%m-%d %H:%M:%S',
+                        '%Y-%m-%d %H:%M',
+                        '%Y-%m-%d',
+                        '%d/%m/%Y %H:%M:%S',
+                        '%d/%m/%Y %H:%M',
+                        '%d/%m/%Y'
+                    ]
+                    
+                    parsed_date = None
+                    for fmt in formats:
+                        try:
+                            parsed_date = datetime.strptime(creation_date, fmt)
+                            break
+                        except ValueError:
+                            continue
+                    
+                    if parsed_date is None:
+                        print(f"⚠️ Tarih formatı tanınmadı: {creation_date}")
+                        return False
+                    
+                    creation_date = parsed_date
+                except Exception as e:
+                    print(f"⚠️ Tarih dönüştürme hatası: {e}")
+                    return False
+            
+            query = "UPDATE hedef_hesaplar SET twitter_olusturma_tarihi = %s WHERE kullanici_adi = %s"
+            cursor.execute(query, (creation_date, username))
+            connection.commit()
+            
+            return cursor.rowcount > 0
+        except Error as e:
+            logger.error(f"❌ Hedef hesap Twitter oluşturma tarihi güncelleme hatası: {e}")
+            connection.rollback()
+            return False
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
+    def add_target(self, username, year=None, month=None):
+        """Hedef hesap ekle"""
+        connection = self.get_connection()
+        if not connection:
+            return False
+        
+        try:
+            cursor = connection.cursor()
+            
+            # Var olup olmadığını kontrol et
+            check_query = "SELECT id FROM hedef_hesaplar WHERE kullanici_adi = %s"
+            cursor.execute(check_query, (username,))
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Güncelle
+                update_query = """
+                UPDATE hedef_hesaplar 
+                SET yil = %s, ay = %s, guncelleme_tarihi = CURRENT_TIMESTAMP 
+                WHERE kullanici_adi = %s
+                """
+                cursor.execute(update_query, (year, month, username))
+            else:
+                # Yeni ekle
+                insert_query = """
+                INSERT INTO hedef_hesaplar (kullanici_adi, yil, ay, durum, olusturma_tarihi)
+                VALUES (%s, %s, %s, 'aktif', CURRENT_TIMESTAMP)
+                """
+                cursor.execute(insert_query, (username, year, month))
+            
+            connection.commit()
+            return True
+        except Error as e:
+            logger.error(f"❌ Hedef hesap ekleme hatası: {e}")
+            connection.rollback()
+            return False
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
+    def delete_target(self, username):
+        """Hedef hesabı sil"""
+        connection = self.get_connection()
+        if not connection:
+            return False
+        
+        try:
+            cursor = connection.cursor()
+            query = "DELETE FROM hedef_hesaplar WHERE kullanici_adi = %s"
+            cursor.execute(query, (username,))
+            connection.commit()
+            return cursor.rowcount > 0
+        except Error as e:
+            logger.error(f"❌ Hedef hesap silme hatası: {e}")
+            connection.rollback()
+            return False
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
+    def get_target_stats(self):
+        """Hedef hesap istatistiklerini getir"""
+        connection = self.get_connection()
+        if not connection:
+            return {}
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            # Toplam sayı
+            cursor.execute("SELECT COUNT(*) as toplam FROM hedef_hesaplar")
+            toplam = cursor.fetchone()['toplam']
+            
+            # Aktif sayı
+            cursor.execute("SELECT COUNT(*) as aktif FROM hedef_hesaplar WHERE durum = 'aktif'")
+            aktif = cursor.fetchone()['aktif']
+            
+            # Tarihli sayı
+            cursor.execute("SELECT COUNT(*) as tarihli FROM hedef_hesaplar WHERE twitter_olusturma_tarihi IS NOT NULL")
+            tarihli = cursor.fetchone()['tarihli']
+            
+            return {
+                'toplam': toplam,
+                'aktif': aktif,
+                'tarihli': tarihli
+            }
+        except Error as e:
+            logger.error(f"❌ Hedef hesap istatistik hatası: {e}")
+            return {}
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
+    def import_targets_from_file(self, file_path):
+        """Dosyadan hedef hesapları içe aktar"""
+        try:
+            imported_count = 0
+            with open(file_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    
+                    parts = line.split(':')
+                    username = parts[0].strip()
+                    year = int(parts[1]) if len(parts) > 1 and parts[1].strip().isdigit() else None
+                    month = int(parts[2]) if len(parts) > 2 and parts[2].strip().isdigit() else None
+                    
+                    if self.add_target(username, year, month):
+                        imported_count += 1
+            
+            return imported_count
+        except Exception as e:
+            logger.error(f"❌ Dosyadan içe aktarma hatası: {e}")
+            return 0
 
 # Global MySQL manager instance
 mysql_manager = MySQLManager()
