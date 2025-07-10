@@ -446,6 +446,12 @@ class UserManager:
 
         try:
             cursor = connection.cursor()
+            
+            # Önce sütunun varlığını kontrol et
+            cursor.execute("SHOW COLUMNS FROM kullanicilar LIKE 'twitter_olusturma_tarihi'")
+            if not cursor.fetchone():
+                return None
+                
             query = "SELECT twitter_olusturma_tarihi FROM kullanicilar WHERE kullanici_adi = %s"
             cursor.execute(query, (username,))
             result = cursor.fetchone()
@@ -468,6 +474,13 @@ class UserManager:
 
         try:
             cursor = connection.cursor()
+            
+            # Önce sütunun varlığını kontrol et
+            cursor.execute("SHOW COLUMNS FROM kullanicilar LIKE 'twitter_olusturma_tarihi'")
+            if not cursor.fetchone():
+                # Sütun yoksa ekle
+                cursor.execute("ALTER TABLE kullanicilar ADD COLUMN twitter_olusturma_tarihi VARCHAR(50)")
+                
             query = "UPDATE kullanicilar SET twitter_olusturma_tarihi = %s WHERE kullanici_adi = %s"
             cursor.execute(query, (creation_date, username))
             connection.commit()
@@ -491,6 +504,12 @@ class UserManager:
 
         try:
             cursor = connection.cursor()
+            
+            # Önce sütunların varlığını kontrol et
+            cursor.execute("SHOW COLUMNS FROM kullanicilar LIKE 'proxy_ip'")
+            if not cursor.fetchone():
+                return None
+                
             query = "SELECT proxy_ip, proxy_port FROM kullanicilar WHERE kullanici_adi = %s"
             cursor.execute(query, (username,))
             result = cursor.fetchone()
