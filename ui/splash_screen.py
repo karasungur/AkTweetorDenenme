@@ -123,7 +123,7 @@ class InitializationWorker(QThread):
             # Adım 4: Tabloları kontrol et/oluştur
             self.progress_updated.emit(85, "Veritabanı yapısı kontrol ediliyor...")
             try:
-                mysql_manager.create_new_tables()
+                mysql_manager.create_tables()
                 print("✅ MySQL tabloları kontrol edildi")
             except Exception as table_e:
                 print(f"⚠️ MySQL tablo hatası: {str(table_e)}")
