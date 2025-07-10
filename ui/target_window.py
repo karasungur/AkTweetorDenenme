@@ -75,20 +75,6 @@ class TargetWindow(QWidget):
         self.username_entry.setObjectName("inputField")
         self.username_entry.setPlaceholderText("Kullanıcı adı giriniz...")
 
-        self.year_spin = QSpinBox()
-        self.year_spin.setObjectName("inputField")
-        self.year_spin.setRange(2020, 2030)
-        self.year_spin.setValue(2024)
-        self.year_spin.setSpecialValueText("Yıl seç")
-        self.year_spin.setMinimum(0)
-
-        self.month_spin = QSpinBox()
-        self.month_spin.setObjectName("inputField")
-        self.month_spin.setRange(1, 12)
-        self.month_spin.setValue(1)
-        self.month_spin.setSpecialValueText("Ay seç")
-        self.month_spin.setMinimum(0)
-
         add_btn = QPushButton("Ekle")
         add_btn.setObjectName("primaryButton")
         add_btn.clicked.connect(self.add_single_target)
@@ -96,10 +82,6 @@ class TargetWindow(QWidget):
 
         add_layout.addWidget(QLabel("Kullanıcı Adı:"))
         add_layout.addWidget(self.username_entry)
-        add_layout.addWidget(QLabel("Yıl:"))
-        add_layout.addWidget(self.year_spin)
-        add_layout.addWidget(QLabel("Ay:"))
-        add_layout.addWidget(self.month_spin)
         add_layout.addWidget(add_btn)
         add_group.setLayout(add_layout)
 
@@ -159,9 +141,9 @@ class TargetWindow(QWidget):
         # Tablo
         self.table = QTableWidget()
         self.table.setObjectName("dataTable")
-        self.table.setColumnCount(6)
+        self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels([
-            "☑️", "👤 Kullanıcı Adı", "📅 Yıl", "🗓️ Ay", "📝 Notlar", "🕒 Eklenme Tarihi"
+            "☑️", "👤 Kullanıcı Adı", "📝 Notlar", "🕒 Eklenme Tarihi"
         ])
 
         # Tablo ayarları
@@ -174,13 +156,9 @@ class TargetWindow(QWidget):
         header.setStretchLastSection(True)
         header.setSectionResizeMode(0, QHeaderView.Fixed)  # Checkbox
         header.setSectionResizeMode(1, QHeaderView.Stretch)  # Kullanıcı adı
-        header.setSectionResizeMode(2, QHeaderView.Fixed)  # Yıl
-        header.setSectionResizeMode(3, QHeaderView.Fixed)  # Ay
-        header.setSectionResizeMode(4, QHeaderView.Stretch)  # Notlar
+        header.setSectionResizeMode(2, QHeaderView.Stretch)  # Notlar
 
         self.table.setColumnWidth(0, 50)   # Checkbox
-        self.table.setColumnWidth(2, 80)   # Yıl
-        self.table.setColumnWidth(3, 60)   # Ay
 
         # Sağ tık menüsü
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -211,26 +189,16 @@ class TargetWindow(QWidget):
             username_item.setFlags(username_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, 1, username_item)
 
-            # Yıl
-            year_text = str(target.get('yil', '')) if target.get('yil') else '-'
-            year_item = QTableWidgetItem(year_text)
-            self.table.setItem(row, 2, year_item)
-
-            # Ay
-            month_text = str(target.get('ay', '')) if target.get('ay') else '-'
-            month_item = QTableWidgetItem(month_text)
-            self.table.setItem(row, 3, month_item)
-
             # Notlar
             notes_text = target.get('notlar', '') or ''
             notes_item = QTableWidgetItem(notes_text)
-            self.table.setItem(row, 4, notes_item)
+            self.table.setItem(row, 2, notes_item)
 
             # Eklenme tarihi
             date_text = target.get('olusturma_tarihi', '').strftime('%d.%m.%Y %H:%M') if target.get('olusturma_tarihi') else ''
             date_item = QTableWidgetItem(date_text)
             date_item.setFlags(date_item.flags() & ~Qt.ItemIsEditable)
-            self.table.setItem(row, 5, date_item)
+            self.table.setItem(row, 3, date_item)
 
         # Tablo güncelleme sinyali
         self.table.cellChanged.connect(self.on_cell_changed)
@@ -248,10 +216,7 @@ class TargetWindow(QWidget):
             self.show_warning("Kullanıcı adı boş olamaz!")
             return
 
-        year = self.year_spin.value() if self.year_spin.value() > 0 else None
-        month = self.month_spin.value() if self.month_spin.value() > 0 else None
-
-        if mysql_manager.add_target(username, year, month):
+        if mysql_manager.add_target(username):
             self.show_info(f"✅ {username} hedef hesaplara eklendi!")
             self.username_entry.clear()
             self.load_targets()
@@ -293,13 +258,7 @@ class TargetWindow(QWidget):
                 with open(file_path, 'w', encoding='utf-8') as f:
                     for target in self.targets:
                         username = target.get('kullanici_adi', '')
-                        year = target.get('yil', '')
-                        month = target.get('ay', '')
-
-                        if year and month:
-                            f.write(f"{username}:{year}:{month}\n")
-                        else:
-                            f.write(f"{username}\n")
+                        f.write(f"{username}\n")
 
                 self.show_info(f"✅ {len(self.targets)} hedef hesap dışa aktarıldı!")
 
@@ -353,7 +312,7 @@ class TargetWindow(QWidget):
 
     def on_cell_changed(self, row, column):
         """Hücre değiştiğinde güncelle"""
-        if column in [2, 3, 4]:  # Yıl, Ay, Notlar
+        if column == 2:  # Notlar
             username_item = self.table.item(row, 1)
             if not username_item:
                 return
@@ -361,33 +320,11 @@ class TargetWindow(QWidget):
             username = username_item.text()
 
             # Yeni değerleri al
-            year_item = self.table.item(row, 2)
-            month_item = self.table.item(row, 3)
-            notes_item = self.table.item(row, 4)
-
-            year = None
-            month = None
-            notes = None
-
-            if year_item and year_item.text() and year_item.text() != '-':
-                try:
-                    year = int(year_item.text())
-                except ValueError:
-                    pass
-
-            if month_item and month_item.text() and month_item.text() != '-':
-                try:
-                    month = int(month_item.text())
-                    if month < 1 or month > 12:
-                        month = None
-                except ValueError:
-                    pass
-
-            if notes_item:
-                notes = notes_item.text()
+            notes_item = self.table.item(row, 2)
+            notes = notes_item.text() if notes_item else None
 
             # Güncelle
-            mysql_manager.add_target(username, year, month, notes)
+            mysql_manager.add_target(username, None, None, notes)
 
     def show_context_menu(self, position):
         """Sağ tık menüsünü göster"""
