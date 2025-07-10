@@ -1,7 +1,9 @@
+
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QLabel, QFrame, QMessageBox, QSpinBox, QGroupBox,
                              QRadioButton, QProgressBar, QTextEdit, QButtonGroup,
-                             QCheckBox, QLineEdit, QListWidget, QListWidgetItem)
+                             QCheckBox, QLineEdit, QListWidget, QListWidgetItem,
+                             QScrollArea, QGridLayout, QSplitter)
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtGui import QFont, QColor
 import asyncio
@@ -222,233 +224,284 @@ class YearSeparatorWindow(QWidget):
 
     def init_ui(self):
         """UI'yi başlat"""
-        layout = QVBoxLayout()
-        layout.setSpacing(8)
-        layout.setContentsMargins(15, 15, 15, 15)
+        # Ana layout
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(8)
 
         # Header
+        header_frame = self.create_header()
+        main_layout.addWidget(header_frame)
+
+        # Ana splitter - sol ve sağ paneller
+        main_splitter = QSplitter(Qt.Horizontal)
+
+        # Sol panel - Ayarlar ve hesap listesi
+        left_panel = self.create_left_panel()
+        main_splitter.addWidget(left_panel)
+
+        # Sağ panel - İşlem ve log
+        right_panel = self.create_right_panel()
+        main_splitter.addWidget(right_panel)
+
+        # Splitter oranları
+        main_splitter.setSizes([500, 600])
+
+        main_layout.addWidget(main_splitter, 1)
+        self.setLayout(main_layout)
+
+        # İlk yükleme
+        self.update_accounts_list()
+
+    def create_header(self):
+        """Header panelini oluştur"""
+        header_frame = QFrame()
+        header_frame.setObjectName("headerFrame")
+        header_frame.setFixedHeight(60)
+        
         header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(15, 10, 15, 10)
 
         # Geri butonu
-        back_btn = QPushButton("← Ana Menüye Dön")
+        back_btn = QPushButton("← Ana Menü")
         back_btn.setObjectName("backButton")
         back_btn.clicked.connect(self.return_to_main)
         back_btn.setCursor(Qt.PointingHandCursor)
+        back_btn.setFixedSize(120, 40)
 
         # Başlık
         title_label = QLabel("📅 Yıl Ayırıcı")
         title_label.setObjectName("pageTitle")
+        title_label.setAlignment(Qt.AlignCenter)
 
         header_layout.addWidget(back_btn)
         header_layout.addStretch()
         header_layout.addWidget(title_label)
         header_layout.addStretch()
 
+        header_frame.setLayout(header_layout)
+        return header_frame
+
+    def create_left_panel(self):
+        """Sol paneli oluştur - Ayarlar ve hesap listesi"""
+        left_widget = QWidget()
+        left_layout = QVBoxLayout()
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(8)
+
         # Ayarlar paneli
-        settings_panel = self.create_settings_panel()
+        settings_frame = QFrame()
+        settings_frame.setObjectName("settingsFrame")
+        settings_layout = QVBoxLayout()
+        settings_layout.setContentsMargins(15, 15, 15, 15)
+        settings_layout.setSpacing(10)
 
-        # Hesap listesi paneli
-        accounts_panel = self.create_accounts_panel()
+        # Başlık
+        settings_title = QLabel("⚙️ Ayarlar")
+        settings_title.setObjectName("sectionTitle")
+        settings_layout.addWidget(settings_title)
 
-        # İşlem paneli
-        operation_panel = self.create_operation_panel()
-
-        # Layout'a ekle
-        layout.addLayout(header_layout)
-        layout.addWidget(settings_panel)
-        layout.addWidget(accounts_panel)
-        layout.addWidget(operation_panel, 1)
-
-        self.setLayout(layout)
-
-    def create_settings_panel(self):
-        """Ayarlar panelini oluştur"""
-        panel = QFrame()
-        panel.setObjectName("settingsPanel")
-        layout = QVBoxLayout()
-
-        # Hesap türü seçimi
-        account_group = QGroupBox("👥 Hangi hesaplara işlem yapmak istiyorsunuz?")
-        account_group.setObjectName("settingsGroup")
+        # Hesap türü seçimi - Kompakt
+        account_frame = QFrame()
+        account_frame.setObjectName("compactFrame")
         account_layout = QVBoxLayout()
+        account_layout.setContentsMargins(10, 8, 10, 8)
 
+        account_label = QLabel("👥 Hesap Türü:")
+        account_label.setObjectName("compactLabel")
+        account_layout.addWidget(account_label)
+
+        # Radio butonlar yan yana
+        radio_layout = QHBoxLayout()
         self.account_type_group = QButtonGroup()
-        self.login_accounts_radio = QRadioButton("Giriş Yapılan Hesaplar")
+        self.login_accounts_radio = QRadioButton("Giriş Yapılan")
         self.target_accounts_radio = QRadioButton("Hedef Hesaplar")
-
-        self.login_accounts_radio.setChecked(True)  # Varsayılan seçim
+        self.login_accounts_radio.setChecked(True)
 
         self.account_type_group.addButton(self.login_accounts_radio)
         self.account_type_group.addButton(self.target_accounts_radio)
 
-        # Hesap türü değişikliğinde listbox'ı güncelle
         self.login_accounts_radio.toggled.connect(self.update_accounts_list)
         self.target_accounts_radio.toggled.connect(self.update_accounts_list)
 
-        account_layout.addWidget(self.login_accounts_radio)
-        account_layout.addWidget(self.target_accounts_radio)
-        account_group.setLayout(account_layout)
+        radio_layout.addWidget(self.login_accounts_radio)
+        radio_layout.addWidget(self.target_accounts_radio)
+        radio_layout.addStretch()
 
-        # Bekleme süresi ayarı
-        wait_group = QGroupBox("⏱ Her işlem arasındaki bekleme süresi")
-        wait_group.setObjectName("settingsGroup")
+        account_layout.addLayout(radio_layout)
+        account_frame.setLayout(account_layout)
+        settings_layout.addWidget(account_frame)
+
+        # Bekleme süresi - Kompakt
+        wait_frame = QFrame()
+        wait_frame.setObjectName("compactFrame")
         wait_layout = QHBoxLayout()
+        wait_layout.setContentsMargins(10, 8, 10, 8)
 
-        wait_label = QLabel("Saniye:")
+        wait_label = QLabel("⏱ Bekleme:")
+        wait_label.setObjectName("compactLabel")
         self.wait_spin = QSpinBox()
-        self.wait_spin.setObjectName("inputField")
+        self.wait_spin.setObjectName("compactInput")
         self.wait_spin.setRange(1, 3600)
         self.wait_spin.setValue(5)
-        self.wait_spin.setSuffix(" saniye")
+        self.wait_spin.setSuffix(" sn")
+        self.wait_spin.setFixedWidth(80)
 
         wait_layout.addWidget(wait_label)
         wait_layout.addWidget(self.wait_spin)
         wait_layout.addStretch()
-        wait_group.setLayout(wait_layout)
 
-        # Proxy ayarları
-        proxy_group = QGroupBox("🌐 Proxy Ayarları")
-        proxy_group.setObjectName("settingsGroup")
+        wait_frame.setLayout(wait_layout)
+        settings_layout.addWidget(wait_frame)
+
+        # Proxy ayarları - Kompakt
+        proxy_frame = QFrame()
+        proxy_frame.setObjectName("compactFrame")
         proxy_layout = QVBoxLayout()
+        proxy_layout.setContentsMargins(10, 8, 10, 8)
 
-        self.proxy_enabled = QCheckBox("Proxy kullan")
-        self.proxy_enabled.setObjectName("settingsCheckbox")
+        self.proxy_enabled = QCheckBox("🌐 Proxy Kullan")
+        self.proxy_enabled.setObjectName("compactCheckbox")
         self.proxy_enabled.toggled.connect(self.toggle_proxy_fields)
+        proxy_layout.addWidget(self.proxy_enabled)
 
-        # Proxy URL container
-        proxy_container = QFrame()
-        proxy_container_layout = QVBoxLayout()
-        proxy_container_layout.setSpacing(5)
-        proxy_container_layout.setContentsMargins(0, 0, 0, 0)
-
-        proxy_label = QLabel("Proxy URL:")
-        proxy_label.setObjectName("settingsLabel")
+        # Proxy URL
+        proxy_url_layout = QHBoxLayout()
+        proxy_url_label = QLabel("URL:")
+        proxy_url_label.setObjectName("miniLabel")
         self.proxy_entry = QLineEdit()
-        self.proxy_entry.setObjectName("inputField")
+        self.proxy_entry.setObjectName("compactInput")
         self.proxy_entry.setPlaceholderText("http://proxy:port")
         self.proxy_entry.setEnabled(False)
 
-        proxy_container_layout.addWidget(proxy_label)
-        proxy_container_layout.addWidget(self.proxy_entry)
-        proxy_container.setLayout(proxy_container_layout)
+        proxy_url_layout.addWidget(proxy_url_label)
+        proxy_url_layout.addWidget(self.proxy_entry)
+        proxy_layout.addLayout(proxy_url_layout)
 
-        # Reset URL container
-        reset_container = QFrame()
-        reset_container_layout = QVBoxLayout()
-        reset_container_layout.setSpacing(5)
-        reset_container_layout.setContentsMargins(0, 0, 0, 0)
-
-        reset_label = QLabel("Reset URL:")
-        reset_label.setObjectName("settingsLabel")
+        # Reset URL
+        reset_url_layout = QHBoxLayout()
+        reset_url_label = QLabel("Reset:")
+        reset_url_label.setObjectName("miniLabel")
         self.reset_url_entry = QLineEdit()
-        self.reset_url_entry.setObjectName("inputField")
+        self.reset_url_entry.setObjectName("compactInput")
         self.reset_url_entry.setPlaceholderText("http://example.com/reset")
         self.reset_url_entry.setEnabled(False)
 
-        reset_container_layout.addWidget(reset_label)
-        reset_container_layout.addWidget(self.reset_url_entry)
-        reset_container.setLayout(reset_container_layout)
+        reset_url_layout.addWidget(reset_url_label)
+        reset_url_layout.addWidget(self.reset_url_entry)
+        proxy_layout.addLayout(reset_url_layout)
 
-        proxy_layout.addWidget(self.proxy_enabled)
-        proxy_layout.addSpacing(10)
-        proxy_layout.addWidget(proxy_container)
-        proxy_layout.addSpacing(8)
-        proxy_layout.addWidget(reset_container)
-        proxy_group.setLayout(proxy_layout)
+        proxy_frame.setLayout(proxy_layout)
+        settings_layout.addWidget(proxy_frame)
 
-        # Kontrol butonları
+        # Kontrol butonları - Kompakt
         control_layout = QHBoxLayout()
+        control_layout.setSpacing(8)
 
-        self.start_btn = QPushButton("🚀 İşlemi Başlat")
+        self.start_btn = QPushButton("🚀 Başlat")
         self.start_btn.setObjectName("primaryButton")
         self.start_btn.clicked.connect(self.start_process)
         self.start_btn.setCursor(Qt.PointingHandCursor)
+        self.start_btn.setFixedHeight(35)
 
-        self.stop_btn = QPushButton("⏹️ İşlemi Durdur")
+        self.stop_btn = QPushButton("⏹️ Durdur")
         self.stop_btn.setObjectName("errorButton")
         self.stop_btn.clicked.connect(self.stop_process)
         self.stop_btn.setCursor(Qt.PointingHandCursor)
         self.stop_btn.setEnabled(False)
+        self.stop_btn.setFixedHeight(35)
 
         control_layout.addWidget(self.start_btn)
         control_layout.addWidget(self.stop_btn)
-        control_layout.addStretch()
 
-        # Layout'a ekle
-        layout.addWidget(account_group)
-        layout.addWidget(wait_group)
-        layout.addWidget(proxy_group)
-        layout.addLayout(control_layout)
+        settings_layout.addLayout(control_layout)
+        settings_frame.setLayout(settings_layout)
 
-        panel.setLayout(layout)
-        return panel
+        # Hesap listesi paneli
+        accounts_frame = QFrame()
+        accounts_frame.setObjectName("accountsFrame")
+        accounts_layout = QVBoxLayout()
+        accounts_layout.setContentsMargins(15, 15, 15, 15)
 
-    def create_accounts_panel(self):
-        """Hesap listesi panelini oluştur"""
-        panel = QFrame()
-        panel.setObjectName("accountsPanel")
-        layout = QVBoxLayout()
+        # Başlık ve istatistik
+        accounts_title = QLabel("📋 Hesap Listesi")
+        accounts_title.setObjectName("sectionTitle")
+        accounts_layout.addWidget(accounts_title)
 
-        # Başlık
-        title_label = QLabel("📋 Hesap Listesi")
-        title_label.setObjectName("sectionLabel")
+        self.accounts_info_label = QLabel("Hesap türü seçin")
+        self.accounts_info_label.setObjectName("infoLabel")
+        accounts_layout.addWidget(self.accounts_info_label)
 
         # Hesap listesi
         self.accounts_list = QListWidget()
-        self.accounts_list.setObjectName("accountsList")
-        self.accounts_list.setMaximumHeight(150)
+        self.accounts_list.setObjectName("compactList")
+        accounts_layout.addWidget(self.accounts_list)
 
-        # Bilgi etiketi
-        self.accounts_info_label = QLabel("Hesap türü seçin")
-        self.accounts_info_label.setObjectName("infoLabel")
+        accounts_frame.setLayout(accounts_layout)
 
-        # Layout'a ekle
-        layout.addWidget(title_label)
-        layout.addWidget(self.accounts_list)
-        layout.addWidget(self.accounts_info_label)
+        # Sol panel layout'u
+        left_layout.addWidget(settings_frame)
+        left_layout.addWidget(accounts_frame, 1)
 
-        panel.setLayout(layout)
-        return panel
+        left_widget.setLayout(left_layout)
+        return left_widget
 
-    def create_operation_panel(self):
-        """İşlem panelini oluştur"""
-        panel = QFrame()
-        panel.setObjectName("operationPanel")
-        layout = QVBoxLayout()
+    def create_right_panel(self):
+        """Sağ paneli oluştur - İşlem ve log"""
+        right_widget = QWidget()
+        right_layout = QVBoxLayout()
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(8)
+
+        # İlerleme paneli
+        progress_frame = QFrame()
+        progress_frame.setObjectName("progressFrame")
+        progress_layout = QVBoxLayout()
+        progress_layout.setContentsMargins(15, 15, 15, 15)
+
+        progress_title = QLabel("📊 İşlem İlerlemesi")
+        progress_title.setObjectName("sectionTitle")
+        progress_layout.addWidget(progress_title)
 
         # İlerleme çubuğu
-        progress_layout = QVBoxLayout()
-
-        progress_label = QLabel("📊 İşlem İlerlemesi")
-        progress_label.setObjectName("sectionLabel")
-
         self.progress_bar = QProgressBar()
-        self.progress_bar.setObjectName("progressBar")
+        self.progress_bar.setObjectName("modernProgress")
         self.progress_bar.setValue(0)
+        self.progress_bar.setFixedHeight(25)
+        progress_layout.addWidget(self.progress_bar)
 
+        # İlerleme metni
         self.progress_text = QLabel("Hazır")
         self.progress_text.setObjectName("progressText")
         self.progress_text.setAlignment(Qt.AlignCenter)
-
-        progress_layout.addWidget(progress_label)
-        progress_layout.addWidget(self.progress_bar)
         progress_layout.addWidget(self.progress_text)
 
+        progress_frame.setLayout(progress_layout)
+
+        # Log paneli
+        log_frame = QFrame()
+        log_frame.setObjectName("logFrame")
+        log_layout = QVBoxLayout()
+        log_layout.setContentsMargins(15, 15, 15, 15)
+
+        log_title = QLabel("📝 İşlem Kayıtları")
+        log_title.setObjectName("sectionTitle")
+        log_layout.addWidget(log_title)
+
         # Log alanı
-        log_label = QLabel("📝 İşlem Kayıtları")
-        log_label.setObjectName("sectionLabel")
-
         self.log_text = QTextEdit()
-        self.log_text.setObjectName("logArea")
+        self.log_text.setObjectName("modernLog")
         self.log_text.setReadOnly(True)
+        log_layout.addWidget(self.log_text)
 
-        # Layout'a ekle
-        layout.addLayout(progress_layout)
-        layout.addWidget(log_label)
-        layout.addWidget(self.log_text, 1)
+        log_frame.setLayout(log_layout)
 
-        panel.setLayout(layout)
-        return panel
+        # Sağ panel layout'u
+        right_layout.addWidget(progress_frame)
+        right_layout.addWidget(log_frame, 1)
+
+        right_widget.setLayout(right_layout)
+        return right_widget
 
     def toggle_proxy_fields(self):
         """Proxy alanlarını aktif/pasif yap"""
@@ -481,9 +534,9 @@ class YearSeparatorWindow(QWidget):
 
                 # Liste öğesi oluştur
                 if twitter_date:
-                    item_text = f"✅ {username} - Twitter tarihi: {twitter_date}"
+                    item_text = f"✅ {username} - {twitter_date}"
                 else:
-                    item_text = f"❌ {username} - Twitter tarihi: Bilinmiyor"
+                    item_text = f"❌ {username} - Tarih yok"
 
                 item = QListWidgetItem(item_text)
 
@@ -495,53 +548,9 @@ class YearSeparatorWindow(QWidget):
 
                 self.accounts_list.addItem(item)
 
-            self.accounts_info_label.setText(f"📊 {len(accounts)} {account_type} hesap bulundu")
+            self.accounts_info_label.setText(f"📊 {len(accounts)} {account_type} hesap")
         else:
-            self.accounts_info_label.setText(f"⚠️ Hiç {account_type} hesap bulunamadı")
-
-    def init_ui(self):
-        """UI'yi başlat"""
-        layout = QVBoxLayout()
-        layout.setSpacing(8)
-        layout.setContentsMargins(15, 15, 15, 15)
-
-        # Header
-        header_layout = QHBoxLayout()
-
-        # Geri butonu
-        back_btn = QPushButton("← Ana Menüye Dön")
-        back_btn.setObjectName("backButton")
-        back_btn.clicked.connect(self.return_to_main)
-        back_btn.setCursor(Qt.PointingHandCursor)
-
-        # Başlık
-        title_label = QLabel("📅 Yıl Ayırıcı")
-        title_label.setObjectName("pageTitle")
-
-        header_layout.addWidget(back_btn)
-        header_layout.addStretch()
-        header_layout.addWidget(title_label)
-        header_layout.addStretch()
-
-        # Ayarlar paneli
-        settings_panel = self.create_settings_panel()
-
-        # Hesap listesi paneli
-        accounts_panel = self.create_accounts_panel()
-
-        # İşlem paneli
-        operation_panel = self.create_operation_panel()
-
-        # Layout'a ekle
-        layout.addLayout(header_layout)
-        layout.addWidget(settings_panel)
-        layout.addWidget(accounts_panel)
-        layout.addWidget(operation_panel, 1)
-
-        self.setLayout(layout)
-
-        # İlk yükleme
-        self.update_accounts_list()
+            self.accounts_info_label.setText(f"⚠️ Hiç {account_type} hesap yok")
 
     def start_process(self):
         """İşlemi başlat"""
@@ -582,7 +591,7 @@ class YearSeparatorWindow(QWidget):
         """İlerlemeyi güncelle"""
         progress = int((current / total) * 100) if total > 0 else 0
         self.progress_bar.setValue(progress)
-        self.progress_text.setText(f"{current}/{total} hesap işlendi (%{progress})")
+        self.progress_text.setText(f"{current}/{total} hesap (%{progress})")
 
     def add_log(self, message):
         """Log mesajı ekle"""
@@ -603,7 +612,7 @@ class YearSeparatorWindow(QWidget):
             self.add_log("❌ İşlem hata ile sonlandı!")
 
     def setup_style(self):
-        """Stil ayarlarını uygula"""
+        """Kompakt ve modern stil"""
         style = f"""
         QWidget {{
             background: {self.colors['background']};
@@ -611,72 +620,116 @@ class YearSeparatorWindow(QWidget):
             font-family: 'SF Pro Display', 'Segoe UI', sans-serif;
         }}
 
+        #headerFrame {{
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 {self.colors['card_bg']}, 
+                stop:1 {self.colors['background_alt']});
+            border-bottom: 1px solid {self.colors['border']};
+        }}
+
         #pageTitle {{
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 700;
             color: {self.colors['text_primary']};
-            margin: 10px 0px;
         }}
 
-        #settingsPanel {{
+        #settingsFrame, #accountsFrame, #progressFrame, #logFrame {{
             background: {self.colors['card_bg']};
             border: 1px solid {self.colors['border']};
-            border-radius: 12px;
-            padding: 20px;
-            margin: 10px 0px;
+            border-radius: 8px;
         }}
 
-        #operationPanel {{
-            background: {self.colors['card_bg']};
-            border: 1px solid {self.colors['border']};
-            border-radius: 12px;
-            padding: 20px;
-        }}
-
-        #settingsGroup {{
-            font-size: 14px;
+        #sectionTitle {{
+            font-size: 16px;
             font-weight: 600;
             color: {self.colors['text_primary']};
-            border: 2px solid {self.colors['border']};
-            border-radius: 8px;
-            margin: 5px;
-            padding-top: 15px;
+            margin-bottom: 8px;
         }}
 
-        #settingsGroup::title {{
-            subcontrol-origin: margin;
-            subcontrol-position: top left;
-            padding: 0px 8px;
-            background: {self.colors['card_bg']};
+        #compactFrame {{
+            background: {self.colors['background_alt']};
+            border: 1px solid {self.colors['border']};
+            border-radius: 6px;
+            margin: 2px 0px;
+        }}
+
+        #compactLabel {{
+            font-size: 13px;
+            font-weight: 600;
             color: {self.colors['text_primary']};
         }}
 
-        #inputField {{
+        #miniLabel {{
+            font-size: 11px;
+            color: {self.colors['text_secondary']};
+            min-width: 40px;
+        }}
+
+        #compactInput {{
             background: {self.colors['background']};
-            border: 2px solid {self.colors['border']};
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-size: 14px;
+            border: 1px solid {self.colors['border']};
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
             color: {self.colors['text_primary']};
         }}
 
-        #inputField:focus {{
+        #compactInput:focus {{
             border-color: {self.colors['primary']};
-            background: {self.colors['background']};
         }}
 
-        #settingsCheckbox {{
-            font-size: 14px;
+        #compactCheckbox {{
+            font-size: 12px;
             color: {self.colors['text_primary']};
             font-weight: 500;
-            margin-bottom: 5px;
         }}
 
-        #settingsLabel {{
+        #compactList {{
+            background: {self.colors['background']};
+            border: 1px solid {self.colors['border']};
+            border-radius: 6px;
+            font-size: 11px;
+            selection-background-color: {self.colors['primary']};
+            selection-color: white;
+        }}
+
+        #modernProgress {{
+            background: {self.colors['background_alt']};
+            border: 1px solid {self.colors['border']};
+            border-radius: 12px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+        }}
+
+        #modernProgress::chunk {{
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 {self.colors['primary']}, 
+                stop:1 {self.colors['primary_end']});
+            border-radius: 10px;
+        }}
+
+        #progressText {{
             font-size: 12px;
             color: {self.colors['text_secondary']};
             font-weight: 500;
-            margin-bottom: 3px;
+            margin: 5px 0px;
+        }}
+
+        #modernLog {{
+            background: {self.colors['background']};
+            border: 1px solid {self.colors['border']};
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 11px;
+            color: {self.colors['text_primary']};
+            padding: 8px;
+        }}
+
+        #infoLabel {{
+            font-size: 11px;
+            color: {self.colors['text_secondary']};
+            font-weight: 500;
         }}
 
         #primaryButton {{
@@ -685,9 +738,9 @@ class YearSeparatorWindow(QWidget):
                 stop:1 {self.colors['primary_end']});
             color: white;
             border: none;
-            border-radius: 8px;
-            padding: 12px 24px;
-            font-size: 14px;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 12px;
             font-weight: 600;
         }}
 
@@ -708,86 +761,15 @@ class YearSeparatorWindow(QWidget):
                 stop:1 {self.colors['error_hover']});
             color: white;
             border: none;
-            border-radius: 8px;
-            padding: 12px 24px;
-            font-size: 14px;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 12px;
             font-weight: 600;
-        }}
-
-        #errorButton:hover {{
-            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 {self.colors['error_hover']}, 
-                stop:1 {self.colors['error']});
         }}
 
         #errorButton:disabled {{
             background: {self.colors['text_light']};
             color: white;
-        }}
-
-        #sectionLabel {{
-            font-size: 16px;
-            font-weight: 600;
-            color: {self.colors['text_primary']};
-            margin: 10px 0px 5px 0px;
-        }}
-
-        #progressBar {{
-            background: {self.colors['background_alt']};
-            border: 1px solid {self.colors['border']};
-            border-radius: 8px;
-            text-align: center;
-            font-size: 12px;
-            font-weight: 600;
-        }}
-
-        #progressBar::chunk {{
-            background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 {self.colors['primary']}, 
-                stop:1 {self.colors['primary_end']});
-            border-radius: 6px;
-        }}
-
-        #progressText {{
-            font-size: 14px;
-            color: {self.colors['text_secondary']};
-            font-weight: 500;
-            margin: 5px 0px;
-        }}
-
-        #logArea {{
-            background: {self.colors['background']};
-            border: 1px solid {self.colors['border']};
-            border-radius: 8px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 12px;
-            color: {self.colors['text_primary']};
-            padding: 10px;
-        }}
-
-        #accountsPanel {{
-            background: {self.colors['card_bg']};
-            border: 1px solid {self.colors['border']};
-            border-radius: 12px;
-            padding: 15px;
-            margin: 10px 0px;
-        }}
-
-        #accountsList {{
-            background: {self.colors['background']};
-            border: 1px solid {self.colors['border']};
-            border-radius: 8px;
-            padding: 5px;
-            font-size: 12px;
-            selection-background-color: {self.colors['primary']};
-            selection-color: white;
-        }}
-
-        #infoLabel {{
-            font-size: 12px;
-            color: {self.colors['text_secondary']};
-            font-weight: 500;
-            margin-top: 5px;
         }}
 
         #backButton {{
@@ -796,9 +778,9 @@ class YearSeparatorWindow(QWidget):
                 stop:1 #5A6268);
             color: white;
             border: none;
-            border-radius: 12px;
-            padding: 14px 24px;
-            font-size: 15px;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
             font-weight: 600;
         }}
 
@@ -809,26 +791,34 @@ class YearSeparatorWindow(QWidget):
         }}
 
         QRadioButton {{
-            font-size: 14px;
+            font-size: 12px;
             color: {self.colors['text_primary']};
             font-weight: 500;
-            padding: 5px;
         }}
 
         QRadioButton::indicator {{
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
         }}
 
         QRadioButton::indicator:unchecked {{
             border: 2px solid {self.colors['border']};
-            border-radius: 8px;
+            border-radius: 7px;
             background: {self.colors['background']};
         }}
 
         QRadioButton::indicator:checked {{
             border: 2px solid {self.colors['primary']};
-            border-radius: 8px;
+            border-radius: 7px;
+            background: {self.colors['primary']};
+        }}
+
+        QSplitter::handle {{
+            background: {self.colors['border']};
+            width: 2px;
+        }}
+
+        QSplitter::handle:hover {{
             background: {self.colors['primary']};
         }}
         """
