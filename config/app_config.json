@@ -1,0 +1,34 @@
+{
+  "database": {
+    "host": "localhost",
+    "port": 3306,
+    "username": "root",
+    "password": "",
+    "database": "aktweetor",
+    "pool_size": 5
+  },
+  "selenium": {
+    "driver_path": "chromedriver.exe",
+    "timeout": 10,
+    "headless": false,
+    "page_load_timeout": 30,
+    "implicit_wait": 5
+  },
+  "proxy": {
+    "enabled": false,
+    "default_proxy": "",
+    "reset_url": "",
+    "timeout": 5
+  },
+  "app": {
+    "name": "AkTweetor",
+    "version": "1.0.0",
+    "debug": false,
+    "log_level": "INFO"
+  },
+  "directories": {
+    "profiles": "./Profiller",
+    "temp_profiles": "./TempProfiller",
+    "logs": "./logs"
+  }
+}
