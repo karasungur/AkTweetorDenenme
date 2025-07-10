@@ -1,0 +1,38 @@
+D:\PycharmProjects\AkTweetorDenenme\Scripts\python.exe D:\Users\Mustafa\PycharmProjects\AkTweetorDenenme\main.py 
+🗑️ Eski tablo silindi: kullanici_kategorileri
+🗑️ Eski tablo silindi: islem_logları
+🗑️ Eski tablo silindi: sistem_ayarları
+✅ Eski tablolar temizlendi
+✅ Yeni tablo yapısı oluşturuldu
+[2025-07-10 19:05:11] [INFO    ] [AkTweetor] ✅ MySQL bağlantı havuzu oluşturuldu
+[2025-07-10 19:05:11] [INFO    ] [AkTweetor] ✅ MySQL tabloları oluşturuldu/kontrol edildi
+[2025-07-10 19:05:11] [INFO    ] [AkTweetor] ✅ kullanicilar tablosuna cerezler sütunu eklendi
+🚀 AkTweetor başlatılıyor...
+✅ Klasör oluşturuldu/kontrol edildi: ./Profiller
+✅ Klasör oluşturuldu/kontrol edildi: ./TempProfiller
+✅ MySQL bağlantısı başarılı
+[2025-07-10 19:05:11] [INFO    ] [AkTweetor] ✅ MySQL bağlantısı başarılı
+🔍 InitializationWorker başlatıldı
+🕐 Toplam yükleme süresi: 8.22 saniye
+[2025-07-10 19:05:16] [INFO    ] [AkTweetor] ✅ MySQL bağlantısı başarılı
+✅ MySQL bağlantısı başarılı
+⚠️ MySQL tablo hatası: 'MySQLManager' object has no attribute 'create_new_tables'
+✅ InitializationWorker başarıyla tamamlandı
+🔍 Initialization finished: True
+✅ Başlatma başarılı, ana pencere açılıyor...
+🔍 Ana pencere yükleniyor...
+🔍 MainWindow sınıfı yüklendi, pencere oluşturuluyor...
+🔍 Ana pencere oluşturuldu, gösteriliyor...
+✅ Ana pencere başarıyla açıldı
+Exception in thread Thread-2 (<lambda>):
+Traceback (most recent call last):
+  File "C:\Users\Mustafa\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1073, in _bootstrap_inner
+    self.run()
+  File "C:\Users\Mustafa\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+  File "D:\Users\Mustafa\PycharmProjects\AkTweetorDenenme\ui\cookie_window.py", line 993, in <lambda>
+    thread = threading.Thread(target=lambda: self.set_computer_ip(get_ip()), daemon=True)
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Users\Mustafa\PycharmProjects\AkTweetorDenenme\ui\cookie_window.py", line 999, in set_computer_ip
+    self.computer_ip_display.setText(self.current_ip)
+RuntimeError: wrapped C/C++ object of type QLabel has been deleted
