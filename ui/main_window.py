@@ -102,8 +102,8 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         """UI'yi başlat"""
         self.setWindowTitle("AkTweetor - Twitter Otomasyon Aracı")
-        self.setGeometry(100, 100, 1700, 1100)
-        self.setMinimumSize(1500, 1000)
+        self.setGeometry(100, 100, 1400, 900)
+        self.setMinimumSize(1200, 800)
         
         # Ana widget ve layout
         central_widget = QWidget()
@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
         # Logo resmi
         logo_label = QLabel()
         logo_label.setAlignment(Qt.AlignCenter)
-        logo_label.setFixedSize(200, 200)
+        logo_label.setFixedSize(120, 120)
         
         # Logo dosyasını yükle - önce GIF, sonra PNG
         import os
@@ -158,18 +158,18 @@ class MainWindow(QMainWindow):
         elif os.path.exists("assets/logo.png"):
             from PyQt5.QtGui import QPixmap
             pixmap = QPixmap("assets/logo.png")
-            scaled_pixmap = pixmap.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            scaled_pixmap = pixmap.scaled(120, 120, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             logo_label.setPixmap(scaled_pixmap)
         else:
             # Logo yoksa emoji kullan
             logo_label.setText("🐦")
-            logo_label.setStyleSheet("font-size: 140px; color: #667eea;")
+            logo_label.setStyleSheet("font-size: 80px; color: #667eea;")
         
         logo_layout.addWidget(logo_label)
-        logo_layout.setContentsMargins(0, 40, 0, 40)
+        logo_layout.setContentsMargins(0, 20, 0, 20)
         logo_layout.setAlignment(Qt.AlignCenter)
         logo_frame.setLayout(logo_layout)
-        logo_frame.setFixedHeight(280)
+        logo_frame.setFixedHeight(180)
         
         # Ana başlık
         title_label = QLabel("AkTweetor")
@@ -190,30 +190,30 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(title_label)
         header_layout.addWidget(subtitle_label)
         header_layout.addWidget(version_label)
-        header_layout.setSpacing(8)
-        header_layout.setContentsMargins(0, 40, 0, 10)
+        header_layout.setSpacing(6)
+        header_layout.setContentsMargins(0, 20, 0, 10)
         header_frame.setLayout(header_layout)
         
         # Menü butonları bölümü - Grid Layout
         menu_frame = QFrame()
         menu_frame.setObjectName("menuFrame")
-        menu_frame.setMinimumWidth(1400)  # Minimum genişlik ayarla
+        menu_frame.setMinimumWidth(1200)  # Minimum genişlik ayarla
         menu_layout = QVBoxLayout()
         menu_layout.setAlignment(Qt.AlignCenter)
         
         # İlk satır butonları
         row1_layout = QHBoxLayout()
-        row1_layout.setSpacing(50)
+        row1_layout.setSpacing(30)
         row1_layout.setAlignment(Qt.AlignCenter)
         
         # İkinci satır butonları
         row2_layout = QHBoxLayout()
-        row2_layout.setSpacing(50)
+        row2_layout.setSpacing(30)
         row2_layout.setAlignment(Qt.AlignCenter)
         
         # Üçüncü satır butonları
         row3_layout = QHBoxLayout()
-        row3_layout.setSpacing(50)
+        row3_layout.setSpacing(30)
         row3_layout.setAlignment(Qt.AlignCenter)
         
         # Menü butonları
@@ -275,11 +275,11 @@ class MainWindow(QMainWindow):
         
         # Ana layout'a ekle
         menu_layout.addLayout(row1_layout)
-        menu_layout.addSpacing(50)
+        menu_layout.addSpacing(30)
         menu_layout.addLayout(row2_layout)
-        menu_layout.addSpacing(50)
+        menu_layout.addSpacing(30)
         menu_layout.addLayout(row3_layout)
-        menu_layout.setContentsMargins(80, 20, 80, 50)
+        menu_layout.setContentsMargins(60, 15, 60, 30)
         menu_frame.setLayout(menu_layout)
         
         # Container layout'a ekle
@@ -300,7 +300,7 @@ class MainWindow(QMainWindow):
         """Modern menü butonu oluştur"""
         container = QFrame()
         container.setObjectName("menuButtonContainer")
-        container.setFixedSize(440, 165)
+        container.setFixedSize(360, 140)
         container.setCursor(Qt.PointingHandCursor)
         
         # Gölge efekti
@@ -393,7 +393,7 @@ class MainWindow(QMainWindow):
         }}
         
         #titleLabel {{
-            font-size: 48px;
+            font-size: 36px;
             font-weight: 800;
             color: {self.colors['text_primary']};
             font-family: 'SF Pro Display', 'Segoe UI', 'Roboto', sans-serif;
@@ -402,11 +402,11 @@ class MainWindow(QMainWindow):
         }}
         
         #subtitleLabel {{
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 400;
             color: {self.colors['text_secondary']};
             font-family: 'SF Pro Display', 'Segoe UI', 'Roboto', sans-serif;
-            margin: 8px 0px;
+            margin: 6px 0px;
         }}
         
         #versionLabel {{

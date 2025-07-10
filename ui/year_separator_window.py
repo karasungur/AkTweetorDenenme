@@ -313,29 +313,45 @@ class YearSeparatorWindow(QWidget):
         self.proxy_enabled.setObjectName("settingsCheckbox")
         self.proxy_enabled.toggled.connect(self.toggle_proxy_fields)
 
-        proxy_input_layout = QHBoxLayout()
+        # Proxy URL container
+        proxy_container = QFrame()
+        proxy_container_layout = QVBoxLayout()
+        proxy_container_layout.setSpacing(5)
+        proxy_container_layout.setContentsMargins(0, 0, 0, 0)
+
         proxy_label = QLabel("Proxy URL:")
+        proxy_label.setObjectName("settingsLabel")
         self.proxy_entry = QLineEdit()
         self.proxy_entry.setObjectName("inputField")
         self.proxy_entry.setPlaceholderText("http://proxy:port")
         self.proxy_entry.setEnabled(False)
 
-        proxy_input_layout.addWidget(proxy_label)
-        proxy_input_layout.addWidget(self.proxy_entry)
+        proxy_container_layout.addWidget(proxy_label)
+        proxy_container_layout.addWidget(self.proxy_entry)
+        proxy_container.setLayout(proxy_container_layout)
 
-        reset_input_layout = QHBoxLayout()
+        # Reset URL container
+        reset_container = QFrame()
+        reset_container_layout = QVBoxLayout()
+        reset_container_layout.setSpacing(5)
+        reset_container_layout.setContentsMargins(0, 0, 0, 0)
+
         reset_label = QLabel("Reset URL:")
+        reset_label.setObjectName("settingsLabel")
         self.reset_url_entry = QLineEdit()
         self.reset_url_entry.setObjectName("inputField")
         self.reset_url_entry.setPlaceholderText("http://example.com/reset")
         self.reset_url_entry.setEnabled(False)
 
-        reset_input_layout.addWidget(reset_label)
-        reset_input_layout.addWidget(self.reset_url_entry)
+        reset_container_layout.addWidget(reset_label)
+        reset_container_layout.addWidget(self.reset_url_entry)
+        reset_container.setLayout(reset_container_layout)
 
         proxy_layout.addWidget(self.proxy_enabled)
-        proxy_layout.addLayout(proxy_input_layout)
-        proxy_layout.addLayout(reset_input_layout)
+        proxy_layout.addSpacing(10)
+        proxy_layout.addWidget(proxy_container)
+        proxy_layout.addSpacing(8)
+        proxy_layout.addWidget(reset_container)
         proxy_group.setLayout(proxy_layout)
 
         # Kontrol butonları
@@ -649,6 +665,14 @@ class YearSeparatorWindow(QWidget):
             font-size: 14px;
             color: {self.colors['text_primary']};
             font-weight: 500;
+            margin-bottom: 5px;
+        }}
+
+        #settingsLabel {{
+            font-size: 12px;
+            color: {self.colors['text_secondary']};
+            font-weight: 500;
+            margin-bottom: 3px;
         }}
 
         #primaryButton {{
