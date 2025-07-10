@@ -125,17 +125,20 @@ class MySQLManager:
             CREATE TABLE IF NOT EXISTS hedef_hesaplar (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 kullanici_adi VARCHAR(255) NOT NULL,
+                kat_sayisi INT DEFAULT 1,
                 yil INT,
                 ay INT,
                 twitter_olusturma_tarihi DATETIME,
                 proxy_ip VARCHAR(255),
                 proxy_port INT,
                 durum ENUM('aktif', 'pasif') DEFAULT 'aktif',
+                notlar TEXT,
                 olusturma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 guncelleme_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_kullanici_adi (kullanici_adi),
                 INDEX idx_yil_ay (yil, ay),
-                INDEX idx_durum (durum)
+                INDEX idx_durum (durum),
+                INDEX idx_kat_sayisi (kat_sayisi)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
             
@@ -173,9 +176,11 @@ class MySQLManager:
                 ('kullanicilar', 'proxy_ip', 'VARCHAR(255)'),
                 ('kullanicilar', 'proxy_port', 'INT'),
                 ('kullanicilar', 'cerezler', 'TEXT'),
+                ('hedef_hesaplar', 'kat_sayisi', 'INT DEFAULT 1'),
                 ('hedef_hesaplar', 'twitter_olusturma_tarihi', 'DATETIME'),
                 ('hedef_hesaplar', 'proxy_ip', 'VARCHAR(255)'),
-                ('hedef_hesaplar', 'proxy_port', 'INT')
+                ('hedef_hesaplar', 'proxy_port', 'INT'),
+                ('hedef_hesaplar', 'notlar', 'TEXT')
             ]
             
             for table, column, data_type in columns_to_add:
@@ -327,7 +332,7 @@ class MySQLManager:
                 connection.close()
     
     @handle_exception
-    def add_target(self, username, year=None, month=None):
+    def add_target(self, username, kat_sayisi=1, year=None, month=None, notlar=None):
         """Hedef hesap ekle"""
         connection = self.get_connection()
         if not connection:
@@ -342,20 +347,40 @@ class MySQLManager:
             existing = cursor.fetchone()
             
             if existing:
-                # Güncelle
-                update_query = """
-                UPDATE hedef_hesaplar 
-                SET yil = %s, ay = %s, guncelleme_tarihi = CURRENT_TIMESTAMP 
-                WHERE kullanici_adi = %s
-                """
-                cursor.execute(update_query, (year, month, username))
+                # Güncelle - sadece None olmayan değerleri güncelle
+                update_parts = []
+                update_values = []
+                
+                if kat_sayisi is not None:
+                    update_parts.append("kat_sayisi = %s")
+                    update_values.append(kat_sayisi)
+                if year is not None:
+                    update_parts.append("yil = %s")
+                    update_values.append(year)
+                if month is not None:
+                    update_parts.append("ay = %s")
+                    update_values.append(month)
+                if notlar is not None:
+                    update_parts.append("notlar = %s")
+                    update_values.append(notlar)
+                
+                if update_parts:
+                    update_parts.append("guncelleme_tarihi = CURRENT_TIMESTAMP")
+                    update_values.append(username)
+                    
+                    update_query = f"""
+                    UPDATE hedef_hesaplar 
+                    SET {', '.join(update_parts)}
+                    WHERE kullanici_adi = %s
+                    """
+                    cursor.execute(update_query, update_values)
             else:
                 # Yeni ekle
                 insert_query = """
-                INSERT INTO hedef_hesaplar (kullanici_adi, yil, ay, durum, olusturma_tarihi)
-                VALUES (%s, %s, %s, 'aktif', CURRENT_TIMESTAMP)
+                INSERT INTO hedef_hesaplar (kullanici_adi, kat_sayisi, yil, ay, notlar, durum, olusturma_tarihi)
+                VALUES (%s, %s, %s, %s, %s, 'aktif', CURRENT_TIMESTAMP)
                 """
-                cursor.execute(insert_query, (username, year, month))
+                cursor.execute(insert_query, (username, kat_sayisi or 1, year, month, notlar))
             
             connection.commit()
             return True
@@ -451,7 +476,7 @@ class MySQLManager:
     
     @handle_exception
     def import_targets_from_file(self, file_path):
-        """Dosyadan hedef hesapları içe aktar"""
+        """Dosyadan hedef hesapları içe aktar - Format: kullaniciadi:katsayisi"""
         try:
             imported_count = 0
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -462,10 +487,9 @@ class MySQLManager:
                     
                     parts = line.split(':')
                     username = parts[0].strip()
-                    year = int(parts[1]) if len(parts) > 1 and parts[1].strip().isdigit() else None
-                    month = int(parts[2]) if len(parts) > 2 and parts[2].strip().isdigit() else None
+                    kat_sayisi = int(parts[1]) if len(parts) > 1 and parts[1].strip().isdigit() else 1
                     
-                    if self.add_target(username, year, month):
+                    if self.add_target(username, kat_sayisi):
                         imported_count += 1
             
             return imported_count

@@ -75,6 +75,12 @@ class TargetWindow(QWidget):
         self.username_entry.setObjectName("inputField")
         self.username_entry.setPlaceholderText("Kullanıcı adı giriniz...")
 
+        self.kat_sayisi_spin = QSpinBox()
+        self.kat_sayisi_spin.setObjectName("inputField")
+        self.kat_sayisi_spin.setMinimum(1)
+        self.kat_sayisi_spin.setMaximum(999)
+        self.kat_sayisi_spin.setValue(1)
+
         add_btn = QPushButton("Ekle")
         add_btn.setObjectName("primaryButton")
         add_btn.clicked.connect(self.add_single_target)
@@ -82,6 +88,8 @@ class TargetWindow(QWidget):
 
         add_layout.addWidget(QLabel("Kullanıcı Adı:"))
         add_layout.addWidget(self.username_entry)
+        add_layout.addWidget(QLabel("Kat Sayısı:"))
+        add_layout.addWidget(self.kat_sayisi_spin)
         add_layout.addWidget(add_btn)
         add_group.setLayout(add_layout)
 
@@ -141,9 +149,9 @@ class TargetWindow(QWidget):
         # Tablo
         self.table = QTableWidget()
         self.table.setObjectName("dataTable")
-        self.table.setColumnCount(4)
+        self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels([
-            "☑️", "👤 Kullanıcı Adı", "📝 Notlar", "🕒 Eklenme Tarihi"
+            "☑️", "👤 Kullanıcı Adı", "🔢 Kat Sayısı", "📝 Notlar", "🕒 Eklenme Tarihi"
         ])
 
         # Tablo ayarları
@@ -156,9 +164,11 @@ class TargetWindow(QWidget):
         header.setStretchLastSection(True)
         header.setSectionResizeMode(0, QHeaderView.Fixed)  # Checkbox
         header.setSectionResizeMode(1, QHeaderView.Stretch)  # Kullanıcı adı
-        header.setSectionResizeMode(2, QHeaderView.Stretch)  # Notlar
+        header.setSectionResizeMode(2, QHeaderView.Fixed)  # Kat sayısı
+        header.setSectionResizeMode(3, QHeaderView.Stretch)  # Notlar
 
         self.table.setColumnWidth(0, 50)   # Checkbox
+        self.table.setColumnWidth(2, 100)  # Kat sayısı
 
         # Sağ tık menüsü
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -189,16 +199,21 @@ class TargetWindow(QWidget):
             username_item.setFlags(username_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, 1, username_item)
 
+            # Kat sayısı
+            kat_sayisi = target.get('kat_sayisi', 1)
+            kat_sayisi_item = QTableWidgetItem(str(kat_sayisi))
+            self.table.setItem(row, 2, kat_sayisi_item)
+
             # Notlar
             notes_text = target.get('notlar', '') or ''
             notes_item = QTableWidgetItem(notes_text)
-            self.table.setItem(row, 2, notes_item)
+            self.table.setItem(row, 3, notes_item)
 
             # Eklenme tarihi
             date_text = target.get('olusturma_tarihi', '').strftime('%d.%m.%Y %H:%M') if target.get('olusturma_tarihi') else ''
             date_item = QTableWidgetItem(date_text)
             date_item.setFlags(date_item.flags() & ~Qt.ItemIsEditable)
-            self.table.setItem(row, 3, date_item)
+            self.table.setItem(row, 4, date_item)
 
         # Tablo güncelleme sinyali
         self.table.cellChanged.connect(self.on_cell_changed)
@@ -216,9 +231,12 @@ class TargetWindow(QWidget):
             self.show_warning("Kullanıcı adı boş olamaz!")
             return
 
-        if mysql_manager.add_target(username):
-            self.show_info(f"✅ {username} hedef hesaplara eklendi!")
+        kat_sayisi = self.kat_sayisi_spin.value()
+
+        if mysql_manager.add_target(username, kat_sayisi):
+            self.show_info(f"✅ {username} (Kat Sayısı: {kat_sayisi}) hedef hesaplara eklendi!")
             self.username_entry.clear()
+            self.kat_sayisi_spin.setValue(1)
             self.load_targets()
         else:
             self.show_error("Hedef hesap eklenirken hata oluştu!")
@@ -258,7 +276,8 @@ class TargetWindow(QWidget):
                 with open(file_path, 'w', encoding='utf-8') as f:
                     for target in self.targets:
                         username = target.get('kullanici_adi', '')
-                        f.write(f"{username}\n")
+                        kat_sayisi = target.get('kat_sayisi', 1)
+                        f.write(f"{username}:{kat_sayisi}\n")
 
                 self.show_info(f"✅ {len(self.targets)} hedef hesap dışa aktarıldı!")
 
@@ -312,19 +331,29 @@ class TargetWindow(QWidget):
 
     def on_cell_changed(self, row, column):
         """Hücre değiştiğinde güncelle"""
-        if column == 2:  # Notlar
-            username_item = self.table.item(row, 1)
-            if not username_item:
-                return
+        username_item = self.table.item(row, 1)
+        if not username_item:
+            return
 
-            username = username_item.text()
+        username = username_item.text()
 
-            # Yeni değerleri al
-            notes_item = self.table.item(row, 2)
+        if column == 2:  # Kat Sayısı
+            kat_sayisi_item = self.table.item(row, 2)
+            if kat_sayisi_item:
+                try:
+                    kat_sayisi = int(kat_sayisi_item.text())
+                    if kat_sayisi < 1:
+                        kat_sayisi = 1
+                        kat_sayisi_item.setText("1")
+                    mysql_manager.add_target(username, kat_sayisi)
+                except ValueError:
+                    kat_sayisi_item.setText("1")
+                    mysql_manager.add_target(username, 1)
+
+        elif column == 3:  # Notlar
+            notes_item = self.table.item(row, 3)
             notes = notes_item.text() if notes_item else None
-
-            # Güncelle
-            mysql_manager.add_target(username, None, None, notes)
+            mysql_manager.add_target(username, notlar=notes)
 
     def show_context_menu(self, position):
         """Sağ tık menüsünü göster"""
