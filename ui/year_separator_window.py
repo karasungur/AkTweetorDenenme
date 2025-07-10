@@ -1,4 +1,3 @@
-
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QLabel, QFrame, QMessageBox, QSpinBox, QGroupBox,
                              QRadioButton, QProgressBar, QTextEdit, QButtonGroup,
@@ -85,7 +84,31 @@ class YearSeparatorWorker(QThread):
 
                 # Rastgele giriş yapılmış hesap seç
                 random_user = random.choice(logged_users)
-                cookies_data = user_manager.get_user_cookies(random_user.get('kullanici_adi'))
+                # Çerez verilerini al
+                raw_cookies = user_manager.get_user_cookies(random_user.get('kullanici_adi'))
+
+                # MySQL'den gelen çerezleri uygun formata çevir
+                cookies_data = None
+                if raw_cookies:
+                    cookies_data = {}
+                    # Çerez isimlerini kontrol et ve değerleri ata
+                    target_cookies = [
+                        'auth_token', 'gt', 'guest_id', 'twid', 'lang', '__cf_bm',
+                        'att', 'ct0', 'd_prefs', 'dnt', 'guest_id_ads', 
+                        'guest_id_marketing', 'kdt', 'personalization_id'
+                    ]
+
+                    for cookie_name in target_cookies:
+                        if cookie_name in raw_cookies and raw_cookies[cookie_name]:
+                            cookies_data[cookie_name] = raw_cookies[cookie_name]
+                        elif cookie_name in ['d_prefs', 'dnt']:
+                            # d_prefs ve dnt null ise "1" değerini ata
+                            cookies_data[cookie_name] = "1"
+
+                    # En az bir önemli çerez var mı kontrol et
+                    essential_cookies = ['auth_token', 'ct0', 'guest_id']
+                    if not any(cookie in cookies_data for cookie in essential_cookies):
+                        cookies_data = None
 
                 if not cookies_data:
                     self.log_updated.emit(f"⚠️ {random_user.get('kullanici_adi')} çerezleri bulunamadı, atlanıyor")
@@ -258,7 +281,7 @@ class YearSeparatorWindow(QWidget):
         header_frame = QFrame()
         header_frame.setObjectName("headerFrame")
         header_frame.setFixedHeight(60)
-        
+
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(15, 10, 15, 10)
 
