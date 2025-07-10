@@ -426,6 +426,30 @@ class MySQLManager:
                 connection.close()
     
     @handle_exception
+    def get_target_proxy(self, username):
+        """Hedef hesabın proxy bilgilerini getir"""
+        connection = self.get_connection()
+        if not connection:
+            return None
+        
+        try:
+            cursor = connection.cursor()
+            query = "SELECT proxy_ip, proxy_port FROM hedef_hesaplar WHERE kullanici_adi = %s"
+            cursor.execute(query, (username,))
+            result = cursor.fetchone()
+            
+            if result and result[0]:
+                return f"http://{result[0]}:{result[1]}" if result[1] else result[0]
+            return None
+        except Error as e:
+            logger.error(f"❌ Hedef hesap proxy getirme hatası: {e}")
+            return None
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
     def import_targets_from_file(self, file_path):
         """Dosyadan hedef hesapları içe aktar"""
         try:
