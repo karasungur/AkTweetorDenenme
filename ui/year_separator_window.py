@@ -90,7 +90,7 @@ class YearSeparatorWorker(QThread):
                     processed += 1
                     self.progress_updated.emit(processed, total_accounts)
                     continue
-                    
+
                 # Kullanıcının kendine ait proxysi varsa al
                 user_proxy = user_manager.get_user_proxy(username) if self.account_type == 'login' else mysql_manager.get_target_proxy(username)
 
@@ -223,6 +223,8 @@ class YearSeparatorWindow(QWidget):
     def init_ui(self):
         """UI'yi başlat"""
         layout = QVBoxLayout()
+        layout.setSpacing(8)
+        layout.setContentsMargins(15, 15, 15, 15)
 
         # Header
         header_layout = QHBoxLayout()
@@ -470,7 +472,7 @@ class YearSeparatorWindow(QWidget):
         if accounts:
             for account in accounts:
                 username = account.get('kullanici_adi', '')
-                
+
                 # Twitter oluşturma tarihi kontrolü
                 if self.login_accounts_radio.isChecked():
                     twitter_date = user_manager.get_user_twitter_creation_date(username)
@@ -484,7 +486,7 @@ class YearSeparatorWindow(QWidget):
                     item_text = f"❌ {username} - Twitter tarihi: Bilinmiyor"
 
                 item = QListWidgetItem(item_text)
-                
+
                 # Renk ayarla
                 if twitter_date:
                     item.setForeground(QColor(self.colors.get('success', '#4CAF50')))
@@ -500,6 +502,8 @@ class YearSeparatorWindow(QWidget):
     def init_ui(self):
         """UI'yi başlat"""
         layout = QVBoxLayout()
+        layout.setSpacing(8)
+        layout.setContentsMargins(15, 15, 15, 15)
 
         # Header
         header_layout = QHBoxLayout()
