@@ -106,7 +106,7 @@ class MySQLManager:
                 telefon VARCHAR(20),
                 durum ENUM('aktif', 'pasif', 'banli') DEFAULT 'aktif',
                 profil_klasoru VARCHAR(255),
-                twitter_olusturma_tarihi DATE,
+                twitter_olusturma_tarihi DATETIME,
                 proxy_ip VARCHAR(255),
                 proxy_port INT,
                 son_giris TIMESTAMP NULL,
@@ -126,7 +126,7 @@ class MySQLManager:
                 kullanici_adi VARCHAR(255) NOT NULL,
                 yil INT,
                 ay INT,
-                twitter_olusturma_tarihi DATE,
+                twitter_olusturma_tarihi DATETIME,
                 proxy_ip VARCHAR(255),
                 proxy_port INT,
                 durum ENUM('aktif', 'pasif') DEFAULT 'aktif',
@@ -168,10 +168,10 @@ class MySQLManager:
             
             # kullanicilar tablosu için eksik sütunları kontrol et ve ekle
             columns_to_add = [
-                ('kullanicilar', 'twitter_olusturma_tarihi', 'DATE'),
+                ('kullanicilar', 'twitter_olusturma_tarihi', 'DATETIME'),
                 ('kullanicilar', 'proxy_ip', 'VARCHAR(255)'),
                 ('kullanicilar', 'proxy_port', 'INT'),
-                ('hedef_hesaplar', 'twitter_olusturma_tarihi', 'DATE'),
+                ('hedef_hesaplar', 'twitter_olusturma_tarihi', 'DATETIME'),
                 ('hedef_hesaplar', 'proxy_ip', 'VARCHAR(255)'),
                 ('hedef_hesaplar', 'proxy_port', 'INT')
             ]
