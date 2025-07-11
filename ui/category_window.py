@@ -3,7 +3,8 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                              QLabel, QFrame, QMessageBox, QListWidget, QListWidgetItem,
                              QComboBox, QLineEdit, QTextEdit, QGroupBox, QSplitter,
                              QTreeWidget, QTreeWidgetItem, QFileDialog, QProgressBar,
-                             QTabWidget, QGridLayout, QScrollArea, QButtonGroup, QRadioButton)
+                             QTabWidget, QGridLayout, QScrollArea, QButtonGroup, QRadioButton,
+                             QCheckBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont, QIcon
 from database.mysql import mysql_manager
