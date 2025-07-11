@@ -839,7 +839,7 @@ class CategoryWindow(QWidget):
         msg.setWindowTitle("Hata")
         msg.setText(message)
         msg.exec_()
-    
+
     def load_categories(self):
         """Kategorileri yükle"""
         try:
@@ -848,11 +848,11 @@ class CategoryWindow(QWidget):
             self.update_assignment_combos()
         except Exception as e:
             self.show_error(f"Kategoriler yüklenirken hata: {str(e)}")
-    
+
     def update_categories_tree(self):
         """Kategori ağacını güncelle"""
         self.categories_tree.clear()
-        
+
         # Kategorileri grupla
         grouped = {}
         for category in self.categories:
@@ -860,31 +860,31 @@ class CategoryWindow(QWidget):
             if key not in grouped:
                 grouped[key] = []
             grouped[key].append(category)
-        
+
         # Ağaca ekle
         for (kategori_turu, ana_kategori), subs in grouped.items():
             main_item = QTreeWidgetItem([ana_kategori, kategori_turu, ""])
             main_item.setExpanded(True)
-            
+
             for sub in subs:
-                sub_item = QTreeWidgetItem([
+                sub_item = QTreeWidgetItem([Syntax error in category_window.py has been removed.
                     sub['alt_kategori'] or "Genel",
                     sub['kategori_turu'],
                     sub['aciklama'] or ""
                 ])
                 main_item.addChild(sub_item)
-            
+
             self.categories_tree.addTopLevelItem(main_item)
-    
+
     def filter_categories(self):
         """Kategorileri filtrele"""
         filter_type = self.category_filter_combo.currentText()
-        
+
         if filter_type == "Tümü":
             filtered_categories = self.categories
         else:
             filtered_categories = [c for c in self.categories if c['kategori_turu'] == filter_type]
-        
+
         # Ağacı güncelle
         self.categories_tree.clear()
         grouped = {}
@@ -893,11 +893,11 @@ class CategoryWindow(QWidget):
             if key not in grouped:
                 grouped[key] = []
             grouped[key].append(category)
-        
+
         for (kategori_turu, ana_kategori), subs in grouped.items():
             main_item = QTreeWidgetItem([ana_kategori, kategori_turu, ""])
             main_item.setExpanded(True)
-            
+
             for sub in subs:
                 sub_item = QTreeWidgetItem([
                     sub['alt_kategori'] or "Genel",
@@ -905,20 +905,20 @@ class CategoryWindow(QWidget):
                     sub['aciklama'] or ""
                 ])
                 main_item.addChild(sub_item)
-            
+
             self.categories_tree.addTopLevelItem(main_item)
-    
+
     def add_new_category(self):
         """Yeni kategori ekle"""
         kategori_turu = self.category_type_combo.currentText()
         ana_kategori = self.main_category_entry.text().strip()
         alt_kategori = self.sub_category_entry.text().strip() or None
         aciklama = self.description_entry.text().strip() or None
-        
+
         if not ana_kategori:
             self.show_warning("Ana kategori boş olamaz!")
             return
-        
+
         if mysql_manager.add_category(kategori_turu, ana_kategori, alt_kategori, aciklama):
             self.show_info("✅ Kategori başarıyla eklendi!")
             self.main_category_entry.clear()
@@ -927,28 +927,28 @@ class CategoryWindow(QWidget):
             self.load_categories()
         else:
             self.show_warning("Bu kategori zaten mevcut!")
-    
+
     def proceed_to_categorization(self):
         """Kategorilendirme tab'ına geç"""
         if not self.selected_account_type:
             self.show_warning("Önce hesap türü seçin!")
             return
-        
+
         self.tab_widget.setCurrentIndex(2)  # Hesap kategorilendirme tab'ı
         self.load_selected_accounts()
-    
+
     def load_selected_accounts(self):
         """Seçili hesapları kategorilendirme tab'ına yükle"""
         self.categorization_accounts_list.clear()
-        
+
         if self.selected_account_type:
             for account in self.accounts:
                 self.categorization_accounts_list.addItem(account)
-    
+
     def update_assignment_combos(self):
         """Kategori checkbox'larını güncelle"""
         self.create_category_checkboxes()
-    
+
     def create_category_checkboxes(self):
         """Checkbox tabanlı kategori seçimi oluştur"""
         # Önceki widget'ları temizle
@@ -956,9 +956,9 @@ class CategoryWindow(QWidget):
             child = self.category_layout.itemAt(i).widget()
             if child:
                 child.setParent(None)
-        
+
         self.category_checkboxes.clear()
-        
+
         # Kategorileri grupla
         grouped_categories = {}
         for category in self.categories:
@@ -966,26 +966,26 @@ class CategoryWindow(QWidget):
             if main_cat not in grouped_categories:
                 grouped_categories[main_cat] = []
             grouped_categories[main_cat].append(category)
-        
+
         # Her ana kategori için grup oluştur
         for main_category, sub_categories in grouped_categories.items():
             # Ana kategori grubu
             group_frame = QFrame()
             group_frame.setObjectName("categoryGroupFrame")
             group_layout = QVBoxLayout()
-            
+
             # Ana kategori başlığı
             title_label = QLabel(f"📂 {main_category}")
             title_label.setObjectName("categoryGroupTitle")
             group_layout.addWidget(title_label)
-            
+
             # Alt kategoriler için container
             sub_container = QFrame()
             sub_container.setObjectName("categorySubContainer")
             sub_layout = QVBoxLayout()
             sub_layout.setContentsMargins(20, 10, 10, 10)
             sub_layout.setSpacing(8)
-            
+
             # Alt kategoriler
             for category in sub_categories:
                 if category['alt_kategori']:
@@ -993,10 +993,10 @@ class CategoryWindow(QWidget):
                     checkbox_frame.setObjectName("categoryCheckboxFrame")
                     checkbox_layout = QHBoxLayout()
                     checkbox_layout.setContentsMargins(0, 0, 0, 0)
-                    
+
                     checkbox = QCheckBox(category['alt_kategori'])
                     checkbox.setObjectName("categoryCheckbox")
-                    
+
                     # Açıklama varsa göster
                     if category['aciklama']:
                         info_label = QLabel(f"({category['aciklama']})")
@@ -1005,32 +1005,32 @@ class CategoryWindow(QWidget):
                         checkbox_layout.addWidget(info_label, 0)
                     else:
                         checkbox_layout.addWidget(checkbox, 1)
-                    
+
                     checkbox_frame.setLayout(checkbox_layout)
                     sub_layout.addWidget(checkbox_frame)
-                    
+
                     # Checkbox'ı kaydet
                     self.category_checkboxes[category['id']] = checkbox
-            
+
             sub_container.setLayout(sub_layout)
             group_layout.addWidget(sub_container)
             group_frame.setLayout(group_layout)
-            
+
             self.category_layout.addWidget(group_frame)
-        
+
         # Boş alan ekle
         self.category_layout.addStretch()
-    
+
     def load_account_category_checkboxes(self, account):
         """Hesabın kategorilerini checkbox'larda işaretle"""
         # Önce tüm checkbox'ları temizle
         for checkbox in self.category_checkboxes.values():
             checkbox.setChecked(False)
-        
+
         try:
             # Hesabın kategorilerini getir
             account_categories = mysql_manager.get_account_categories(account, self.selected_account_type)
-            
+
             # Kategorileri checkbox'larda işaretle
             for account_cat in account_categories:
                 for cat_id, checkbox in self.category_checkboxes.items():
@@ -1043,46 +1043,46 @@ class CategoryWindow(QWidget):
                         break
         except Exception as e:
             self.show_error(f"Hesap kategorileri yüklenirken hata: {str(e)}")
-    
+
     def save_category_assignments(self):
         """Checkbox durumlarına göre kategorileri kaydet"""
         selected_items = self.categorization_accounts_list.selectedItems()
         if not selected_items:
             self.show_warning("Hesap seçin!")
             return
-        
+
         account = selected_items[0].text()
         saved_count = 0
-        
+
         try:
             # Önce bu hesabın tüm kategorilerini sil
             mysql_manager.delete_account_categories(account, self.selected_account_type)
-            
+
             # Checkbox durumlarına göre kaydet
             for cat_id, checkbox in self.category_checkboxes.items():
                 value = "Evet" if checkbox.isChecked() else "Hayır"
-                
+
                 if mysql_manager.assign_category_to_account(account, self.selected_account_type, cat_id, value):
                     saved_count += 1
-            
+
             self.show_info(f"✅ {saved_count} kategori başarıyla kaydedildi!")
-            
+
         except Exception as e:
             self.show_error(f"Kategoriler kaydedilirken hata: {str(e)}")
-    
+
     def on_account_selected(self):
         """Hesap seçildiğinde"""
         selected_items = self.categorization_accounts_list.selectedItems()
         if not selected_items:
             self.selected_account_label.setText("Hesap seçilmedi")
             return
-        
+
         account = selected_items[0].text()
         self.selected_account_label.setText(f"🎯 Seçili Hesap: {account}")
-        
+
         # Bu hesabın mevcut kategorilerini checkbox'larda göster
         self.load_account_category_checkboxes(account)
-    
+
     def browse_categories_file(self):
         """Kategori dosyası seç"""
         file_path, _ = QFileDialog.getOpenFileName(
@@ -1090,7 +1090,7 @@ class CategoryWindow(QWidget):
         )
         if file_path:
             self.import_categories_path.setText(file_path)
-    
+
     def browse_account_categories_file(self):
         """Hesap kategorileri dosyası seç"""
         file_path, _ = QFileDialog.getOpenFileName(
@@ -1098,55 +1098,55 @@ class CategoryWindow(QWidget):
         )
         if file_path:
             self.import_account_categories_path.setText(file_path)
-    
+
     def import_categories(self):
         """Kategorileri içe aktar"""
         file_path = self.import_categories_path.text()
         if not file_path or not os.path.exists(file_path):
             self.show_warning("Geçerli dosya seçin!")
             return
-        
+
         self.progress_bar.setVisible(True)
         self.log_area.append("📥 Kategori içe aktarma başlatıldı...")
-        
+
         # Thread'i başlat
         self.import_thread = CategoryImportThread(file_path, 'categories')
         self.import_thread.log_signal.connect(self.log_area.append)
         self.import_thread.finished_signal.connect(self.on_import_finished)
         self.import_thread.start()
-    
+
     def import_account_categories(self):
         """Hesap kategorilerini içe aktar"""
         file_path = self.import_account_categories_path.text()
         hesap_turu = self.import_account_type_combo.currentText()
-        
+
         if not file_path or not os.path.exists(file_path):
             self.show_warning("Geçerli dosya seçin!")
             return
-        
+
         self.progress_bar.setVisible(True)
         self.log_area.append(f"🏷️ Hesap kategorileri içe aktarma başlatıldı ({hesap_turu})...")
-        
+
         # Thread'i başlat
         self.import_thread = CategoryImportThread(file_path, 'account_categories', hesap_turu)
         self.import_thread.log_signal.connect(self.log_area.append)
         self.import_thread.finished_signal.connect(self.on_import_finished)
         self.import_thread.start()
-    
+
     def on_import_finished(self, count):
         """İçe aktarma tamamlandığında"""
         self.progress_bar.setVisible(False)
         self.load_categories()
-        
+
         if count > 0:
             self.show_info(f"✅ {count} öğe başarıyla içe aktarıldı!")
         else:
             self.show_warning("Hiçbir öğe içe aktarılamadı!")
-    
+
     def return_to_main(self):
         """Ana menüye dön"""
         self.return_callback()
-    
+
     def show_info(self, message):
         """Bilgi mesajı göster"""
         msg = QMessageBox()
@@ -1154,7 +1154,7 @@ class CategoryWindow(QWidget):
         msg.setWindowTitle("Bilgi")
         msg.setText(message)
         msg.exec_()
-    
+
     def show_warning(self, message):
         """Uyarı mesajı göster"""
         msg = QMessageBox()
@@ -1162,12 +1162,11 @@ class CategoryWindow(QWidget):
         msg.setWindowTitle("Uyarı")
         msg.setText(message)
         msg.exec_()
-    
+
     def show_error(self, message):
         """Hata mesajı göster"""
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Critical)
         msg.setWindowTitle("Hata")
         msg.setText(message)
-        msg.exec_()            
-```python
+        msg.exec_()
