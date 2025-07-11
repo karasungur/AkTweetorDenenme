@@ -310,32 +310,28 @@ class CategoryWindow(QWidget):
         self.selected_account_label = QLabel("Hesap seçilmedi")
         self.selected_account_label.setObjectName("selectedAccountLabel")
         
-        # Kategori seçimi
-        category_selection_layout = QGridLayout()
+        # Kategori seçimi - Scroll area ile
+        category_scroll = QScrollArea()
+        category_scroll.setObjectName("categoryScrollArea")
+        category_scroll.setWidgetResizable(True)
+        category_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         
-        category_selection_layout.addWidget(QLabel("Ana Kategori:"), 0, 0)
-        self.assignment_main_combo = QComboBox()
-        self.assignment_main_combo.setObjectName("categoryCombo")
-        self.assignment_main_combo.currentTextChanged.connect(self.load_sub_categories)
-        category_selection_layout.addWidget(self.assignment_main_combo, 0, 1)
+        category_widget = QWidget()
+        self.category_layout = QVBoxLayout()
+        self.category_layout.setSpacing(12)
         
-        category_selection_layout.addWidget(QLabel("Alt Kategori:"), 1, 0)
-        self.assignment_sub_combo = QComboBox()
-        self.assignment_sub_combo.setObjectName("categoryCombo")
-        category_selection_layout.addWidget(self.assignment_sub_combo, 1, 1)
+        # Kategori gruplarını oluştur
+        self.category_checkboxes = {}
+        self.create_category_checkboxes()
         
-        category_selection_layout.addWidget(QLabel("Değer:"), 2, 0)
-        self.assignment_value_entry = QLineEdit()
-        self.assignment_value_entry.setObjectName("categoryInput")
-        self.assignment_value_entry.setPlaceholderText("Kategori değeri girin")
-        category_selection_layout.addWidget(self.assignment_value_entry, 2, 1)
+        category_widget.setLayout(self.category_layout)
+        category_scroll.setWidget(category_widget)
         
-        # Atama butonu
-        assign_btn = QPushButton("✅ Kategori Ata")
-        assign_btn.setObjectName("successButton")
-        assign_btn.clicked.connect(self.assign_category)
-        assign_btn.setCursor(Qt.PointingHandCursor)
-        category_selection_layout.addWidget(assign_btn, 3, 0, 1, 2)
+        # Kaydet butonu
+        save_btn = QPushButton("💾 Kategori Ayarlarını Kaydet")
+        save_btn.setObjectName("successButton")
+        save_btn.clicked.connect(self.save_category_assignments)
+        save_btn.setCursor(Qt.PointingHandCursor)
         
         # Mevcut kategoriler
         current_categories_label = QLabel("📋 Mevcut Kategoriler:")
@@ -345,11 +341,10 @@ class CategoryWindow(QWidget):
         self.current_categories_list.setObjectName("currentCategoriesList")
         
         assignment_layout.addWidget(self.selected_account_label)
+        assignment_layout.addSpacing(15)
+        assignment_layout.addWidget(category_scroll, 1)
         assignment_layout.addSpacing(10)
-        assignment_layout.addLayout(category_selection_layout)
-        assignment_layout.addSpacing(10)
-        assignment_layout.addWidget(current_categories_label)
-        assignment_layout.addWidget(self.current_categories_list)
+        assignment_layout.addWidget(save_btn)
         
         assignment_panel.setLayout(assignment_layout)
         
@@ -682,6 +677,82 @@ class CategoryWindow(QWidget):
             font-weight: 600;
             color: {self.colors['text_primary']};
         }}
+        
+        #categoryScrollArea {{
+            border: 1px solid {self.colors['border']};
+            border-radius: 8px;
+            background: {self.colors['background']};
+        }}
+        
+        #categoryGroupFrame {{
+            background: {self.colors['background']};
+            border: 1px solid {self.colors['border']};
+            border-radius: 8px;
+            margin: 5px 0px;
+        }}
+        
+        #categoryGroupTitle {{
+            font-size: 16px;
+            font-weight: 700;
+            color: {self.colors['text_primary']};
+            padding: 12px 15px 8px 15px;
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 {self.colors['background_alt']}, stop:1 {self.colors['background']});
+            border-radius: 6px 6px 0px 0px;
+            border-bottom: 1px solid {self.colors['border']};
+        }}
+        
+        #categorySubContainer {{
+            background: {self.colors['background']};
+            border-radius: 0px 0px 6px 6px;
+        }}
+        
+        #categoryCheckboxFrame {{
+            background: {self.colors['background']};
+            border: 1px solid transparent;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin: 2px 0px;
+        }}
+        
+        #categoryCheckboxFrame:hover {{
+            background: {self.colors['background_alt']};
+            border: 1px solid {self.colors['border']};
+        }}
+        
+        #categoryCheckbox {{
+            font-size: 14px;
+            font-weight: 500;
+            color: {self.colors['text_primary']};
+            spacing: 8px;
+        }}
+        
+        #categoryCheckbox::indicator {{
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 2px solid {self.colors['border']};
+            background: {self.colors['background']};
+        }}
+        
+        #categoryCheckbox::indicator:hover {{
+            border: 2px solid {self.colors['primary']};
+            background: {self.colors['background_alt']};
+        }}
+        
+        #categoryCheckbox::indicator:checked {{
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 {self.colors['primary']}, stop:1 {self.colors['primary_end']});
+            border: 2px solid {self.colors['primary']};
+            image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCAxMCAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIuNSA1TDQgNi41TDcuNSAzIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=);
+        }}
+        
+        #categoryInfoLabel {{
+            font-size: 12px;
+            color: {self.colors['text_secondary']};
+            font-style: italic;
+            margin-left: 8px;
+        }}
         """
         
         self.setStyleSheet(style)
@@ -827,96 +898,142 @@ class CategoryWindow(QWidget):
                 self.categorization_accounts_list.addItem(account)
     
     def update_assignment_combos(self):
-        """Atama combobox'larını güncelle"""
-        self.assignment_main_combo.clear()
+        """Kategori checkbox'larını güncelle"""
+        self.create_category_checkboxes()
+    
+    def create_category_checkboxes(self):
+        """Checkbox tabanlı kategori seçimi oluştur"""
+        # Önceki widget'ları temizle
+        for i in reversed(range(self.category_layout.count())):
+            child = self.category_layout.itemAt(i).widget()
+            if child:
+                child.setParent(None)
         
-        # Ana kategorileri ekle
-        main_categories = set()
+        self.category_checkboxes.clear()
+        
+        # Kategorileri grupla
+        grouped_categories = {}
         for category in self.categories:
-            main_categories.add(category['ana_kategori'])
+            main_cat = category['ana_kategori']
+            if main_cat not in grouped_categories:
+                grouped_categories[main_cat] = []
+            grouped_categories[main_cat].append(category)
         
-        for main_cat in sorted(main_categories):
-            self.assignment_main_combo.addItem(main_cat)
+        # Her ana kategori için grup oluştur
+        for main_category, sub_categories in grouped_categories.items():
+            # Ana kategori grubu
+            group_frame = QFrame()
+            group_frame.setObjectName("categoryGroupFrame")
+            group_layout = QVBoxLayout()
+            
+            # Ana kategori başlığı
+            title_label = QLabel(f"📂 {main_category}")
+            title_label.setObjectName("categoryGroupTitle")
+            group_layout.addWidget(title_label)
+            
+            # Alt kategoriler için container
+            sub_container = QFrame()
+            sub_container.setObjectName("categorySubContainer")
+            sub_layout = QVBoxLayout()
+            sub_layout.setContentsMargins(20, 10, 10, 10)
+            sub_layout.setSpacing(8)
+            
+            # Alt kategoriler
+            for category in sub_categories:
+                if category['alt_kategori']:
+                    checkbox_frame = QFrame()
+                    checkbox_frame.setObjectName("categoryCheckboxFrame")
+                    checkbox_layout = QHBoxLayout()
+                    checkbox_layout.setContentsMargins(0, 0, 0, 0)
+                    
+                    checkbox = QCheckBox(category['alt_kategori'])
+                    checkbox.setObjectName("categoryCheckbox")
+                    
+                    # Açıklama varsa göster
+                    if category['aciklama']:
+                        info_label = QLabel(f"({category['aciklama']})")
+                        info_label.setObjectName("categoryInfoLabel")
+                        checkbox_layout.addWidget(checkbox, 1)
+                        checkbox_layout.addWidget(info_label, 0)
+                    else:
+                        checkbox_layout.addWidget(checkbox, 1)
+                    
+                    checkbox_frame.setLayout(checkbox_layout)
+                    sub_layout.addWidget(checkbox_frame)
+                    
+                    # Checkbox'ı kaydet
+                    self.category_checkboxes[category['id']] = checkbox
+            
+            sub_container.setLayout(sub_layout)
+            group_layout.addWidget(sub_container)
+            group_frame.setLayout(group_layout)
+            
+            self.category_layout.addWidget(group_frame)
+        
+        # Boş alan ekle
+        self.category_layout.addStretch()
     
-    def load_sub_categories(self):
-        """Alt kategorileri yükle"""
-        self.assignment_sub_combo.clear()
-        
-        main_category = self.assignment_main_combo.currentText()
-        if not main_category:
-            return
-        
-        # Bu ana kategoriye ait alt kategorileri bul
-        sub_categories = []
-        for category in self.categories:
-            if category['ana_kategori'] == main_category and category['alt_kategori']:
-                sub_categories.append(category['alt_kategori'])
-        
-        for sub_cat in sorted(set(sub_categories)):
-            self.assignment_sub_combo.addItem(sub_cat)
-    
-    def on_account_selected(self):
-        """Hesap seçildiğinde"""
-        selected_items = self.categorization_accounts_list.selectedItems()
-        if not selected_items:
-            self.selected_account_label.setText("Hesap seçilmedi")
-            self.current_categories_list.clear()
-            return
-        
-        account = selected_items[0].text()
-        self.selected_account_label.setText(f"🎯 Seçili Hesap: {account}")
-        
-        # Bu hesabın mevcut kategorilerini yükle
-        self.load_account_categories(account)
-    
-    def load_account_categories(self, account):
-        """Hesabın kategorilerini yükle"""
-        self.current_categories_list.clear()
+    def load_account_category_checkboxes(self, account):
+        """Hesabın kategorilerini checkbox'larda işaretle"""
+        # Önce tüm checkbox'ları temizle
+        for checkbox in self.category_checkboxes.values():
+            checkbox.setChecked(False)
         
         try:
-            categories = mysql_manager.get_account_categories(account, self.selected_account_type)
+            # Hesabın kategorilerini getir
+            account_categories = mysql_manager.get_account_categories(account, self.selected_account_type)
             
-            for category in categories:
-                item_text = f"{category['ana_kategori']} > {category['alt_kategori']} = {category['kategori_degeri']}"
-                self.current_categories_list.addItem(item_text)
-                
+            # Kategorileri checkbox'larda işaretle
+            for account_cat in account_categories:
+                for cat_id, checkbox in self.category_checkboxes.items():
+                    category = next((c for c in self.categories if c['id'] == cat_id), None)
+                    if (category and 
+                        category['ana_kategori'] == account_cat['ana_kategori'] and 
+                        category['alt_kategori'] == account_cat['alt_kategori'] and
+                        account_cat['kategori_degeri'] == 'Evet'):
+                        checkbox.setChecked(True)
+                        break
         except Exception as e:
             self.show_error(f"Hesap kategorileri yüklenirken hata: {str(e)}")
     
-    def assign_category(self):
-        """Kategori ata"""
+    def save_category_assignments(self):
+        """Checkbox durumlarına göre kategorileri kaydet"""
         selected_items = self.categorization_accounts_list.selectedItems()
         if not selected_items:
             self.show_warning("Hesap seçin!")
             return
         
         account = selected_items[0].text()
-        main_category = self.assignment_main_combo.currentText()
-        sub_category = self.assignment_sub_combo.currentText()
-        value = self.assignment_value_entry.text().strip()
+        saved_count = 0
         
-        if not all([main_category, sub_category, value]):
-            self.show_warning("Tüm alanları doldurun!")
+        try:
+            # Önce bu hesabın tüm kategorilerini sil
+            mysql_manager.delete_account_categories(account, self.selected_account_type)
+            
+            # Checkbox durumlarına göre kaydet
+            for cat_id, checkbox in self.category_checkboxes.items():
+                value = "Evet" if checkbox.isChecked() else "Hayır"
+                
+                if mysql_manager.assign_category_to_account(account, self.selected_account_type, cat_id, value):
+                    saved_count += 1
+            
+            self.show_info(f"✅ {saved_count} kategori başarıyla kaydedildi!")
+            
+        except Exception as e:
+            self.show_error(f"Kategoriler kaydedilirken hata: {str(e)}")
+    
+    def on_account_selected(self):
+        """Hesap seçildiğinde"""
+        selected_items = self.categorization_accounts_list.selectedItems()
+        if not selected_items:
+            self.selected_account_label.setText("Hesap seçilmedi")
             return
         
-        # Kategori ID'sini bul
-        category_id = None
-        for category in self.categories:
-            if category['ana_kategori'] == main_category and category['alt_kategori'] == sub_category:
-                category_id = category['id']
-                break
+        account = selected_items[0].text()
+        self.selected_account_label.setText(f"🎯 Seçili Hesap: {account}")
         
-        if not category_id:
-            self.show_error("Kategori bulunamadı!")
-            return
-        
-        # Atama yap
-        if mysql_manager.assign_category_to_account(account, self.selected_account_type, category_id, value):
-            self.show_info("✅ Kategori başarıyla atandı!")
-            self.assignment_value_entry.clear()
-            self.load_account_categories(account)
-        else:
-            self.show_error("Kategori atanamadı!")
+        # Bu hesabın mevcut kategorilerini checkbox'larda göster
+        self.load_account_category_checkboxes(account)
     
     def browse_categories_file(self):
         """Kategori dosyası seç"""

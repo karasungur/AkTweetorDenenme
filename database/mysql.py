@@ -655,6 +655,36 @@ class MySQLManager:
                 connection.close()
     
     @handle_exception
+    def delete_account_categories(self, kullanici_adi, hesap_turu):
+        """Hesabın tüm kategorilerini sil"""
+        connection = self.get_connection()
+        if not connection:
+            return False
+        
+        try:
+            cursor = connection.cursor()
+            
+            # Hesap türüne göre tabloyu belirle
+            table_name = "kullanici_kategorileri" if hesap_turu == "giris_yapilan" else "hedef_hesap_kategorileri"
+            
+            delete_query = f"""
+            DELETE FROM {table_name} 
+            WHERE kullanici_adi = %s
+            """
+            cursor.execute(delete_query, (kullanici_adi,))
+            connection.commit()
+            
+            return True
+        except Error as e:
+            logger.error(f"❌ Hesap kategorileri silme hatası: {e}")
+            connection.rollback()
+            return False
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
     def assign_category_to_account(self, kullanici_adi, hesap_turu, kategori_id, kategori_degeri):
         """Hesaba kategori ata"""
         connection = self.get_connection()
