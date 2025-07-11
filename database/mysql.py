@@ -144,12 +144,50 @@ class MySQLManager:
             
             cursor.execute(create_targets_table)
             
+            # profil_kategorileri tablosu
+            create_profile_categories_table = """
+            CREATE TABLE IF NOT EXISTS profil_kategorileri (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                kategori_turu ENUM('profil', 'icerik') NOT NULL,
+                ana_kategori VARCHAR(255) NOT NULL,
+                alt_kategori VARCHAR(255),
+                aciklama TEXT,
+                olusturma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_kategori_turu (kategori_turu),
+                INDEX idx_ana_kategori (ana_kategori)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """
+            
+            cursor.execute(create_profile_categories_table)
+            
+            # hesap_kategorileri tablosu
+            create_account_categories_table = """
+            CREATE TABLE IF NOT EXISTS hesap_kategorileri (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                kullanici_adi VARCHAR(255) NOT NULL,
+                hesap_turu ENUM('giris_yapilan', 'hedef') NOT NULL,
+                kategori_id INT,
+                kategori_degeri VARCHAR(255),
+                olusturma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                guncelleme_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (kategori_id) REFERENCES profil_kategorileri(id) ON DELETE CASCADE,
+                INDEX idx_kullanici_adi (kullanici_adi),
+                INDEX idx_hesap_turu (hesap_turu),
+                INDEX idx_kategori_id (kategori_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """
+            
+            cursor.execute(create_account_categories_table)
+            
             connection.commit()
             print("✅ Yeni tablo yapısı oluşturuldu")
             logger.info("✅ MySQL tabloları oluşturuldu/kontrol edildi")
             
             # Eksik sütunları ekle
             self.add_missing_columns()
+            
+            # Varsayılan kategorileri ekle
+            self.add_default_categories()
             
         except Error as e:
             logger.error(f"❌ Tablo oluşturma hatası: {e}")
@@ -495,6 +533,266 @@ class MySQLManager:
             return imported_count
         except Exception as e:
             logger.error(f"❌ Dosyadan içe aktarma hatası: {e}")
+            return 0
+    
+    @handle_exception
+    def add_default_categories(self):
+        """Varsayılan profil kategorilerini ekle"""
+        connection = self.get_connection()
+        if not connection:
+            return
+        
+        try:
+            cursor = connection.cursor()
+            
+            # Varsayılan kategoriler
+            default_categories = [
+                # Profil kategorileri
+                ('profil', 'Yaş Grubu', 'Genç (18-30)', 'Genç yaş grubundaki kullanıcılar'),
+                ('profil', 'Yaş Grubu', 'Orta yaş (31-50)', 'Orta yaş grubundaki kullanıcılar'),
+                ('profil', 'Yaş Grubu', 'Yaşlı (50+)', 'Yaşlı kullanıcılar'),
+                ('profil', 'Cinsiyet', 'Erkek', 'Erkek kullanıcılar'),
+                ('profil', 'Cinsiyet', 'Kadın', 'Kadın kullanıcılar'),
+                ('profil', 'Cinsiyet', 'Belirtmeyen / Diğer', 'Cinsiyet belirtmeyen kullanıcılar'),
+                ('profil', 'Profil Fotoğrafı', 'Fotoğraf var', 'Profil fotoğrafı olan hesaplar'),
+                ('profil', 'Profil Fotoğrafı', 'Fotoğraf yok', 'Profil fotoğrafı olmayan hesaplar'),
+            ]
+            
+            # Her kategoriyi kontrol et ve yoksa ekle
+            for kategori_turu, ana_kategori, alt_kategori, aciklama in default_categories:
+                check_query = """
+                SELECT id FROM profil_kategorileri 
+                WHERE kategori_turu = %s AND ana_kategori = %s AND alt_kategori = %s
+                """
+                cursor.execute(check_query, (kategori_turu, ana_kategori, alt_kategori))
+                
+                if not cursor.fetchone():
+                    insert_query = """
+                    INSERT INTO profil_kategorileri (kategori_turu, ana_kategori, alt_kategori, aciklama)
+                    VALUES (%s, %s, %s, %s)
+                    """
+                    cursor.execute(insert_query, (kategori_turu, ana_kategori, alt_kategori, aciklama))
+            
+            connection.commit()
+            
+        except Error as e:
+            logger.error(f"❌ Varsayılan kategori ekleme hatası: {e}")
+            connection.rollback()
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
+    def get_categories(self, kategori_turu=None):
+        """Kategorileri getir"""
+        connection = self.get_connection()
+        if not connection:
+            return []
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            if kategori_turu:
+                query = """
+                SELECT * FROM profil_kategorileri 
+                WHERE kategori_turu = %s 
+                ORDER BY ana_kategori, alt_kategori
+                """
+                cursor.execute(query, (kategori_turu,))
+            else:
+                query = """
+                SELECT * FROM profil_kategorileri 
+                ORDER BY kategori_turu, ana_kategori, alt_kategori
+                """
+                cursor.execute(query)
+            
+            return cursor.fetchall()
+        except Error as e:
+            logger.error(f"❌ Kategori getirme hatası: {e}")
+            return []
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
+    def add_category(self, kategori_turu, ana_kategori, alt_kategori=None, aciklama=None):
+        """Yeni kategori ekle"""
+        connection = self.get_connection()
+        if not connection:
+            return False
+        
+        try:
+            cursor = connection.cursor()
+            
+            # Var olup olmadığını kontrol et
+            check_query = """
+            SELECT id FROM profil_kategorileri 
+            WHERE kategori_turu = %s AND ana_kategori = %s AND alt_kategori = %s
+            """
+            cursor.execute(check_query, (kategori_turu, ana_kategori, alt_kategori))
+            
+            if cursor.fetchone():
+                return False  # Zaten var
+            
+            # Ekle
+            insert_query = """
+            INSERT INTO profil_kategorileri (kategori_turu, ana_kategori, alt_kategori, aciklama)
+            VALUES (%s, %s, %s, %s)
+            """
+            cursor.execute(insert_query, (kategori_turu, ana_kategori, alt_kategori, aciklama))
+            connection.commit()
+            
+            return True
+        except Error as e:
+            logger.error(f"❌ Kategori ekleme hatası: {e}")
+            connection.rollback()
+            return False
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
+    def assign_category_to_account(self, kullanici_adi, hesap_turu, kategori_id, kategori_degeri):
+        """Hesaba kategori ata"""
+        connection = self.get_connection()
+        if not connection:
+            return False
+        
+        try:
+            cursor = connection.cursor()
+            
+            # Var olan atamayı kontrol et
+            check_query = """
+            SELECT id FROM hesap_kategorileri 
+            WHERE kullanici_adi = %s AND hesap_turu = %s AND kategori_id = %s
+            """
+            cursor.execute(check_query, (kullanici_adi, hesap_turu, kategori_id))
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Güncelle
+                update_query = """
+                UPDATE hesap_kategorileri 
+                SET kategori_degeri = %s, guncelleme_tarihi = CURRENT_TIMESTAMP
+                WHERE id = %s
+                """
+                cursor.execute(update_query, (kategori_degeri, existing[0]))
+            else:
+                # Yeni ekle
+                insert_query = """
+                INSERT INTO hesap_kategorileri (kullanici_adi, hesap_turu, kategori_id, kategori_degeri)
+                VALUES (%s, %s, %s, %s)
+                """
+                cursor.execute(insert_query, (kullanici_adi, hesap_turu, kategori_id, kategori_degeri))
+            
+            connection.commit()
+            return True
+        except Error as e:
+            logger.error(f"❌ Kategori atama hatası: {e}")
+            connection.rollback()
+            return False
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
+    def get_account_categories(self, kullanici_adi, hesap_turu):
+        """Hesabın kategorilerini getir"""
+        connection = self.get_connection()
+        if not connection:
+            return []
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            query = """
+            SELECT hk.*, pk.ana_kategori, pk.alt_kategori, pk.aciklama
+            FROM hesap_kategorileri hk
+            JOIN profil_kategorileri pk ON hk.kategori_id = pk.id
+            WHERE hk.kullanici_adi = %s AND hk.hesap_turu = %s
+            ORDER BY pk.ana_kategori, pk.alt_kategori
+            """
+            cursor.execute(query, (kullanici_adi, hesap_turu))
+            return cursor.fetchall()
+        except Error as e:
+            logger.error(f"❌ Hesap kategori getirme hatası: {e}")
+            return []
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
+    def import_categories_from_file(self, file_path):
+        """Dosyadan kategorileri içe aktar - Format: kategori_turu:ana_kategori:alt_kategori:aciklama"""
+        try:
+            imported_count = 0
+            with open(file_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    
+                    parts = line.split(':')
+                    if len(parts) >= 3:
+                        kategori_turu = parts[0].strip()
+                        ana_kategori = parts[1].strip()
+                        alt_kategori = parts[2].strip() if parts[2].strip() else None
+                        aciklama = parts[3].strip() if len(parts) > 3 else None
+                        
+                        if self.add_category(kategori_turu, ana_kategori, alt_kategori, aciklama):
+                            imported_count += 1
+            
+            return imported_count
+        except Exception as e:
+            logger.error(f"❌ Kategori dosya içe aktarma hatası: {e}")
+            return 0
+    
+    @handle_exception
+    def import_account_categories_from_file(self, file_path, hesap_turu):
+        """Dosyadan hesap kategorilerini içe aktar - Format: kullanici_adi:ana_kategori:alt_kategori:deger"""
+        try:
+            imported_count = 0
+            with open(file_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    
+                    parts = line.split(':')
+                    if len(parts) >= 4:
+                        kullanici_adi = parts[0].strip()
+                        ana_kategori = parts[1].strip()
+                        alt_kategori = parts[2].strip()
+                        kategori_degeri = parts[3].strip()
+                        
+                        # Kategori ID'sini bul
+                        connection = self.get_connection()
+                        if connection:
+                            try:
+                                cursor = connection.cursor()
+                                query = """
+                                SELECT id FROM profil_kategorileri 
+                                WHERE ana_kategori = %s AND alt_kategori = %s
+                                """
+                                cursor.execute(query, (ana_kategori, alt_kategori))
+                                result = cursor.fetchone()
+                                
+                                if result:
+                                    kategori_id = result[0]
+                                    if self.assign_category_to_account(kullanici_adi, hesap_turu, kategori_id, kategori_degeri):
+                                        imported_count += 1
+                            finally:
+                                if connection.is_connected():
+                                    cursor.close()
+                                    connection.close()
+            
+            return imported_count
+        except Exception as e:
+            logger.error(f"❌ Hesap kategori dosya içe aktarma hatası: {e}")
             return 0
 
 # Global MySQL manager instance

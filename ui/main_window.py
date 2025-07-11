@@ -9,6 +9,7 @@ from .validation_window import ValidationWindow
 from .cookie_window import CookieWindow
 from .target_window import TargetWindow
 from .year_separator_window import YearSeparatorWindow
+from .category_window import CategoryWindow
 
 class GradientFrame(QFrame):
     """Gradient arka plan efekti için özel frame"""
@@ -228,7 +229,7 @@ class MainWindow(QMainWindow):
             [
                 ("📋", "Hedef Hesaplar", "RT'lenecek hesapları yönetin", self.open_target_menu, "success"),
                 ("📅", "Yıl Ayırıcı", "Hesapları yıllara göre ayırın", self.open_year_separator_menu, "warning"),
-                ("📂", "Kategori Yöneticisi", "Hesapları kategorilere ayırın", self.coming_soon, "secondary"),
+                ("📂", "Kategori Yöneticisi", "Hesapları kategorilere ayırın", self.open_category_menu, "secondary"),
             ],
             # Satır 3 - Otomasyon ve ayarlar
             [
@@ -596,6 +597,15 @@ class MainWindow(QMainWindow):
             self.stacked_widget.setCurrentWidget(year_separator_window)
         except Exception as e:
             self.show_error(f"Yıl Ayırıcı açılırken hata: {str(e)}")
+    
+    def open_category_menu(self):
+        """Kategori Yöneticisi menüsünü aç"""
+        try:
+            category_window = CategoryWindow(self.colors, self.return_to_main)
+            self.stacked_widget.addWidget(category_window)
+            self.stacked_widget.setCurrentWidget(category_window)
+        except Exception as e:
+            self.show_error(f"Kategori Yöneticisi açılırken hata: {str(e)}")
     
     def return_to_main(self):
         """Ana menüye dön"""
