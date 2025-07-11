@@ -859,7 +859,7 @@ class CategoryWindow(QWidget):
             key = (category['kategori_turu'], category['ana_kategori'])
             if key not in grouped:
                 grouped[key] = []
-grouped[key].append(category)
+            grouped[key].append(category)
         
         # Ağaca ekle
         for (kategori_turu, ana_kategori), subs in grouped.items():
