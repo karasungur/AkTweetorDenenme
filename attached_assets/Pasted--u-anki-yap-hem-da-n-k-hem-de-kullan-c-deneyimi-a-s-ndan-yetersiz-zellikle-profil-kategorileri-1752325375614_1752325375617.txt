@@ -1,0 +1,66 @@
+Şu anki yapı hem dağınık hem de kullanıcı deneyimi açısından yetersiz. Özellikle profil kategorileri düzgün tanımlanmamış. Yaş grubu, cinsiyet gibi temel alanlar eksik veya rastgele yerleştirilmiş. Örneğin, bu alanlara gereksiz yere radio butonlar atanmış. Aşağıda önerilen yapı, hem mantıklı hem kullanıcı dostu bir düzen sunar:
+
+1. Profil Kategorileri
+Bu bölümde sabit olarak bulunması gereken üç temel kategori olmalıdır:
+
+🧓 Yaş Grubu
+Genç (18–30)
+
+Orta yaş (31–50)
+
+Yaşlı (50+)
+
+🚻 Cinsiyet
+Erkek
+
+Kadın
+
+Belirtmeyen / Diğer
+
+📸 Profil Fotoğrafı / Görsel İçerik
+Fotoğraf Varlığı:
+
+Fotoğraf var
+
+Fotoğraf yok
+
+Fotoğrafın İçeriği (Varsa):
+
+Eğer “Fotoğraf var” seçeneği işaretlenirse, fotoğrafın içeriğine ait alt kategoriler gösterilmeli.
+
+Bu alt kategoriler (örneğin: parti logosu, dini sembol, selfie, manzara vs.) sonradan ayrı bir menü üzerinden eklenip düzenlenebilir.
+
+Bu alan, sadece “Fotoğraf var” seçiliyse görünür olmalıdır.
+
+⚠️ Not: Yaş grubu, cinsiyet ve fotoğraf var/yok seçimleri radio buton ile yapılmalı. Çünkü tekli seçim gerektirir.
+
+2. Profil İçerik Kategorileri
+Bu bölüm, profilin paylaştığı içerik türlerine göre yapılan sınıflandırmadır. Örnekler:
+
+Siyasi eğilim
+
+Dini paylaşımlar
+
+Mizah
+
+Kültürel içerik
+
+Bu alan birden fazla seçime açık olmalıdır, dolayısıyla burada checkbox kullanılmalıdır.
+
+Profil içerik kategorileri ve alt kategorileri sonradan menü üzerinden eklenebilir ve düzenlenebilir.
+
+✅ Menü Yapısı ve Fonksiyon Ayrımı
+Kullanıcı deneyimini iyileştirmek için işlemler modüler yapılmalıdır:
+
+📁 “Kategori dosyasından hesaplara kategori atama” işlemi, ayrı bir menü üzerinden yapılmalı.
+
+🛠 “Kategori / Alt Kategori Ekleme ve Düzenleme” işlemleri de başka bir bağımsız menü üzerinden sağlanmalı.
+
+Bu menüde hem profil içerik kategorileri, hem de fotoğraf içeriği alt kategorileri oluşturulabilir ve düzenlenebilir.
+
+Bu yapı sayesinde:
+✅ Arayüz sade ve anlaşılır olur.
+✅ Kategori yapısı kolayca genişletilebilir.
+✅ Kullanıcı ne yaptığını açık şekilde bilir.
+✅ Veritabanı ve geliştirici tarafı için bakım daha kolay olur.
+
