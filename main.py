@@ -1,15 +1,26 @@
 import sys
 import os
 import traceback
+
+# Qt'yi headless modda çalıştırmak için environment variable'ları ayarla
+os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+os.environ['DISPLAY'] = ':99'
+
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtCore import Qt
 
 def main():
     """Ana program giriş noktası"""
     try:
-        # Uygulama oluştur
+        # Minimal backend ile uygulama oluştur
         app = QApplication(sys.argv)
         app.setApplicationName("AkTweetor")
+        
+        # OpenGL gerektirmeyen backend kullan
+        try:
+            app.setAttribute(Qt.AA_UseSoftwareOpenGL, True)
+        except:
+            pass
 
         # High DPI desteği
         try:
