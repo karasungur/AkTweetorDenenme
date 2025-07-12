@@ -86,16 +86,9 @@ class MySQLManager:
         try:
             cursor = connection.cursor()
             
-            # Önce eski tabloları sil
-            old_tables = ['kategoriler', 'hesap_kategorileri']
-            for table in old_tables:
-                try:
-                    cursor.execute(f"DROP TABLE IF EXISTS {table}")
-                    print(f"🗑️ Eski tablo silindi: {table}")
-                except:
-                    pass
-            
-            print("✅ Eski kategori tabloları temizlendi")
+            # Tabloları silme - sadece ilk kurulumda gerekli
+            # Bu kısımı kaldırarak mevcut verileri koruyoruz
+            print("✅ Mevcut kategori tabloları korunuyor")
             
             # kullanicilar tablosu
             create_users_table = """
@@ -145,19 +138,18 @@ class MySQLManager:
             
             cursor.execute(create_targets_table)
             
-            # Yeni hiyerarşik kategori tablosu
+            # Yeni hiyerarşik kategori tablosu - alt kategoriler tek satırda
             create_categories_table = """
             CREATE TABLE IF NOT EXISTS kategoriler (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 kategori_turu ENUM('profil', 'icerik') NOT NULL,
                 ana_kategori VARCHAR(255) NOT NULL,
-                alt_kategori VARCHAR(255),
+                alt_kategoriler TEXT,
                 aciklama TEXT,
                 olusturma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE KEY unique_category (kategori_turu, ana_kategori, alt_kategori),
+                UNIQUE KEY unique_category (kategori_turu, ana_kategori),
                 INDEX idx_kategori_turu (kategori_turu),
-                INDEX idx_ana_kategori (ana_kategori),
-                INDEX idx_alt_kategori (alt_kategori)
+                INDEX idx_ana_kategori (ana_kategori)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
             
@@ -171,10 +163,10 @@ class MySQLManager:
                 hesap_turu ENUM('giris_yapilan', 'hedef') NOT NULL,
                 kategori_turu ENUM('profil', 'icerik') NOT NULL,
                 ana_kategori VARCHAR(255) NOT NULL,
-                alt_kategori VARCHAR(255),
+                secili_alt_kategoriler TEXT,
                 kategori_degeri VARCHAR(255),
                 olusturma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE KEY unique_user_category (kullanici_adi, hesap_turu, kategori_turu, ana_kategori, alt_kategori),
+                UNIQUE KEY unique_user_category (kullanici_adi, hesap_turu, kategori_turu, ana_kategori),
                 INDEX idx_kullanici_adi (kullanici_adi),
                 INDEX idx_hesap_turu (hesap_turu),
                 INDEX idx_kategori_turu (kategori_turu),
@@ -557,12 +549,8 @@ class MySQLManager:
                 ('profil', 'Cinsiyet', None, 'Kullanıcının cinsiyeti: Erkek, Kadın, Belirtmeyen/Diğer'),
                 ('profil', 'Profil Fotoğrafı', None, 'Profil fotoğrafının varlığı: Var, Yok'),
                 
-                # Fotoğraf içerik kategorileri (Alt kategoriler)
-                ('icerik', 'Fotoğraf İçeriği', 'Parti Logosu', 'Siyasi parti veya ideoloji logosu'),
-                ('icerik', 'Fotoğraf İçeriği', 'Dini Sembol', 'Dini içerikli sembol veya görsel'),
-                ('icerik', 'Fotoğraf İçeriği', 'Selfie', 'Kişisel selfie fotoğrafı'),
-                ('icerik', 'Fotoğraf İçeriği', 'Manzara', 'Doğa veya manzara fotoğrafı'),
-                ('icerik', 'Fotoğraf İçeriği', 'Avatar', 'Çizgi karakter veya avatar'),
+                # Fotoğraf içerik kategorileri (Alt kategoriler tek satırda)
+                ('icerik', 'Fotoğraf İçeriği', 'Parti Logosu,Dini Sembol,Selfie,Manzara,Avatar', 'Profil fotoğrafının içeriği'),
                 
                 # Profil içerik kategorileri (Ana kategoriler)
                 ('icerik', 'Siyasi Eğilim', None, 'Siyasi görüş ve ideolojik eğilim paylaşımları'),
@@ -578,19 +566,19 @@ class MySQLManager:
             ]
             
             # Her kategoriyi kontrol et ve yoksa ekle
-            for kategori_turu, ana_kategori, alt_kategori, aciklama in default_categories:
+            for kategori_turu, ana_kategori, alt_kategoriler, aciklama in default_categories:
                 check_query = """
                 SELECT id FROM kategoriler 
-                WHERE kategori_turu = %s AND ana_kategori = %s AND alt_kategori = %s
+                WHERE kategori_turu = %s AND ana_kategori = %s
                 """
-                cursor.execute(check_query, (kategori_turu, ana_kategori, alt_kategori))
+                cursor.execute(check_query, (kategori_turu, ana_kategori))
                 
                 if not cursor.fetchone():
                     insert_query = """
-                    INSERT INTO kategoriler (kategori_turu, ana_kategori, alt_kategori, aciklama)
+                    INSERT INTO kategoriler (kategori_turu, ana_kategori, alt_kategoriler, aciklama)
                     VALUES (%s, %s, %s, %s)
                     """
-                    cursor.execute(insert_query, (kategori_turu, ana_kategori, alt_kategori, aciklama))
+                    cursor.execute(insert_query, (kategori_turu, ana_kategori, alt_kategoriler, aciklama))
             
             connection.commit()
             
@@ -616,17 +604,34 @@ class MySQLManager:
                 query = """
                 SELECT * FROM kategoriler 
                 WHERE kategori_turu = %s 
-                ORDER BY ana_kategori, alt_kategori
+                ORDER BY ana_kategori
                 """
                 cursor.execute(query, (kategori_turu,))
             else:
                 query = """
                 SELECT * FROM kategoriler 
-                ORDER BY kategori_turu, ana_kategori, alt_kategori
+                ORDER BY kategori_turu, ana_kategori
                 """
                 cursor.execute(query)
             
-            return cursor.fetchall()
+            results = cursor.fetchall()
+            
+            # Alt kategorileri ayrı listeler halinde döndür
+            expanded_results = []
+            for row in results:
+                if row['alt_kategoriler']:
+                    # Alt kategorileri virgülle ayır
+                    subcategories = [sub.strip() for sub in row['alt_kategoriler'].split(',')]
+                    for subcategory in subcategories:
+                        expanded_row = row.copy()
+                        expanded_row['alt_kategori'] = subcategory
+                        expanded_results.append(expanded_row)
+                else:
+                    # Ana kategori (alt kategori yok)
+                    row['alt_kategori'] = None
+                    expanded_results.append(row)
+            
+            return expanded_results
         except Error as e:
             logger.error(f"❌ Kategori getirme hatası: {e}")
             return []
@@ -645,25 +650,55 @@ class MySQLManager:
         try:
             cursor = connection.cursor()
             
-            # Var olup olmadığını kontrol et
-            check_query = """
-            SELECT id FROM kategoriler 
-            WHERE kategori_turu = %s AND ana_kategori = %s AND 
-            (alt_kategori = %s OR (alt_kategori IS NULL AND %s IS NULL))
-            """
-            cursor.execute(check_query, (kategori_turu, ana_kategori, alt_kategori, alt_kategori))
+            if alt_kategori is None:
+                # Ana kategori ekleme
+                check_query = """
+                SELECT id FROM kategoriler 
+                WHERE kategori_turu = %s AND ana_kategori = %s
+                """
+                cursor.execute(check_query, (kategori_turu, ana_kategori))
+                
+                if cursor.fetchone():
+                    return False  # Zaten var
+                
+                insert_query = """
+                INSERT INTO kategoriler (kategori_turu, ana_kategori, alt_kategoriler, aciklama)
+                VALUES (%s, %s, %s, %s)
+                """
+                cursor.execute(insert_query, (kategori_turu, ana_kategori, None, aciklama))
+            else:
+                # Alt kategori ekleme - mevcut ana kategoriye ekle
+                check_query = """
+                SELECT id, alt_kategoriler FROM kategoriler 
+                WHERE kategori_turu = %s AND ana_kategori = %s
+                """
+                cursor.execute(check_query, (kategori_turu, ana_kategori))
+                result = cursor.fetchone()
+                
+                if not result:
+                    return False  # Ana kategori yok
+                
+                category_id, existing_subcategories = result
+                
+                # Mevcut alt kategorileri al
+                if existing_subcategories:
+                    subcategories = [sub.strip() for sub in existing_subcategories.split(',')]
+                    if alt_kategori in subcategories:
+                        return False  # Alt kategori zaten var
+                    subcategories.append(alt_kategori)
+                else:
+                    subcategories = [alt_kategori]
+                
+                # Güncellenmiş alt kategorileri kaydet
+                new_subcategories = ','.join(subcategories)
+                update_query = """
+                UPDATE kategoriler 
+                SET alt_kategoriler = %s 
+                WHERE id = %s
+                """
+                cursor.execute(update_query, (new_subcategories, category_id))
             
-            if cursor.fetchone():
-                return False  # Zaten var
-            
-            # Ekle
-            insert_query = """
-            INSERT INTO kategoriler (kategori_turu, ana_kategori, alt_kategori, aciklama)
-            VALUES (%s, %s, %s, %s)
-            """
-            cursor.execute(insert_query, (kategori_turu, ana_kategori, alt_kategori, aciklama))
             connection.commit()
-            
             return True
         except Error as e:
             logger.error(f"❌ Kategori ekleme hatası: {e}")

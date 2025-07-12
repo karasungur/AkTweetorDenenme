@@ -17,7 +17,7 @@ class CategoryManagementDialog(QDialog):
         self.setWindowTitle("🛠 Kategori Yönetimi")
         self.setModal(True)
         self.resize(600, 500)
-        
+
         # Sayfalama değişkenleri
         self.photo_current_page = 1
         self.photo_items_per_page = 20
@@ -63,7 +63,7 @@ class CategoryManagementDialog(QDialog):
         self.content_search_input = QLineEdit()
         self.content_search_input.setPlaceholderText("Kategori adı veya açıklama arayın...")
         self.content_search_input.textChanged.connect(self.filter_content_categories)
-        
+
         search_layout.addWidget(search_label)
         search_layout.addWidget(self.content_search_input)
         layout.addWidget(QFrame())  # Spacer
@@ -178,7 +178,7 @@ class CategoryManagementDialog(QDialog):
         self.photo_search_input = QLineEdit()
         self.photo_search_input.setPlaceholderText("Fotoğraf kategorisi arayın...")
         self.photo_search_input.textChanged.connect(self.filter_photo_categories)
-        
+
         photo_search_layout.addWidget(photo_search_label)
         photo_search_layout.addWidget(self.photo_search_input)
         photo_search_frame = QFrame()
@@ -212,7 +212,7 @@ class CategoryManagementDialog(QDialog):
         self.photo_next_btn = QPushButton("Sonraki ▶")
         self.photo_next_btn.clicked.connect(self.photo_next_page)
         self.photo_page_label = QLabel("Sayfa 1")
-        
+
         pagination_layout.addWidget(self.photo_prev_btn)
         pagination_layout.addWidget(self.photo_page_label)
         pagination_layout.addWidget(self.photo_next_btn)
@@ -239,7 +239,7 @@ class CategoryManagementDialog(QDialog):
         self.all_profile_categories = [cat for cat in profile_categories 
                                      if cat.get('ana_kategori') != 'Fotoğraf İçeriği' 
                                      and cat.get('alt_kategori') is None]
-        
+
         # Ana kategorileri tekrarsız şekilde ekle
         added_main_categories = set()
         for cat in self.all_profile_categories:
@@ -255,7 +255,7 @@ class CategoryManagementDialog(QDialog):
         self.all_photo_categories = [cat for cat in profile_categories 
                                    if cat.get('ana_kategori') == 'Fotoğraf İçeriği'
                                    and cat.get('alt_kategori') is not None]
-        
+
         for cat in self.all_photo_categories:
             item = QListWidgetItem(cat.get('alt_kategori', ''))
             item.setData(Qt.UserRole, cat)
@@ -265,13 +265,13 @@ class CategoryManagementDialog(QDialog):
         """İçerik kategorilerini filtrele"""
         search_text = self.content_search_input.text().lower()
         self.main_categories_list.clear()
-        
+
         # Ana kategorileri tekrarsız şekilde filtrele
         added_categories = set()
         for cat in getattr(self, 'all_profile_categories', []):
             ana_kategori = cat.get('ana_kategori', '')
             aciklama = cat.get('aciklama', '').lower()
-            
+
             if (search_text in ana_kategori.lower() or search_text in aciklama) and ana_kategori not in added_categories:
                 item = QListWidgetItem(ana_kategori)
                 item.setData(Qt.UserRole, cat)
@@ -282,11 +282,11 @@ class CategoryManagementDialog(QDialog):
         """Fotoğraf kategorilerini filtrele"""
         search_text = self.photo_search_input.text().lower()
         self.photo_content_list.clear()
-        
+
         for cat in getattr(self, 'all_photo_categories', []):
             alt_kategori = cat.get('alt_kategori', '').lower()
             aciklama = cat.get('aciklama', '').lower()
-            
+
             if search_text in alt_kategori or search_text in aciklama:
                 item = QListWidgetItem(cat.get('alt_kategori', ''))
                 item.setData(Qt.UserRole, cat)
@@ -308,17 +308,27 @@ class CategoryManagementDialog(QDialog):
         main_category = self.selected_main_label.text().replace("Seçili ana kategori: ", "")
         name = self.sub_category_input.text().strip()
 
-        if name and main_category != "← Sol taraftan ana kategori seçin":
-            if mysql_manager.add_hierarchical_category('icerik', main_category, name, 'Profil içerik alt kategorisi'):
-                self.sub_category_input.clear()
-                self.load_sub_categories(main_category)
-                self.show_info(f"✅ Alt kategori eklendi: {name} (Ana kategori: {main_category})")
-                
-                # Ana ekrandaki kategorileri de yenile (parent varsa)
-                if hasattr(self.parent(), 'load_profile_content_categories'):
-                    self.parent().load_profile_content_categories()
-            else:
-                self.show_warning("Bu alt kategori zaten mevcut!")
+        # Önce ana kategori seçilmiş mi kontrol et
+        if main_category == "← Sol taraftan ana kategori seçin":
+            self.show_warning("⚠️ Önce sol taraftan bir ana kategori seçin!")
+            return
+
+        # Alt kategori adı boş mu kontrol et
+        if not name:
+            self.show_warning("⚠️ Alt kategori adı boş olamaz!")
+            return
+
+        # Alt kategori ekle
+        if mysql_manager.add_hierarchical_category('icerik', main_category, name, 'Profil içerik alt kategorisi'):
+            self.sub_category_input.clear()
+            self.load_sub_categories(main_category)
+            self.show_info(f"✅ Alt kategori eklendi: {name} (Ana kategori: {main_category})")
+
+            # Ana ekrandaki kategorileri de yenile (parent varsa)
+            if hasattr(self.parent(), 'load_profile_content_categories'):
+                self.parent().load_profile_content_categories()
+        else:
+            self.show_warning("Bu alt kategori zaten mevcut veya ana kategori bulunamadı!")
 
     def add_photo_content_category(self):
         """Fotoğraf içerik kategorisi ekle"""
@@ -337,12 +347,12 @@ class CategoryManagementDialog(QDialog):
         if current:
             category_data = current.data(Qt.UserRole)
             category_name = category_data.get('ana_kategori')
-            
+
             # Onay dialog'u
             reply = QMessageBox.question(self, "Kategori Sil", 
                 f"'{category_name}' kategorisini ve tüm alt kategorilerini silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz!",
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            
+
             if reply == QMessageBox.Yes:
                 if mysql_manager.delete_category('icerik', category_name, None):
                     self.load_categories()
@@ -370,7 +380,7 @@ class CategoryManagementDialog(QDialog):
             reply = QMessageBox.question(self, "Alt Kategori Sil", 
                 f"'{category_name}' alt kategorisini silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz!",
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            
+
             if reply == QMessageBox.Yes:
                 if mysql_manager.delete_category('icerik', main_category, category_name):
                     self.load_sub_categories(main_category)
@@ -387,12 +397,12 @@ class CategoryManagementDialog(QDialog):
         if current:
             category_data = current.data(Qt.UserRole)
             category_name = category_data.get('alt_kategori')
-            
+
             # Onay dialog'u
             reply = QMessageBox.question(self, "Fotoğraf Kategorisi Sil", 
                 f"'{category_name}' fotoğraf kategorisini silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz!",
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            
+
             if reply == QMessageBox.Yes:
                 if mysql_manager.delete_category('icerik', 'Fotoğraf İçeriği', category_name):
                     self.load_categories()
@@ -442,21 +452,21 @@ class CategoryManagementDialog(QDialog):
     def update_photo_pagination(self):
         """Fotoğraf kategorileri sayfalama güncelle"""
         self.photo_content_list.clear()
-        
+
         all_categories = getattr(self, 'all_photo_categories', [])
         total_items = len(all_categories)
         max_pages = (total_items + self.photo_items_per_page - 1) // self.photo_items_per_page if total_items > 0 else 1
-        
+
         start_idx = (self.photo_current_page - 1) * self.photo_items_per_page
         end_idx = min(start_idx + self.photo_items_per_page, total_items)
-        
+
         # Sayfadaki öğeleri göster
         for i in range(start_idx, end_idx):
             cat = all_categories[i]
             item = QListWidgetItem(cat.get('alt_kategori', ''))
             item.setData(Qt.UserRole, cat)
             self.photo_content_list.addItem(item)
-        
+
         # Sayfa bilgisini güncelle
         self.photo_page_label.setText(f"Sayfa {self.photo_current_page}/{max_pages}")
         self.photo_prev_btn.setEnabled(self.photo_current_page > 1)
@@ -991,23 +1001,23 @@ class CategoryWindow(QWidget):
 
         # Tüm içerik kategorilerini yükle (Fotoğraf İçeriği hariç)
         categories = mysql_manager.get_categories('icerik')
-        
+
         # Ana kategorileri ve alt kategorileri grupla
         category_tree = {}
         for cat in categories:
             ana_kategori = cat.get('ana_kategori', '')
             alt_kategori = cat.get('alt_kategori', '')
-            
+
             # Fotoğraf İçeriği kategorilerini atla
             if ana_kategori == 'Fotoğraf İçeriği':
                 continue
-                
+
             if ana_kategori not in category_tree:
                 category_tree[ana_kategori] = {
                     'main_category': cat,
                     'sub_categories': []
                 }
-            
+
             if alt_kategori:
                 category_tree[ana_kategori]['sub_categories'].append(cat)
 
@@ -1023,14 +1033,14 @@ class CategoryWindow(QWidget):
                 'type': 'main'
             }
             self.profile_content_layout.addWidget(main_checkbox)
-            
+
             # Alt kategorileri ekle
             for sub_cat in data['sub_categories']:
                 alt_kategori = sub_cat.get('alt_kategori', '')
                 sub_checkbox = QCheckBox(f"   └─ {alt_kategori}")
                 sub_checkbox.setObjectName("contentCheckbox")
                 sub_checkbox.setStyleSheet("margin-left: 20px; color: #666;")
-                
+
                 # Alt kategori için benzersiz anahtar oluştur
                 sub_key = f"{ana_kategori}::{alt_kategori}"
                 self.profile_content_checkboxes[sub_key] = {
@@ -1084,7 +1094,7 @@ class CategoryWindow(QWidget):
         # Kategorileri yeniden yükle
         self.load_photo_content_categories()
         self.load_profile_content_categories()
-        
+
         # Eğer bir hesap seçilmişse kategorilerini yenile
         if self.current_view_account:
             if self.is_edit_mode:
@@ -1548,6 +1558,7 @@ class CategoryWindow(QWidget):
         #saveButton {{
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 {self.colors['success']}, stop:1 {self.colors['success_hover']});
+```python
             color: white;
             border: none;
             border-radius: 8px;
