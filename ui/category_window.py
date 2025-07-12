@@ -312,8 +312,11 @@ class CategoryManagementDialog(QDialog):
             if mysql_manager.add_hierarchical_category('icerik', main_category, name, 'Profil içerik alt kategorisi'):
                 self.sub_category_input.clear()
                 self.load_sub_categories(main_category)
-                # Ana kategori listesini yeniden yükleme - sadalt kategoriler değişti
                 self.show_info(f"✅ Alt kategori eklendi: {name} (Ana kategori: {main_category})")
+                
+                # Ana ekrandaki kategorileri de yenile (parent varsa)
+                if hasattr(self.parent(), 'load_profile_content_categories'):
+                    self.parent().load_profile_content_categories()
             else:
                 self.show_warning("Bu alt kategori zaten mevcut!")
 
@@ -977,7 +980,7 @@ class CategoryWindow(QWidget):
                 self.photo_content_layout.addWidget(checkbox)
 
     def load_profile_content_categories(self):
-        """Profil içerik kategorilerini yükle"""
+        """Profil içerik kategorilerini yükle - hem ana hem alt kategorileri dahil et"""
         # Temizle
         for i in reversed(range(self.profile_content_layout.count())):
             child = self.profile_content_layout.itemAt(i).widget()
@@ -986,25 +989,57 @@ class CategoryWindow(QWidget):
 
         self.profile_content_checkboxes.clear()
 
-        # Kategorileri yükle - sadece ana kategorileri (alt_kategori NULL olanlar)
+        # Tüm içerik kategorilerini yükle (Fotoğraf İçeriği hariç)
         categories = mysql_manager.get_categories('icerik')
-        profile_categories = [cat for cat in categories 
-                            if cat.get('ana_kategori') != 'Fotoğraf İçeriği' 
-                            and cat.get('alt_kategori') is None]
-
-        # Ana kategorileri tekrarsız şekilde ekle
-        added_categories = set()
-        for cat in profile_categories:
+        
+        # Ana kategorileri ve alt kategorileri grupla
+        category_tree = {}
+        for cat in categories:
             ana_kategori = cat.get('ana_kategori', '')
-            if ana_kategori and ana_kategori not in added_categories:
-                checkbox = QCheckBox(ana_kategori)
-                checkbox.setObjectName("contentCheckbox")
-                self.profile_content_checkboxes[ana_kategori] = {
-                    'checkbox': checkbox,
-                    'data': cat
+            alt_kategori = cat.get('alt_kategori', '')
+            
+            # Fotoğraf İçeriği kategorilerini atla
+            if ana_kategori == 'Fotoğraf İçeriği':
+                continue
+                
+            if ana_kategori not in category_tree:
+                category_tree[ana_kategori] = {
+                    'main_category': cat,
+                    'sub_categories': []
                 }
-                self.profile_content_layout.addWidget(checkbox)
-                added_categories.add(ana_kategori)
+            
+            if alt_kategori:
+                category_tree[ana_kategori]['sub_categories'].append(cat)
+
+        # Ana kategorileri ve alt kategorilerini ekle
+        for ana_kategori, data in category_tree.items():
+            # Ana kategori ekle
+            main_checkbox = QCheckBox(f"📋 {ana_kategori}")
+            main_checkbox.setObjectName("contentCheckbox")
+            main_checkbox.setStyleSheet("font-weight: bold; margin-top: 8px;")
+            self.profile_content_checkboxes[ana_kategori] = {
+                'checkbox': main_checkbox,
+                'data': data['main_category'],
+                'type': 'main'
+            }
+            self.profile_content_layout.addWidget(main_checkbox)
+            
+            # Alt kategorileri ekle
+            for sub_cat in data['sub_categories']:
+                alt_kategori = sub_cat.get('alt_kategori', '')
+                sub_checkbox = QCheckBox(f"   └─ {alt_kategori}")
+                sub_checkbox.setObjectName("contentCheckbox")
+                sub_checkbox.setStyleSheet("margin-left: 20px; color: #666;")
+                
+                # Alt kategori için benzersiz anahtar oluştur
+                sub_key = f"{ana_kategori}::{alt_kategori}"
+                self.profile_content_checkboxes[sub_key] = {
+                    'checkbox': sub_checkbox,
+                    'data': sub_cat,
+                    'type': 'sub',
+                    'parent': ana_kategori
+                }
+                self.profile_content_layout.addWidget(sub_checkbox)
 
     def on_photo_exists_changed(self, button, checked):
         """Fotoğraf varlığı değiştiğinde"""
@@ -1045,10 +1080,17 @@ class CategoryWindow(QWidget):
     def show_category_management(self):
         """Kategori yönetimi dialog'unu göster"""
         dialog = CategoryManagementDialog(self)
-        dialog.exec_()
+        result = dialog.exec_()
         # Kategorileri yeniden yükle
         self.load_photo_content_categories()
         self.load_profile_content_categories()
+        
+        # Eğer bir hesap seçilmişse kategorilerini yenile
+        if self.current_view_account:
+            if self.is_edit_mode:
+                self.load_account_categories_edit(self.current_view_account)
+            else:
+                self.load_account_categories_view(self.current_view_account)
 
     def show_file_import(self):
         """Dosya içe aktarma dialog'unu göster"""
@@ -1212,8 +1254,15 @@ class CategoryWindow(QWidget):
 
                 # Profil içerik kategorileri
                 else:
-                    if ana_kategori in self.profile_content_checkboxes:
-                        self.profile_content_checkboxes[ana_kategori]['checkbox'].setChecked(True)
+                    if alt_kategori:
+                        # Alt kategori için anahtar oluştur
+                        sub_key = f"{ana_kategori}::{alt_kategori}"
+                        if sub_key in self.profile_content_checkboxes:
+                            self.profile_content_checkboxes[sub_key]['checkbox'].setChecked(True)
+                    else:
+                        # Ana kategori
+                        if ana_kategori in self.profile_content_checkboxes:
+                            self.profile_content_checkboxes[ana_kategori]['checkbox'].setChecked(True)
 
         except Exception as e:
             self.show_error(f"Kategoriler yüklenirken hata: {str(e)}")
@@ -1286,11 +1335,19 @@ class CategoryWindow(QWidget):
                                 )
 
                 # Profil içerik kategorileri
-                for ana_kategori, checkbox_data in self.profile_content_checkboxes.items():
+                for key, checkbox_data in self.profile_content_checkboxes.items():
                     if checkbox_data['checkbox'].isChecked():
-                        mysql_manager.assign_hierarchical_category_to_account(
-                            account, self.selected_account_type, ana_kategori, None, "Seçili"
-                        )
+                        if checkbox_data['type'] == 'main':
+                            # Ana kategori
+                            mysql_manager.assign_hierarchical_category_to_account(
+                                account, self.selected_account_type, key, None, "Seçili"
+                            )
+                        elif checkbox_data['type'] == 'sub':
+                            # Alt kategori - key formatı: "ana_kategori::alt_kategori"
+                            ana_kategori, alt_kategori = key.split('::', 1)
+                            mysql_manager.assign_hierarchical_category_to_account(
+                                account, self.selected_account_type, ana_kategori, alt_kategori, "Seçili"
+                            )
 
                 saved_count += 1
 
