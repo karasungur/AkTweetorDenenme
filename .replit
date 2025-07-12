@@ -3,7 +3,3 @@ modules = ["python-3.12"]
 [nix]
 channel = "stable-24_05"
 packages = ["geckodriver", "xcodebuild", "zlib"]
-
-[[ports]]
-localPort = 5000
-externalPort = 80
