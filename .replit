@@ -3,3 +3,15 @@ modules = ["python-3.12"]
 [nix]
 channel = "stable-24_05"
 packages = ["geckodriver", "xcodebuild", "zlib"]
+
+[workflows]
+runButton = "Flask Web Server"
+
+[[workflows.workflow]]
+name = "Flask Web Server"
+author = 42888135
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"

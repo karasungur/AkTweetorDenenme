@@ -1,0 +1,26 @@
+
+{% extends "base.html" %}
+
+{% block title %}İstatistikler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>📊 İstatistikler</h2>
+        <p class="text-muted">Kategori dağılımları ve kullanım istatistikleri (Bu özellik yakında gelecek)</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-pie fa-5x text-info mb-3"></i>
+                <h4>📈 İstatistik Araçları</h4>
+                <p class="text-muted">Grafik ve istatistik araçları yakında eklenecektir.</p>
+                <a href="{{ url_for('index') }}" class="btn btn-primary">🏠 Ana Sayfaya Dön</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

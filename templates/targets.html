@@ -1,0 +1,26 @@
+
+{% extends "base.html" %}
+
+{% block title %}Hedef Hesaplar{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>🎯 Hedef Hesaplar</h2>
+        <p class="text-muted">Hedef hesaplarınızı yönetin (Bu özellik yakında gelecek)</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-construction fa-5x text-warning mb-3"></i>
+                <h4>🚧 Geliştirme Aşamasında</h4>
+                <p class="text-muted">Bu özellik şu anda geliştirilme aşamasındadır.</p>
+                <a href="{{ url_for('index') }}" class="btn btn-primary">🏠 Ana Sayfaya Dön</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

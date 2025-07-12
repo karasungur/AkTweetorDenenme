@@ -1,140 +1,100 @@
-import sys
+from flask import Flask, render_template, request, jsonify, redirect, url_for
+import logging
 import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QSplashScreen
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QIcon, QPixmap
+from datetime import datetime
 
-# UI dosyalarını yükle
-from ui.main_window import MainWindow
-from ui.splash_screen import SplashScreen
+# Projeye özgü import'lar
+from config.settings import load_config
+from database.mysql import mysql_manager
+from database.user_manager import user_manager
+from utils.logger import setup_logger
 
-class AkTweetor:
-    def __init__(self):
-        self.app = QApplication(sys.argv)
-        self.setup_app()
-        self.create_directories()  # Klasörleri oluştur
+app = Flask(__name__)
+app.secret_key = 'aktweetor_secret_key_2024'
 
-        # Modern splash screen'i oluştur ve göster
-        self.splash = SplashScreen()
-        self.splash.show()
+# Logger kurulumu
+logger = setup_logger()
 
-        # Ana pencere splash screen'den açılacak
+@app.route('/')
+def index():
+    """Ana sayfa"""
+    return render_template('index.html')
 
-    def setup_app(self):
-        """Uygulama ayarlarını yapılandır"""
-        self.app.setApplicationName("AkTweetor")
-        self.app.setApplicationVersion("1.0")
-        self.app.setOrganizationName("AkTweetor")
+@app.route('/categories')
+def categories():
+    """Kategori yönetimi sayfası"""
+    return render_template('categories.html')
 
-        # Global font ayarı
-        font = QFont("SF Pro Display", 10)  # Apple'ın fontu
-        self.app.setFont(font)
-
-        # Global stil
-        self.app.setStyleSheet(self.get_global_style())
-
-    def create_directories(self):
-        """Gerekli klasörleri oluştur"""
-        directories = [
-            "./Profiller",
-            "./TempProfiller"
-        ]
-
-        for directory in directories:
-            try:
-                os.makedirs(directory, exist_ok=True)
-                print(f"✅ Klasör oluşturuldu/kontrol edildi: {directory}")
-            except Exception as e:
-                print(f"⚠️ Klasör oluşturma hatası: {e}")
-
-        # MySQL bağlantısını test et
-        try:
-            from database.mysql import mysql_manager
-            if mysql_manager.test_connection():
-                print("✅ MySQL bağlantısı başarılı")
-            else:
-                print("⚠️ MySQL bağlantısı başarısız - Lütfen veritabanı ayarlarını kontrol edin")
-        except Exception as e:
-            print(f"⚠️ MySQL modülü yüklenemedi: {str(e)}")
-
-    def get_global_style(self):
-        """Global stil tanımları"""
-        return """
-        QApplication {
-            background-color: #FFFFFF;
-            color: #231F20;
-            font-family: 'SF Pro Display', 'Segoe UI', Arial, sans-serif;
-        }
-
-        /* Scrollbar Styling */
-        QScrollBar:vertical {
-            background: #F5F5F7;
-            width: 12px;
-            border-radius: 6px;
-        }
-
-        QScrollBar::handle:vertical {
-            background: #C7C7CC;
-            border-radius: 6px;
-            min-height: 20px;
-        }
-
-        QScrollBar::handle:vertical:hover {
-            background: #AEAEB2;
-        }
-
-        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-            height: 0px;
-        }
-
-        /* Horizontal Scrollbar */
-        QScrollBar:horizontal {
-            background: #F5F5F7;
-            height: 12px;
-            border-radius: 6px;
-        }
-
-        QScrollBar::handle:horizontal {
-            background: #C7C7CC;
-            border-radius: 6px;
-            min-width: 20px;
-        }
-
-        QScrollBar::handle:horizontal:hover {
-            background: #AEAEB2;
-        }
-
-        QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-            width: 0px;
-        }
-        """
-
-    def run(self):
-        """Uygulamayı başlat"""
-        # chromedriver.exe kontrolü
-        if not os.path.exists("chromedriver.exe"):
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
-            msg.setWindowTitle("Hata")
-            msg.setText("chromedriver.exe dosyası bulunamadı!")
-            msg.setInformativeText("Lütfen chromedriver.exe dosyasını uygulama klasörüne koyun.")
-            msg.setDetailedText("""
-ChromeDriver İndirme Adımları:
-1. https://chromedriver.chromium.org/ adresine gidin
-2. Chrome sürümünüze uygun driver'ı indirin
-3. chromedriver.exe dosyasını bu klasöre koyun
-4. Uygulamayı yeniden başlatın
-            """)
-            msg.exec_()
-            return 1
-
-        return self.app.exec_()
-
-if __name__ == "__main__":
+@app.route('/api/categories', methods=['GET'])
+def get_categories():
+    """Kategorileri getir"""
     try:
-        print("🚀 AkTweetor başlatılıyor...")
-        aktweetor = AkTweetor()
-        sys.exit(aktweetor.run())
+        categories = mysql_manager.get_categories('icerik')
+        return jsonify({'success': True, 'categories': categories})
     except Exception as e:
-        print(f"❌ Kritik hata: {e}")
-        sys.exit(1)
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/accounts/<account_type>', methods=['GET'])
+def get_accounts(account_type):
+    """Hesapları getir"""
+    try:
+        if account_type == 'giris_yapilan':
+            users = user_manager.get_all_users()
+            accounts = [user['kullanici_adi'] for user in users]
+        else:
+            targets = mysql_manager.get_all_targets()
+            accounts = [target['kullanici_adi'] for target in targets]
+
+        return jsonify({'success': True, 'accounts': accounts})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/save_categories', methods=['POST'])
+def save_categories():
+    """Kategorileri kaydet"""
+    try:
+        data = request.json
+        accounts = data.get('accounts', [])
+        categories_data = data.get('categories', {})
+        account_type = data.get('account_type', 'giris_yapilan')
+
+        saved_count = 0
+        for account in accounts:
+            # Hesabın kategorilerini sil
+            mysql_manager.delete_account_categories(account, account_type)
+
+            # Yeni kategorileri ekle
+            for category, value in categories_data.items():
+                if value and value != 'Belirtilmemiş':
+                    mysql_manager.assign_hierarchical_category_to_account(
+                        account, account_type, category, None, value
+                    )
+
+            saved_count += 1
+
+        return jsonify({'success': True, 'message': f'{saved_count} hesap için kategoriler kaydedildi'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/targets')
+def targets():
+    """Hedef hesaplar sayfası"""
+    return render_template('targets.html')
+
+@app.route('/stats')
+def stats():
+    """İstatistikler sayfası"""
+    return render_template('stats.html')
+
+if __name__ == '__main__':
+    # Konfigürasyonu yükle
+    try:
+        config = load_config()
+        logger.info("🚀 AkTweetor Web Arayüzü başlatılıyor...")
+
+        # Web sunucusunu başlat
+        app.run(host='0.0.0.0', port=5000, debug=True)
+
+    except Exception as e:
+        logger.error(f"❌ Başlatma hatası: {str(e)}")
+        print(f"❌ Hata: {str(e)}")
