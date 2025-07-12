@@ -15,12 +15,13 @@ try:
     matplotlib.use('Agg')  # Backend'i Agg olarak ayarla (GUI olmayan)
     import matplotlib.pyplot as plt
     import matplotlib.patches as patches
-    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-    from matplotlib.figure import Figure
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
     print("⚠️ Matplotlib bulunamadı. Grafikler devre dışı.")
+except Exception as e:
+    MATPLOTLIB_AVAILABLE = False
+    print(f"⚠️ Matplotlib yükleme hatası: {e}")
 from database.mysql import mysql_manager
 from database.user_manager import user_manager
 import json
