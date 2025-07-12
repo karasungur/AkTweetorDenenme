@@ -550,29 +550,31 @@ class MySQLManager:
         try:
             cursor = connection.cursor()
             
-            # Varsayılan hiyerarşik kategoriler
+            # Yeni sade ve mantıklı kategori yapısı
             default_categories = [
-                # Profil kategorileri
-                ('profil', 'Demografik Bilgiler', 'Yaş Grubu', 'Kullanıcının yaş aralığı (Genç: 18-30, Orta yaş: 31-50, Yaşlı: 50+)'),
-                ('profil', 'Demografik Bilgiler', 'Cinsiyet', 'Kullanıcının cinsiyeti (Erkek, Kadın, Belirtmeyen)'),
-                ('profil', 'Görsel Özellikler', 'Profil Fotoğrafı Durumu', 'Profil fotoğrafının varlığı (Var, Yok, Varsayılan)'),
-                ('profil', 'Görsel Özellikler', 'Fotoğraf İçerik Türü', 'Profil fotoğrafının içeriği (Gerçek Kişi, Avatar, Logo, Diğer)'),
-                ('profil', 'Hesap Özellikleri', 'Doğrulama Durumu', 'Hesabın doğrulama durumu (Doğrulanmış, Doğrulanmamış)'),
-                ('profil', 'Hesap Özellikleri', 'Takipçi Sayısı', 'Takipçi sayısı aralığı (Az: 0-100, Orta: 101-1000, Çok: 1000+)'),
+                # Profil kategorileri (Sabit temel kategoriler)
+                ('profil', 'Yaş Grubu', None, 'Kullanıcının yaş grubu: Genç (18-30), Orta yaş (31-50), Yaşlı (50+)'),
+                ('profil', 'Cinsiyet', None, 'Kullanıcının cinsiyeti: Erkek, Kadın, Belirtmeyen/Diğer'),
+                ('profil', 'Profil Fotoğrafı', None, 'Profil fotoğrafının varlığı: Var, Yok'),
                 
-                # İçerik kategorileri
-                ('icerik', 'Siyasi İçerik', 'Parti Desteği', 'Belirli parti veya ideolojiye destek'),
-                ('icerik', 'Siyasi İçerik', 'Seçim Yorumları', 'Seçim ve siyasi olaylar hakkında yorumlar'),
-                ('icerik', 'Dini İçerik', 'Dini Paylaşımlar', 'Dini bayramlar, ayetler, dualar'),
-                ('icerik', 'Dini İçerik', 'Mezhebi Görüşler', 'Belirli mezhebi görüşlere ait paylaşımlar'),
-                ('icerik', 'Eğlence', 'Mizah İçerikleri', 'Komik görseller, videolar, capsler'),
-                ('icerik', 'Eğlence', 'Müzik Paylaşımları', 'Şarkı, albüm, sanatçı paylaşımları'),
-                ('icerik', 'Spor', 'Futbol', 'Futbol takımları ve maçları hakkında paylaşımlar'),
-                ('icerik', 'Spor', 'Diğer Sporlar', 'Basketbol, voleybol, tenis vs.'),
-                ('icerik', 'Haber', 'Güncel Olaylar', 'Güncel haber ve olaylar hakkında paylaşımlar'),
-                ('icerik', 'Haber', 'Ekonomi', 'Ekonomik gelişmeler ve yorumlar'),
-                ('icerik', 'Kişisel', 'Yaşam Tarzı', 'Günlük yaşam, hobiler, ilgi alanları'),
-                ('icerik', 'Kişisel', 'Aile ve İlişkiler', 'Aile fotoğrafları, ilişki durumu paylaşımları'),
+                # Fotoğraf içerik kategorileri (Alt kategoriler)
+                ('icerik', 'Fotoğraf İçeriği', 'Parti Logosu', 'Siyasi parti veya ideoloji logosu'),
+                ('icerik', 'Fotoğraf İçeriği', 'Dini Sembol', 'Dini içerikli sembol veya görsel'),
+                ('icerik', 'Fotoğraf İçeriği', 'Selfie', 'Kişisel selfie fotoğrafı'),
+                ('icerik', 'Fotoğraf İçeriği', 'Manzara', 'Doğa veya manzara fotoğrafı'),
+                ('icerik', 'Fotoğraf İçeriği', 'Avatar', 'Çizgi karakter veya avatar'),
+                
+                # Profil içerik kategorileri (Ana kategoriler)
+                ('icerik', 'Siyasi Eğilim', None, 'Siyasi görüş ve ideolojik eğilim paylaşımları'),
+                ('icerik', 'Dini Paylaşımlar', None, 'Dini içerik, ayet, dua ve bayram paylaşımları'),
+                ('icerik', 'Mizah', None, 'Komik içerik, caps, espri ve mizahi paylaşımlar'),
+                ('icerik', 'Kültürel İçerik', None, 'Sanat, edebiyat, tarih ve kültürel paylaşımlar'),
+                ('icerik', 'Spor', None, 'Spor takımları, maçlar ve spor haberleri'),
+                ('icerik', 'Güncel Olaylar', None, 'Haber, gündem ve güncel gelişmeler'),
+                ('icerik', 'Kişisel Yaşam', None, 'Aile, günlük yaşam ve kişisel paylaşımlar'),
+                ('icerik', 'Eğitim', None, 'Eğitim, bilim ve öğretici içerikler'),
+                ('icerik', 'Teknoloji', None, 'Teknoloji, dijital gelişmeler ve inovasyon'),
+                ('icerik', 'Sağlık', None, 'Sağlık, fitness ve yaşam kalitesi'),
             ]
             
             # Her kategoriyi kontrol et ve yoksa ekle
