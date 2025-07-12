@@ -233,19 +233,28 @@ class CategoryManagementDialog(QDialog):
 
     def load_categories(self):
         """Kategorileri yükle"""
-        # Profil içerik kategorileri
+        # Profil içerik kategorileri - sadece ana kategorileri (alt_kategori NULL olanlar)
         self.main_categories_list.clear()
         profile_categories = mysql_manager.get_categories('icerik')
-        self.all_profile_categories = [cat for cat in profile_categories if cat.get('ana_kategori') != 'Fotoğraf İçeriği']
+        self.all_profile_categories = [cat for cat in profile_categories 
+                                     if cat.get('ana_kategori') != 'Fotoğraf İçeriği' 
+                                     and cat.get('alt_kategori') is None]
         
+        # Ana kategorileri tekrarsız şekilde ekle
+        added_main_categories = set()
         for cat in self.all_profile_categories:
-            item = QListWidgetItem(cat.get('ana_kategori', ''))
-            item.setData(Qt.UserRole, cat)
-            self.main_categories_list.addItem(item)
+            ana_kategori = cat.get('ana_kategori', '')
+            if ana_kategori and ana_kategori not in added_main_categories:
+                item = QListWidgetItem(ana_kategori)
+                item.setData(Qt.UserRole, cat)
+                self.main_categories_list.addItem(item)
+                added_main_categories.add(ana_kategori)
 
-        # Fotoğraf içeriği kategorileri
+        # Fotoğraf içeriği kategorileri - sadece alt kategorileri
         self.photo_content_list.clear()
-        self.all_photo_categories = [cat for cat in profile_categories if cat.get('ana_kategori') == 'Fotoğraf İçeriği']
+        self.all_photo_categories = [cat for cat in profile_categories 
+                                   if cat.get('ana_kategori') == 'Fotoğraf İçeriği'
+                                   and cat.get('alt_kategori') is not None]
         
         for cat in self.all_photo_categories:
             item = QListWidgetItem(cat.get('alt_kategori', ''))
@@ -257,14 +266,17 @@ class CategoryManagementDialog(QDialog):
         search_text = self.content_search_input.text().lower()
         self.main_categories_list.clear()
         
+        # Ana kategorileri tekrarsız şekilde filtrele
+        added_categories = set()
         for cat in getattr(self, 'all_profile_categories', []):
-            ana_kategori = cat.get('ana_kategori', '').lower()
+            ana_kategori = cat.get('ana_kategori', '')
             aciklama = cat.get('aciklama', '').lower()
             
-            if search_text in ana_kategori or search_text in aciklama:
-                item = QListWidgetItem(cat.get('ana_kategori', ''))
+            if (search_text in ana_kategori.lower() or search_text in aciklama) and ana_kategori not in added_categories:
+                item = QListWidgetItem(ana_kategori)
                 item.setData(Qt.UserRole, cat)
                 self.main_categories_list.addItem(item)
+                added_categories.add(ana_kategori)
 
     def filter_photo_categories(self):
         """Fotoğraf kategorilerini filtrele"""
@@ -297,9 +309,10 @@ class CategoryManagementDialog(QDialog):
         name = self.sub_category_input.text().strip()
 
         if name and main_category != "← Sol taraftan ana kategori seçin":
-            if mysql_manager.add_hierarchical_category('icerik', main_category, name, 'Profil içerik kategorisi'):
+            if mysql_manager.add_hierarchical_category('icerik', main_category, name, 'Profil içerik alt kategorisi'):
                 self.sub_category_input.clear()
                 self.load_sub_categories(main_category)
+                # Ana kategori listesini yeniden yükleme - sadalt kategoriler değişti
                 self.show_info(f"✅ Alt kategori eklendi: {name} (Ana kategori: {main_category})")
             else:
                 self.show_warning("Bu alt kategori zaten mevcut!")
@@ -358,6 +371,7 @@ class CategoryManagementDialog(QDialog):
             if reply == QMessageBox.Yes:
                 if mysql_manager.delete_category('icerik', main_category, category_name):
                     self.load_sub_categories(main_category)
+                    # Ana kategori listesini güncellemek gerekmez, sadece alt kategoriler değişti
                     self.show_info(f"✅ Alt kategori silindi: {category_name}")
                 else:
                     self.show_warning("Bu kategori silinemedi! Kategori hala kullanımda olabilir.")
@@ -945,9 +959,11 @@ class CategoryWindow(QWidget):
 
         self.photo_content_checkboxes.clear()
 
-        # Kategorileri yükle
+        # Kategorileri yükle - sadece fotoğraf içeriği alt kategorileri
         categories = mysql_manager.get_categories('icerik')
-        photo_categories = [cat for cat in categories if cat.get('ana_kategori') == 'Fotoğraf İçeriği']
+        photo_categories = [cat for cat in categories 
+                          if cat.get('ana_kategori') == 'Fotoğraf İçeriği'
+                          and cat.get('alt_kategori') is not None]
 
         for cat in photo_categories:
             alt_kategori = cat.get('alt_kategori', '')
@@ -970,13 +986,17 @@ class CategoryWindow(QWidget):
 
         self.profile_content_checkboxes.clear()
 
-        # Kategorileri yükle
+        # Kategorileri yükle - sadece ana kategorileri (alt_kategori NULL olanlar)
         categories = mysql_manager.get_categories('icerik')
-        profile_categories = [cat for cat in categories if cat.get('ana_kategori') != 'Fotoğraf İçeriği']
+        profile_categories = [cat for cat in categories 
+                            if cat.get('ana_kategori') != 'Fotoğraf İçeriği' 
+                            and cat.get('alt_kategori') is None]
 
+        # Ana kategorileri tekrarsız şekilde ekle
+        added_categories = set()
         for cat in profile_categories:
             ana_kategori = cat.get('ana_kategori', '')
-            if ana_kategori:
+            if ana_kategori and ana_kategori not in added_categories:
                 checkbox = QCheckBox(ana_kategori)
                 checkbox.setObjectName("contentCheckbox")
                 self.profile_content_checkboxes[ana_kategori] = {
@@ -984,6 +1004,7 @@ class CategoryWindow(QWidget):
                     'data': cat
                 }
                 self.profile_content_layout.addWidget(checkbox)
+                added_categories.add(ana_kategori)
 
     def on_photo_exists_changed(self, button, checked):
         """Fotoğraf varlığı değiştiğinde"""
