@@ -1513,8 +1513,10 @@ class CategoryWindow(QWidget):
 
         try:
             saved_count = 0
+            print(f"🔧 Kategori kaydetme başlıyor: {len(self.selected_accounts)} hesap seçildi")
 
             for account in self.selected_accounts:
+                print(f"🔧 İşlenen hesap: {account}")
                 # Hesabın kategorilerini sil
                 mysql_manager.delete_account_categories(account, self.selected_account_type)
 

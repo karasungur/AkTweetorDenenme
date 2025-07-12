@@ -163,10 +163,10 @@ class MySQLManager:
                 hesap_turu ENUM('giris_yapilan', 'hedef') NOT NULL,
                 kategori_turu ENUM('profil', 'icerik') NOT NULL,
                 ana_kategori VARCHAR(255) NOT NULL,
-                secili_alt_kategoriler TEXT,
+                alt_kategori VARCHAR(255),
                 kategori_degeri VARCHAR(255),
                 olusturma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE KEY unique_user_category (kullanici_adi, hesap_turu, kategori_turu, ana_kategori),
+                UNIQUE KEY unique_user_category (kullanici_adi, hesap_turu, kategori_turu, ana_kategori, alt_kategori),
                 INDEX idx_kullanici_adi (kullanici_adi),
                 INDEX idx_hesap_turu (hesap_turu),
                 INDEX idx_kategori_turu (kategori_turu),
@@ -747,19 +747,35 @@ class MySQLManager:
             cursor = connection.cursor()
             
             # Önce kategori türünü bul
-            find_type_query = """
-            SELECT kategori_turu FROM kategoriler 
-            WHERE ana_kategori = %s AND (alt_kategori = %s OR (alt_kategori IS NULL AND %s IS NULL))
-            LIMIT 1
-            """
-            cursor.execute(find_type_query, (ana_kategori, alt_kategori, alt_kategori))
+            if alt_kategori:
+                # Alt kategori için: alt_kategoriler sütununda ara
+                find_type_query = """
+                SELECT kategori_turu FROM kategoriler 
+                WHERE ana_kategori = %s AND alt_kategoriler IS NOT NULL 
+                AND FIND_IN_SET(%s, alt_kategoriler) > 0
+                LIMIT 1
+                """
+                cursor.execute(find_type_query, (ana_kategori, alt_kategori))
+            else:
+                # Ana kategori için: alt_kategoriler NULL olan kayıt
+                find_type_query = """
+                SELECT kategori_turu FROM kategoriler 
+                WHERE ana_kategori = %s
+                LIMIT 1
+                """
+                cursor.execute(find_type_query, (ana_kategori,))
+            
             result = cursor.fetchone()
             
             if not result:
-                logger.warning(f"Kategori bulunamadı: {ana_kategori} > {alt_kategori}")
-                return False
-                
-            kategori_turu = result[0]
+                # Kategori bulunamadıysa, varsayılan türü kullan
+                if ana_kategori in ['Yaş Grubu', 'Cinsiyet', 'Profil Fotoğrafı']:
+                    kategori_turu = 'profil'
+                else:
+                    kategori_turu = 'icerik'
+                logger.warning(f"Kategori veritabanında bulunamadı, varsayılan tür kullanılıyor: {ana_kategori} > {alt_kategori} -> {kategori_turu}")
+            else:
+                kategori_turu = result[0]
             
             # Var olan atamayı kontrol et ve güncelle veya ekle
             insert_query = """
@@ -767,11 +783,13 @@ class MySQLManager:
             (kullanici_adi, hesap_turu, kategori_turu, ana_kategori, alt_kategori, kategori_degeri)
             VALUES (%s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE 
-            kategori_degeri = VALUES(kategori_degeri)
+            kategori_degeri = VALUES(kategori_degeri),
+            alt_kategori = VALUES(alt_kategori)
             """
             cursor.execute(insert_query, (kullanici_adi, hesap_turu, kategori_turu, ana_kategori, alt_kategori, kategori_degeri))
             
             connection.commit()
+            logger.info(f"✅ Kategori atandı: {kullanici_adi} -> {ana_kategori}:{alt_kategori} = {kategori_degeri}")
             return True
         except Error as e:
             logger.error(f"❌ Kategori atama hatası: {e}")
