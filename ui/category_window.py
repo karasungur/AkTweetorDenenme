@@ -1,4 +1,4 @@
-
+python
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QLabel, QFrame, QMessageBox, QListWidget, QListWidgetItem,
                              QComboBox, QLineEdit, QTextEdit, QGroupBox, QSplitter,
@@ -25,7 +25,7 @@ class CategoryManagementDialog(QDialog):
         self.tabs = QTabWidget()
 
         # Profil içerik kategorileri
-        profile_content_tab = self.create_profile_content_tab()
+        profile_content_tab = self.create_content_categories_tab()
         self.tabs.addTab(profile_content_tab, "📂 Profil İçerik Kategorileri")
 
         # Fotoğraf içeriği kategorileri
@@ -42,45 +42,104 @@ class CategoryManagementDialog(QDialog):
         self.setLayout(layout)
         self.load_categories()
 
-    def create_profile_content_tab(self):
-        """Profil içerik kategorileri sekmesi"""
+    def create_content_categories_tab(self):
+        """İçerik kategorileri sekmesi - Hiyerarşik yapı"""
         widget = QWidget()
         layout = QVBoxLayout()
 
         # Açıklama
-        info_label = QLabel("📂 Profil içerik kategorileri: Hesabın paylaştığı içerik türleri")
+        info_label = QLabel("📂 <b>İçerik Kategorileri:</b> Hesabın paylaştığı içerik türleri (Ana kategori → Alt kategoriler)")
         info_label.setObjectName("infoLabel")
         layout.addWidget(info_label)
 
-        # Ekleme formu
-        form_frame = QFrame()
-        form_frame.setObjectName("addForm")
-        form_layout = QHBoxLayout()
+        # Splitter - sol taraf ana kategoriler, sağ taraf alt kategoriler
+        splitter = QSplitter(Qt.Horizontal)
 
-        self.profile_content_input = QLineEdit()
-        self.profile_content_input.setPlaceholderText("Kategori adı girin (ör: Siyasi Eğilim, Dini Paylaşımlar)")
+        # Sol panel - Ana kategoriler
+        left_panel = QGroupBox("📋 Ana Kategoriler")
+        left_layout = QVBoxLayout()
 
-        add_profile_btn = QPushButton("➕ Ekle")
-        add_profile_btn.setObjectName("addButton")
-        add_profile_btn.clicked.connect(self.add_profile_content_category)
+        # Ana kategori ekleme
+        main_form = QFrame()
+        main_form.setObjectName("addForm")
+        main_form_layout = QHBoxLayout()
 
-        form_layout.addWidget(self.profile_content_input)
-        form_layout.addWidget(add_profile_btn)
-        form_frame.setLayout(form_layout)
+        self.main_category_input = QLineEdit()
+        self.main_category_input.setPlaceholderText("Ana kategori adı (ör: Siyasi Eğilim)")
 
-        # Liste
-        self.profile_content_list = QListWidget()
-        self.profile_content_list.setObjectName("categoryList")
+        add_main_btn = QPushButton("➕ Ana Kategori Ekle")
+        add_main_btn.setObjectName("addButton")
+        add_main_btn.clicked.connect(self.add_main_category)
 
-        # Sil butonu
-        delete_profile_btn = QPushButton("🗑️ Seçileni Sil")
-        delete_profile_btn.setObjectName("deleteButton")
-        delete_profile_btn.clicked.connect(self.delete_profile_content_category)
+        main_form_layout.addWidget(self.main_category_input)
+        main_form_layout.addWidget(add_main_btn)
+        main_form.setLayout(main_form_layout)
 
-        layout.addWidget(form_frame)
-        layout.addWidget(self.profile_content_list, 1)
-        layout.addWidget(delete_profile_btn)
+        # Ana kategori listesi
+        self.main_categories_list = QListWidget()
+        self.main_categories_list.setObjectName("categoryList")
+        self.main_categories_list.itemClicked.connect(self.on_main_category_selected)
 
+        # Ana kategori sil butonu
+        delete_main_btn = QPushButton("🗑️ Ana Kategori Sil")
+        delete_main_btn.setObjectName("deleteButton")
+        delete_main_btn.clicked.connect(self.delete_main_category)
+
+        left_layout.addWidget(main_form)
+        left_layout.addWidget(self.main_categories_list, 1)
+        left_layout.addWidget(delete_main_btn)
+        left_panel.setLayout(left_layout)
+
+        # Sağ panel - Alt kategoriler
+        right_panel = QGroupBox("📝 Alt Kategoriler")
+        right_layout = QVBoxLayout()
+
+        # Seçili ana kategori bilgisi
+        self.selected_main_label = QLabel("← Sol taraftan ana kategori seçin")
+        self.selected_main_label.setObjectName("selectedMainLabel")
+        right_layout.addWidget(self.selected_main_label)
+
+        # Alt kategori ekleme
+        sub_form = QFrame()
+        sub_form.setObjectName("addForm")
+        sub_form_layout = QHBoxLayout()
+
+        self.sub_category_input = QLineEdit()
+        self.sub_category_input.setPlaceholderText("Alt kategori adı")
+        self.sub_category_input.setEnabled(False)
+
+        add_sub_btn = QPushButton("➕ Alt Kategori Ekle")
+        add_sub_btn.setObjectName("addButton")
+        add_sub_btn.clicked.connect(self.add_sub_category)
+        add_sub_btn.setEnabled(False)
+        self.add_sub_btn = add_sub_btn
+
+        sub_form_layout.addWidget(self.sub_category_input)
+        sub_form_layout.addWidget(add_sub_btn)
+        sub_form.setLayout(sub_form_layout)
+
+        # Alt kategori listesi
+        self.sub_categories_list = QListWidget()
+        self.sub_categories_list.setObjectName("categoryList")
+
+        # Alt kategori sil butonu
+        delete_sub_btn = QPushButton("🗑️ Alt Kategori Sil")
+        delete_sub_btn.setObjectName("deleteButton")
+        delete_sub_btn.clicked.connect(self.delete_sub_category)
+        delete_sub_btn.setEnabled(False)
+        self.delete_sub_btn = delete_sub_btn
+
+        right_layout.addWidget(sub_form)
+        right_layout.addWidget(self.sub_categories_list, 1)
+        right_layout.addWidget(delete_sub_btn)
+        right_panel.setLayout(right_layout)
+
+        # Splitter'a ekle
+        splitter.addWidget(left_panel)
+        splitter.addWidget(right_panel)
+        splitter.setSizes([400, 400])
+
+        layout.addWidget(splitter, 1)
         widget.setLayout(layout)
         return widget
 
@@ -129,13 +188,13 @@ class CategoryManagementDialog(QDialog):
     def load_categories(self):
         """Kategorileri yükle"""
         # Profil içerik kategorileri
-        self.profile_content_list.clear()
+        self.main_categories_list.clear()
         profile_categories = mysql_manager.get_categories('icerik')
         for cat in profile_categories:
             if cat.get('ana_kategori') != 'Fotoğraf İçeriği':
                 item = QListWidgetItem(cat.get('ana_kategori', ''))
                 item.setData(Qt.UserRole, cat)
-                self.profile_content_list.addItem(item)
+                self.main_categories_list.addItem(item)
 
         # Fotoğraf içeriği kategorileri
         self.photo_content_list.clear()
@@ -145,16 +204,29 @@ class CategoryManagementDialog(QDialog):
             item.setData(Qt.UserRole, cat)
             self.photo_content_list.addItem(item)
 
-    def add_profile_content_category(self):
-        """Profil içerik kategorisi ekle"""
-        name = self.profile_content_input.text().strip()
+    def add_main_category(self):
+        """Ana içerik kategorisi ekle"""
+        name = self.main_category_input.text().strip()
         if name:
             if mysql_manager.add_hierarchical_category('icerik', name, None, 'Profil içerik kategorisi'):
-                self.profile_content_input.clear()
+                self.main_category_input.clear()
                 self.load_categories()
-                self.show_info(f"✅ Kategori eklendi: {name}")
+                self.show_info(f"✅ Ana kategori eklendi: {name}")
             else:
                 self.show_warning("Bu kategori zaten mevcut!")
+
+    def add_sub_category(self):
+        """Alt içerik kategorisi ekle"""
+        main_category = self.selected_main_label.text().replace("Seçili ana kategori: ", "")
+        name = self.sub_category_input.text().strip()
+
+        if name and main_category != "← Sol taraftan ana kategori seçin":
+            if mysql_manager.add_hierarchical_category('icerik', main_category, name, 'Profil içerik kategorisi'):
+                self.sub_category_input.clear()
+                self.load_sub_categories(main_category)
+                self.show_info(f"✅ Alt kategori eklendi: {name} (Ana kategori: {main_category})")
+            else:
+                self.show_warning("Bu alt kategori zaten mevcut!")
 
     def add_photo_content_category(self):
         """Fotoğraf içerik kategorisi ekle"""
@@ -167,12 +239,32 @@ class CategoryManagementDialog(QDialog):
             else:
                 self.show_warning("Bu kategori zaten mevcut!")
 
-    def delete_profile_content_category(self):
-        """Profil içerik kategorisi sil"""
-        current = self.profile_content_list.currentItem()
+    def delete_main_category(self):
+        """Ana içerik kategorisi sil"""
+        current = self.main_categories_list.currentItem()
         if current:
-            # Bu işlev için veritabanında silme fonksiyonu eklenmelidir
-            self.show_info("Silme işlevi henüz aktif değil")
+            category_data = current.data(Qt.UserRole)
+            category_name = category_data.get('ana_kategori')
+            # Veritabanında silme fonksiyonu eklenmelidir
+            if mysql_manager.delete_category('icerik', category_name, None):
+                self.load_categories()
+                self.show_info(f"✅ Ana kategori silindi: {category_name}")
+            else:
+                self.show_warning("Bu kategori silinemedi!")
+
+    def delete_sub_category(self):
+        """Alt içerik kategorisi sil"""
+        current = self.sub_categories_list.currentItem()
+        if current:
+            category_data = current.data(Qt.UserRole)
+            category_name = category_data.get('alt_kategori')
+            main_category = self.selected_main_label.text().replace("Seçili ana kategori: ", "")
+
+            if mysql_manager.delete_category('icerik', main_category, category_name):
+                self.load_sub_categories(main_category)
+                self.show_info(f"✅ Alt kategori silindi: {category_name} (Ana kategori: {main_category})")
+            else:
+                self.show_warning("Bu kategori silinemedi!")
 
     def delete_photo_content_category(self):
         """Fotoğraf içerik kategorisi sil"""
@@ -180,6 +272,29 @@ class CategoryManagementDialog(QDialog):
         if current:
             # Bu işlev için veritabanında silme fonksiyonu eklenmelidir
             self.show_info("Silme işlevi henüz aktif değil")
+
+    def on_main_category_selected(self, item):
+        """Ana kategori seçildiğinde"""
+        category_data = item.data(Qt.UserRole)
+        category_name = category_data.get('ana_kategori')
+
+        self.selected_main_label.setText(f"Seçili ana kategori: {category_name}")
+        self.sub_category_input.setEnabled(True)
+        self.add_sub_btn.setEnabled(True)
+        self.delete_sub_btn.setEnabled(True)
+
+        self.load_sub_categories(category_name)
+
+    def load_sub_categories(self, main_category):
+        """Alt kategorileri yükle"""
+        self.sub_categories_list.clear()
+        categories = mysql_manager.get_categories('icerik')
+        sub_categories = [cat for cat in categories if cat.get('ana_kategori') == main_category and cat.get('alt_kategori')]
+
+        for cat in sub_categories:
+            item = QListWidgetItem(cat.get('alt_kategori', ''))
+            item.setData(Qt.UserRole, cat)
+            self.sub_categories_list.addItem(item)
 
     def show_info(self, message):
         QMessageBox.information(self, "Bilgi", message)
@@ -411,7 +526,7 @@ class CategoryWindow(QWidget):
 
         # Mod butonları
         mode_layout = QHBoxLayout()
-        
+
         self.view_mode_btn = QPushButton("👁️ Görüntüle")
         self.view_mode_btn.setObjectName("modeButton")
         self.view_mode_btn.clicked.connect(self.set_view_mode)
@@ -486,7 +601,7 @@ class CategoryWindow(QWidget):
 
         # Kontrol butonları
         controls_layout = QHBoxLayout()
-        
+
         clear_btn = QPushButton("🗑️ Temizle")
         clear_btn.setObjectName("clearButton")
         clear_btn.clicked.connect(self.clear_selections)
@@ -541,7 +656,7 @@ class CategoryWindow(QWidget):
         layout.addWidget(title)
 
         self.age_group = QButtonGroup()
-        
+
         age_none = QRadioButton("Belirtilmemiş")
         age_none.setChecked(True)
         self.age_group.addButton(age_none, 0)
@@ -573,7 +688,7 @@ class CategoryWindow(QWidget):
         layout.addWidget(title)
 
         self.gender_group = QButtonGroup()
-        
+
         gender_none = QRadioButton("Belirtilmemiş")
         gender_none.setChecked(True)
         self.gender_group.addButton(gender_none, 0)
@@ -610,7 +725,7 @@ class CategoryWindow(QWidget):
         layout.addWidget(photo_title)
 
         self.photo_exists_group = QButtonGroup()
-        
+
         photo_none = QRadioButton("Belirtilmemiş")
         photo_none.setChecked(True)
         self.photo_exists_group.addButton(photo_none, 0)
@@ -738,7 +853,7 @@ class CategoryWindow(QWidget):
         self.view_mode_btn.setObjectName("modeButtonActive")
         self.edit_mode_btn.setObjectName("modeButton")
         self.update_button_styles()
-        
+
         if self.current_view_account:
             self.load_account_categories_view(self.current_view_account)
 
@@ -824,7 +939,7 @@ class CategoryWindow(QWidget):
         """Hesaba tıklandığında"""
         account = item.text()
         self.current_view_account = account
-        
+
         if self.is_edit_mode:
             self.load_account_categories_edit(account)
             self.status_label.setText(f"✏️ Düzenlenen: {account}")
@@ -848,7 +963,7 @@ class CategoryWindow(QWidget):
         """Hesap kategorilerini görüntüleme modunda göster"""
         try:
             account_categories = mysql_manager.get_account_categories(account, self.selected_account_type)
-            
+
             if not account_categories:
                 self.view_text.setHtml(f"""
                 <div style='padding: 20px; text-align: center; color: #666;'>
@@ -859,7 +974,7 @@ class CategoryWindow(QWidget):
                 return
 
             html = f"<h2>👤 {account} - Kategori Bilgileri</h2>"
-            
+
             # Kategorileri grupla
             categories_by_type = {}
             for cat in account_categories:
@@ -943,7 +1058,7 @@ class CategoryWindow(QWidget):
         # Checkbox'ları temizle
         for checkbox_data in self.photo_content_checkboxes.values():
             checkbox_data['checkbox'].setChecked(False)
-        
+
         for checkbox_data in self.profile_content_checkboxes.values():
             checkbox_data['checkbox'].setChecked(False)
 
