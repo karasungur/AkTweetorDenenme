@@ -548,14 +548,12 @@ class MySQLManager:
             # Varsayılan kategoriler
             default_categories = [
                 # Profil kategorileri
-                ('profil', 'Yaş Grubu', 'Genç (18-30)', 'Genç yaş grubundaki kullanıcılar'),
-                ('profil', 'Yaş Grubu', 'Orta yaş (31-50)', 'Orta yaş grubundaki kullanıcılar'),
-                ('profil', 'Yaş Grubu', 'Yaşlı (50+)', 'Yaşlı kullanıcılar'),
-                ('profil', 'Cinsiyet', 'Erkek', 'Erkek kullanıcılar'),
-                ('profil', 'Cinsiyet', 'Kadın', 'Kadın kullanıcılar'),
-                ('profil', 'Cinsiyet', 'Belirtmeyen / Diğer', 'Cinsiyet belirtmeyen kullanıcılar'),
-                ('profil', 'Profil Fotoğrafı', 'Fotoğraf var', 'Profil fotoğrafı olan hesaplar'),
-                ('profil', 'Profil Fotoğrafı', 'Fotoğraf yok', 'Profil fotoğrafı olmayan hesaplar'),
+                ('profil', 'Yaş Grubu', None, 'Yaş grubu kategorisi'),
+                ('profil', 'Cinsiyet', None, 'Cinsiyet kategorisi'),
+                ('profil', 'Profil Fotoğrafı', None, 'Profil fotoğrafı kategorisi'),
+                ('profil', 'Fotoğraf İçeriği', None, 'Fotoğraf içeriği kategorisi'),
+                # İçerik kategorileri
+                ('icerik', 'İçerik Türü', None, 'İçerik türü kategorisi'),
             ]
             
             # Her kategoriyi kontrol et ve yoksa ekle
@@ -664,14 +662,11 @@ class MySQLManager:
         try:
             cursor = connection.cursor()
             
-            # Hesap türüne göre tabloyu belirle
-            table_name = "kullanici_kategorileri" if hesap_turu == "giris_yapilan" else "hedef_hesap_kategorileri"
-            
-            delete_query = f"""
-            DELETE FROM {table_name} 
-            WHERE kullanici_adi = %s
+            delete_query = """
+            DELETE FROM hesap_kategorileri 
+            WHERE kullanici_adi = %s AND hesap_turu = %s
             """
-            cursor.execute(delete_query, (kullanici_adi,))
+            cursor.execute(delete_query, (kullanici_adi, hesap_turu))
             connection.commit()
             
             return True

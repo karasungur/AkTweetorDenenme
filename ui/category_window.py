@@ -1,3 +1,4 @@
+
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QLabel, QFrame, QMessageBox, QListWidget, QListWidgetItem,
                              QComboBox, QLineEdit, QTextEdit, QGroupBox, QSplitter,
@@ -69,6 +70,23 @@ class CategoryWindow(QWidget):
         header_layout.addWidget(title_label)
         header_layout.addStretch()
 
+        # İmport/Export butonları
+        import_export_layout = QHBoxLayout()
+        
+        import_categories_btn = QPushButton("📁 Kategori Dosyası İçe Aktar")
+        import_categories_btn.setObjectName("importButton")
+        import_categories_btn.clicked.connect(self.import_categories_file)
+        import_categories_btn.setCursor(Qt.PointingHandCursor)
+        
+        import_account_categories_btn = QPushButton("📁 Hesap Kategorileri İçe Aktar")
+        import_account_categories_btn.setObjectName("importButton")
+        import_account_categories_btn.clicked.connect(self.import_account_categories_file)
+        import_account_categories_btn.setCursor(Qt.PointingHandCursor)
+
+        import_export_layout.addWidget(import_categories_btn)
+        import_export_layout.addWidget(import_account_categories_btn)
+        import_export_layout.addStretch()
+
         # Hesap türü seçimi
         account_type_frame = self.create_account_type_selection()
 
@@ -87,6 +105,7 @@ class CategoryWindow(QWidget):
 
         # Layout'a ekle
         layout.addLayout(header_layout)
+        layout.addLayout(import_export_layout)
         layout.addWidget(account_type_frame)
         layout.addWidget(main_splitter, 1)
 
@@ -163,8 +182,8 @@ class CategoryWindow(QWidget):
         # Hesap listesi
         self.accounts_list = QListWidget()
         self.accounts_list.setObjectName("accountsList")
-        self.accounts_list.setSelectionMode(QListWidget.ExtendedSelection)
-        self.accounts_list.itemSelectionChanged.connect(self.on_account_selection_changed)
+        self.accounts_list.itemClicked.connect(self.on_account_clicked)
+        self.accounts_list.itemChanged.connect(self.on_account_item_changed)
 
         layout.addLayout(controls_layout)
         layout.addWidget(self.accounts_list, 1)
@@ -453,8 +472,19 @@ class CategoryWindow(QWidget):
             item = self.accounts_list.item(i)
             item.setCheckState(check_state)
 
-    def on_account_selection_changed(self):
-        """Hesap seçimi değiştiğinde"""
+    def on_account_clicked(self, item):
+        """Hesaba tıklandığında"""
+        # Sadece tek hesap seçimi için kategorileri yükle
+        account = item.text()
+        self.load_account_categories(account)
+        self.selected_info_label.setText(f"🎯 Görüntülenen: {account}")
+
+    def on_account_item_changed(self, item):
+        """Hesap item'ı değiştiğinde (checkbox)"""
+        self.update_selected_accounts()
+
+    def update_selected_accounts(self):
+        """Seçili hesapları güncelle"""
         selected_count = 0
         self.selected_accounts.clear()
 
@@ -472,7 +502,6 @@ class CategoryWindow(QWidget):
             self.load_account_categories(account)
         else:
             self.selected_info_label.setText(f"🎯 {selected_count} hesap seçili")
-            self.clear_category_selections()
 
     def on_photo_option_changed(self, checked):
         """Fotoğraf seçeneği değiştiğinde"""
@@ -562,33 +591,46 @@ class CategoryWindow(QWidget):
                 # Önce hesabın kategorilerini sil
                 mysql_manager.delete_account_categories(account, self.selected_account_type)
 
+                # Kategori ID'lerini al
+                category_mappings = self.get_category_id_mappings()
+
                 # Profil kategorilerini kaydet
                 # Yaş grubu
                 age_checked = self.age_group.checkedButton()
                 if age_checked and hasattr(age_checked, 'value'):
-                    mysql_manager.assign_category_to_account(account, self.selected_account_type, 'age', age_checked.value)
+                    age_cat_id = category_mappings.get(('Yaş Grubu', None))
+                    if age_cat_id:
+                        mysql_manager.assign_category_to_account(account, self.selected_account_type, age_cat_id, age_checked.value)
 
                 # Cinsiyet
                 gender_checked = self.gender_group.checkedButton()
                 if gender_checked and hasattr(gender_checked, 'value'):
-                    mysql_manager.assign_category_to_account(account, self.selected_account_type, 'gender', gender_checked.value)
+                    gender_cat_id = category_mappings.get(('Cinsiyet', None))
+                    if gender_cat_id:
+                        mysql_manager.assign_category_to_account(account, self.selected_account_type, gender_cat_id, gender_checked.value)
 
                 # Profil fotoğrafı
                 photo_checked = self.photo_group.checkedButton()
                 if photo_checked:
                     photo_value = 'var' if photo_checked == self.photo_yes else 'yok'
-                    mysql_manager.assign_category_to_account(account, self.selected_account_type, 'photo', photo_value)
+                    photo_cat_id = category_mappings.get(('Profil Fotoğrafı', None))
+                    if photo_cat_id:
+                        mysql_manager.assign_category_to_account(account, self.selected_account_type, photo_cat_id, photo_value)
 
                     # Fotoğraf içeriği
                     if photo_checked == self.photo_yes:
                         photo_content_checked = self.photo_content_group.checkedButton()
                         if photo_content_checked and hasattr(photo_content_checked, 'value'):
-                            mysql_manager.assign_category_to_account(account, self.selected_account_type, 'photo_content', photo_content_checked.value)
+                            content_cat_id = category_mappings.get(('Fotoğraf İçeriği', None))
+                            if content_cat_id:
+                                mysql_manager.assign_category_to_account(account, self.selected_account_type, content_cat_id, photo_content_checked.value)
 
                 # İçerik kategorilerini kaydet
                 for value, checkbox in self.content_checkboxes.items():
                     if checkbox.isChecked():
-                        mysql_manager.assign_category_to_account(account, self.selected_account_type, 'content', value)
+                        content_cat_id = category_mappings.get(('İçerik Türü', None))
+                        if content_cat_id:
+                            mysql_manager.assign_category_to_account(account, self.selected_account_type, content_cat_id, value)
 
                 saved_count += 1
 
@@ -596,6 +638,55 @@ class CategoryWindow(QWidget):
 
         except Exception as e:
             self.show_error(f"Kategoriler kaydedilirken hata: {str(e)}")
+
+    def get_category_id_mappings(self):
+        """Kategori ID eşlemelerini al"""
+        mappings = {}
+        categories = mysql_manager.get_categories()
+        
+        for cat in categories:
+            key = (cat['ana_kategori'], cat['alt_kategori'])
+            mappings[key] = cat['id']
+        
+        return mappings
+
+    def import_categories_file(self):
+        """Kategori dosyası içe aktar"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Kategori Dosyası Seç",
+            "",
+            "Metin Dosyaları (*.txt);;Tüm Dosyalar (*)"
+        )
+        
+        if file_path:
+            try:
+                count = mysql_manager.import_categories_from_file(file_path)
+                self.show_info(f"✅ {count} kategori başarıyla içe aktarıldı!")
+                self.load_categories()
+                self.create_category_groups()
+            except Exception as e:
+                self.show_error(f"Kategori içe aktarma hatası: {str(e)}")
+
+    def import_account_categories_file(self):
+        """Hesap kategorileri dosyası içe aktar"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Hesap Kategorileri Dosyası Seç",
+            "",
+            "Metin Dosyaları (*.txt);;Tüm Dosyalar (*)"
+        )
+        
+        if file_path:
+            try:
+                count = mysql_manager.import_account_categories_from_file(file_path, self.selected_account_type)
+                self.show_info(f"✅ {count} hesap kategorisi başarıyla içe aktarıldı!")
+                # Seçili hesap varsa kategorilerini yenile
+                if self.selected_accounts:
+                    account = list(self.selected_accounts)[0]
+                    self.load_account_categories(account)
+            except Exception as e:
+                self.show_error(f"Hesap kategorileri içe aktarma hatası: {str(e)}")
 
     def return_to_main(self):
         """Ana menüye dön"""
@@ -631,6 +722,23 @@ class CategoryWindow(QWidget):
         #backButton:hover {{
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #5A6268, stop:1 #495057);
+        }}
+
+        #importButton {{
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #17A2B8, stop:1 #138496);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 5px;
+        }}
+
+        #importButton:hover {{
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #138496, stop:1 #117A8B);
         }}
 
         #questionLabel {{
@@ -834,47 +942,6 @@ class CategoryWindow(QWidget):
 
     def show_error(self, message):
         """Hata mesajı"""
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Critical)
-        msg.setWindowTitle("Hata")
-        msg.setText(message)
-        msg.exec_()
-
-    def load_categories(self):
-        """Kategorileri yükle"""
-        try:
-            self.categories = mysql_manager.get_categories()
-        except Exception as e:
-            self.show_error(f"Kategoriler yüklenirken hata: {str(e)}")
-
-    
-
-    
-
-    
-
-    def return_to_main(self):
-        """Ana menüye dön"""
-        self.return_callback()
-
-    def show_info(self, message):
-        """Bilgi mesajı göster"""
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Information)
-        msg.setWindowTitle("Bilgi")
-        msg.setText(message)
-        msg.exec_()
-
-    def show_warning(self, message):
-        """Uyarı mesajı göster"""
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Warning)
-        msg.setWindowTitle("Uyarı")
-        msg.setText(message)
-        msg.exec_()
-
-    def show_error(self, message):
-        """Hata mesajı göster"""
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Critical)
         msg.setWindowTitle("Hata")
