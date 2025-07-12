@@ -886,7 +886,7 @@ class MySQLManager:
 
     @handle_exception
     def delete_category(self, kategori_turu, ana_kategori, alt_kategori=None):
-        """Kategori sil"""
+        """Kategori sil - önce hesap atamalarını sil, sonra kategoriyi sil"""
         connection = self.get_connection()
         if not connection:
             return False
@@ -894,24 +894,82 @@ class MySQLManager:
         try:
             cursor = connection.cursor()
             
-            # İlgili hesap kategori atamalarını önce sil
-            delete_assignments_query = """
-            DELETE FROM hesap_kategorileri 
-            WHERE kategori_turu = %s AND ana_kategori = %s 
-            AND (alt_kategori = %s OR (alt_kategori IS NULL AND %s IS NULL))
-            """
-            cursor.execute(delete_assignments_query, (kategori_turu, ana_kategori, alt_kategori, alt_kategori))
-            
-            # Kategoriyi sil
-            delete_category_query = """
-            DELETE FROM kategoriler 
-            WHERE kategori_turu = %s AND ana_kategori = %s 
-            AND (alt_kategori = %s OR (alt_kategori IS NULL AND %s IS NULL))
-            """
-            cursor.execute(delete_category_query, (kategori_turu, ana_kategori, alt_kategori, alt_kategori))
+            if alt_kategori is None:
+                # Ana kategori silme - tüm alt kategorileri ve atamaları sil
+                print(f"🔧 Ana kategori siliniyor: {ana_kategori}")
+                
+                # 1. İlgili tüm hesap kategori atamalarını sil (ana ve alt kategoriler)
+                delete_assignments_query = """
+                DELETE FROM hesap_kategorileri 
+                WHERE kategori_turu = %s AND ana_kategori = %s
+                """
+                cursor.execute(delete_assignments_query, (kategori_turu, ana_kategori))
+                deleted_assignments = cursor.rowcount
+                print(f"✅ {deleted_assignments} hesap ataması silindi")
+                
+                # 2. Ana kategoriyi sil (alt kategoriler de dahil - yeni yapıda tek satır)
+                delete_category_query = """
+                DELETE FROM kategoriler 
+                WHERE kategori_turu = %s AND ana_kategori = %s
+                """
+                cursor.execute(delete_category_query, (kategori_turu, ana_kategori))
+                
+            else:
+                # Alt kategori silme - sadece o alt kategoriyi kaldır
+                print(f"🔧 Alt kategori siliniyor: {ana_kategori} -> {alt_kategori}")
+                
+                # 1. İlgili hesap kategori atamalarını sil (sadece bu alt kategori)
+                delete_assignments_query = """
+                DELETE FROM hesap_kategorileri 
+                WHERE kategori_turu = %s AND ana_kategori = %s AND alt_kategori = %s
+                """
+                cursor.execute(delete_assignments_query, (kategori_turu, ana_kategori, alt_kategori))
+                deleted_assignments = cursor.rowcount
+                print(f"✅ {deleted_assignments} hesap ataması silindi")
+                
+                # 2. Ana kategoriden alt kategoriyi kaldır
+                # Önce mevcut alt kategorileri al
+                get_category_query = """
+                SELECT alt_kategoriler FROM kategoriler 
+                WHERE kategori_turu = %s AND ana_kategori = %s
+                """
+                cursor.execute(get_category_query, (kategori_turu, ana_kategori))
+                result = cursor.fetchone()
+                
+                if result and result[0]:
+                    current_subcategories = [sub.strip() for sub in result[0].split(',')]
+                    # Silinecek alt kategoriyi listeden çıkar
+                    if alt_kategori in current_subcategories:
+                        current_subcategories.remove(alt_kategori)
+                        
+                        # Güncellenmiş listeyi kaydet
+                        if current_subcategories:
+                            new_subcategories = ','.join(current_subcategories)
+                            update_query = """
+                            UPDATE kategoriler 
+                            SET alt_kategoriler = %s 
+                            WHERE kategori_turu = %s AND ana_kategori = %s
+                            """
+                            cursor.execute(update_query, (new_subcategories, kategori_turu, ana_kategori))
+                        else:
+                            # Alt kategori kalmadıysa alt_kategoriler sütununu NULL yap
+                            update_query = """
+                            UPDATE kategoriler 
+                            SET alt_kategoriler = NULL 
+                            WHERE kategori_turu = %s AND ana_kategori = %s
+                            """
+                            cursor.execute(update_query, (kategori_turu, ana_kategori))
+                    else:
+                        print(f"⚠️ Alt kategori bulunamadı: {alt_kategori}")
+                        return False
+                else:
+                    print(f"⚠️ Ana kategori bulunamadı: {ana_kategori}")
+                    return False
             
             connection.commit()
-            return cursor.rowcount > 0
+            print(f"✅ Kategori başarıyla silindi: {ana_kategori}{' -> ' + alt_kategori if alt_kategori else ''}")
+            return True
+            
         except Error as e:
             logger.error(f"❌ Kategori silme hatası: {e}")
             connection.rollback()
