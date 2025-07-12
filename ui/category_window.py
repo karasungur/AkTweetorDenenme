@@ -867,7 +867,7 @@ class CategoryWindow(QWidget):
             main_item.setExpanded(True)
 
             for sub in subs:
-                sub_item = QTreeWidgetItem([Syntax error in category_window.py has been removed.
+                sub_item = QTreeWidgetItem([
                     sub['alt_kategori'] or "Genel",
                     sub['kategori_turu'],
                     sub['aciklama'] or ""
