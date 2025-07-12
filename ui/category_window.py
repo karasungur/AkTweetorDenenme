@@ -715,12 +715,36 @@ class CategoryWindow(QWidget):
         manage_categories_btn.setObjectName("manageButton")
         manage_categories_btn.clicked.connect(self.show_category_management)
 
-        # Dosya işlemleri
-        file_import_btn = QPushButton("📁 Dosyadan İçe Aktar")
+        # Kategori istatistikleri
+        stats_btn = QPushButton("📊 Kategori İstatistikleri")
+        stats_btn.setObjectName("statsButton")
+        stats_btn.clicked.connect(self.show_category_statistics)
+
+        # Dışa aktarma
+        export_btn = QPushButton("📤 Dışa Aktarma")
+        export_btn.setObjectName("exportButton")
+        export_btn.clicked.connect(self.show_export_dialog)
+
+        # Grafiksel istatistikler
+        charts_btn = QPushButton("📈 Grafiksel İstatistikler")
+        charts_btn.setObjectName("chartsButton")
+        charts_btn.clicked.connect(self.show_charts_dialog)
+
+        # Gelişmiş dosya işlemleri
+        advanced_ops_btn = QPushButton("🔄 Gelişmiş İçe/Dışa Aktarma")
+        advanced_ops_btn.setObjectName("advancedButton")
+        advanced_ops_btn.clicked.connect(self.show_advanced_operations)
+
+        # Dosya işlemleri (basit)
+        file_import_btn = QPushButton("📁 Basit İçe Aktar")
         file_import_btn.setObjectName("importButton")
         file_import_btn.clicked.connect(self.show_file_import)
 
         toolbar_layout.addWidget(manage_categories_btn)
+        toolbar_layout.addWidget(stats_btn)
+        toolbar_layout.addWidget(export_btn)
+        toolbar_layout.addWidget(charts_btn)
+        toolbar_layout.addWidget(advanced_ops_btn)
         toolbar_layout.addWidget(file_import_btn)
         toolbar_layout.addStretch()
 
@@ -1311,6 +1335,32 @@ class CategoryWindow(QWidget):
             else:
                 self.load_account_categories_view(self.current_view_account)
 
+    def show_category_statistics(self):
+        """Kategori istatistikleri dialog'unu göster"""
+        from .category_stats_window import CategoryStatsDialog
+        dialog = CategoryStatsDialog(self)
+        dialog.exec_()
+
+    def show_export_dialog(self):
+        """Dışa aktarma dialog'unu göster"""
+        from .export_dialog import ExportDialog
+        dialog = ExportDialog(self)
+        dialog.exec_()
+
+    def show_charts_dialog(self):
+        """Grafiksel istatistikler dialog'unu göster"""
+        from .category_stats_window import CategoryStatsDialog
+        dialog = CategoryStatsDialog(self)
+        # Doğrudan grafikler sekmesini aç
+        dialog.tabs.setCurrentIndex(3)  # Grafiksel görünüm sekmesi
+        dialog.exec_()
+
+    def show_advanced_operations(self):
+        """Gelişmiş dosya işlemleri dialog'unu göster"""
+        from .advanced_file_operations import AdvancedFileOperationsDialog
+        dialog = AdvancedFileOperationsDialog(self)
+        dialog.exec_()
+
     def show_file_import(self):
         """Dosya içe aktarma dialog'unu göster"""
         dialog = FileImportDialog(self)
@@ -1841,6 +1891,30 @@ class CategoryWindow(QWidget):
         #exportButton {{
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #10B981, stop:1 #059669);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 2px;
+        }}
+
+        #chartsButton {{
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #F59E0B, stop:1 #D97706);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 2px;
+        }}
+
+        #advancedButton {{
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #6366F1, stop:1 #4F46E5);
             color: white;
             border: none;
             border-radius: 8px;
