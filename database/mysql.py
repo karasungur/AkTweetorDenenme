@@ -144,36 +144,34 @@ class MySQLManager:
             
             cursor.execute(create_targets_table)
             
-            # profil_kategorileri tablosu
-            create_profile_categories_table = """
-            CREATE TABLE IF NOT EXISTS profil_kategorileri (
+            # kategoriler tablosu - sadeleştirilmiş
+            create_categories_table = """
+            CREATE TABLE IF NOT EXISTS kategoriler (
                 id INT AUTO_INCREMENT PRIMARY KEY,
+                kategori_adi VARCHAR(255) NOT NULL UNIQUE,
                 kategori_turu ENUM('profil', 'icerik') NOT NULL,
-                ana_kategori VARCHAR(255) NOT NULL,
-                alt_kategori VARCHAR(255),
                 aciklama TEXT,
                 olusturma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_kategori_turu (kategori_turu),
-                INDEX idx_ana_kategori (ana_kategori)
+                INDEX idx_kategori_adi (kategori_adi),
+                INDEX idx_kategori_turu (kategori_turu)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
             
-            cursor.execute(create_profile_categories_table)
+            cursor.execute(create_categories_table)
             
-            # hesap_kategorileri tablosu
+            # hesap_kategorileri tablosu - basitleştirilmiş
             create_account_categories_table = """
             CREATE TABLE IF NOT EXISTS hesap_kategorileri (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 kullanici_adi VARCHAR(255) NOT NULL,
                 hesap_turu ENUM('giris_yapilan', 'hedef') NOT NULL,
-                kategori_id INT,
+                kategori_adi VARCHAR(255) NOT NULL,
                 kategori_degeri VARCHAR(255),
                 olusturma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                guncelleme_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                FOREIGN KEY (kategori_id) REFERENCES profil_kategorileri(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_user_category (kullanici_adi, hesap_turu, kategori_adi),
                 INDEX idx_kullanici_adi (kullanici_adi),
                 INDEX idx_hesap_turu (hesap_turu),
-                INDEX idx_kategori_id (kategori_id)
+                INDEX idx_kategori_adi (kategori_adi)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
             
@@ -545,31 +543,36 @@ class MySQLManager:
         try:
             cursor = connection.cursor()
             
-            # Varsayılan kategoriler
+            # Varsayılan kategoriler - basitleştirilmiş
             default_categories = [
                 # Profil kategorileri
-                ('profil', 'Yaş Grubu', None, 'Yaş grubu kategorisi'),
-                ('profil', 'Cinsiyet', None, 'Cinsiyet kategorisi'),
-                ('profil', 'Profil Fotoğrafı', None, 'Profil fotoğrafı kategorisi'),
-                ('profil', 'Fotoğraf İçeriği', None, 'Fotoğraf içeriği kategorisi'),
+                ('Yaş Grubu', 'profil', 'Kullanıcının yaş aralığı'),
+                ('Cinsiyet', 'profil', 'Kullanıcının cinsiyeti'),
+                ('Profil Fotoğrafı', 'profil', 'Profil fotoğrafı varlığı'),
+                ('Fotoğraf İçeriği', 'profil', 'Profil fotoğrafının içeriği'),
                 # İçerik kategorileri
-                ('icerik', 'İçerik Türü', None, 'İçerik türü kategorisi'),
+                ('Dini İçerik', 'icerik', 'Dini paylaşımlar'),
+                ('Siyasi İçerik', 'icerik', 'Siyasi paylaşımlar'),
+                ('Mizah', 'icerik', 'Mizahi içerikler'),
+                ('Spor', 'icerik', 'Spor içerikleri'),
+                ('Haber', 'icerik', 'Haber paylaşımları'),
+                ('Eğlence', 'icerik', 'Eğlence içerikleri'),
             ]
             
             # Her kategoriyi kontrol et ve yoksa ekle
-            for kategori_turu, ana_kategori, alt_kategori, aciklama in default_categories:
+            for kategori_adi, kategori_turu, aciklama in default_categories:
                 check_query = """
-                SELECT id FROM profil_kategorileri 
-                WHERE kategori_turu = %s AND ana_kategori = %s AND alt_kategori = %s
+                SELECT id FROM kategoriler 
+                WHERE kategori_adi = %s
                 """
-                cursor.execute(check_query, (kategori_turu, ana_kategori, alt_kategori))
+                cursor.execute(check_query, (kategori_adi,))
                 
                 if not cursor.fetchone():
                     insert_query = """
-                    INSERT INTO profil_kategorileri (kategori_turu, ana_kategori, alt_kategori, aciklama)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO kategoriler (kategori_adi, kategori_turu, aciklama)
+                    VALUES (%s, %s, %s)
                     """
-                    cursor.execute(insert_query, (kategori_turu, ana_kategori, alt_kategori, aciklama))
+                    cursor.execute(insert_query, (kategori_adi, kategori_turu, aciklama))
             
             connection.commit()
             
@@ -593,15 +596,15 @@ class MySQLManager:
             
             if kategori_turu:
                 query = """
-                SELECT * FROM profil_kategorileri 
+                SELECT * FROM kategoriler 
                 WHERE kategori_turu = %s 
-                ORDER BY ana_kategori, alt_kategori
+                ORDER BY kategori_adi
                 """
                 cursor.execute(query, (kategori_turu,))
             else:
                 query = """
-                SELECT * FROM profil_kategorileri 
-                ORDER BY kategori_turu, ana_kategori, alt_kategori
+                SELECT * FROM kategoriler 
+                ORDER BY kategori_turu, kategori_adi
                 """
                 cursor.execute(query)
             
@@ -615,7 +618,7 @@ class MySQLManager:
                 connection.close()
     
     @handle_exception
-    def add_category(self, kategori_turu, ana_kategori, alt_kategori=None, aciklama=None):
+    def add_category(self, kategori_adi, kategori_turu, aciklama=None):
         """Yeni kategori ekle"""
         connection = self.get_connection()
         if not connection:
@@ -626,20 +629,20 @@ class MySQLManager:
             
             # Var olup olmadığını kontrol et
             check_query = """
-            SELECT id FROM profil_kategorileri 
-            WHERE kategori_turu = %s AND ana_kategori = %s AND alt_kategori = %s
+            SELECT id FROM kategoriler 
+            WHERE kategori_adi = %s
             """
-            cursor.execute(check_query, (kategori_turu, ana_kategori, alt_kategori))
+            cursor.execute(check_query, (kategori_adi,))
             
             if cursor.fetchone():
                 return False  # Zaten var
             
             # Ekle
             insert_query = """
-            INSERT INTO profil_kategorileri (kategori_turu, ana_kategori, alt_kategori, aciklama)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO kategoriler (kategori_adi, kategori_turu, aciklama)
+            VALUES (%s, %s, %s)
             """
-            cursor.execute(insert_query, (kategori_turu, ana_kategori, alt_kategori, aciklama))
+            cursor.execute(insert_query, (kategori_adi, kategori_turu, aciklama))
             connection.commit()
             
             return True
@@ -680,7 +683,7 @@ class MySQLManager:
                 connection.close()
     
     @handle_exception
-    def assign_category_to_account(self, kullanici_adi, hesap_turu, kategori_id, kategori_degeri):
+    def assign_category_to_account(self, kullanici_adi, hesap_turu, kategori_adi, kategori_degeri):
         """Hesaba kategori ata"""
         connection = self.get_connection()
         if not connection:
@@ -689,29 +692,14 @@ class MySQLManager:
         try:
             cursor = connection.cursor()
             
-            # Var olan atamayı kontrol et
-            check_query = """
-            SELECT id FROM hesap_kategorileri 
-            WHERE kullanici_adi = %s AND hesap_turu = %s AND kategori_id = %s
+            # Var olan atamayı kontrol et ve güncelle veya ekle
+            insert_query = """
+            INSERT INTO hesap_kategorileri (kullanici_adi, hesap_turu, kategori_adi, kategori_degeri)
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE 
+            kategori_degeri = VALUES(kategori_degeri)
             """
-            cursor.execute(check_query, (kullanici_adi, hesap_turu, kategori_id))
-            existing = cursor.fetchone()
-            
-            if existing:
-                # Güncelle
-                update_query = """
-                UPDATE hesap_kategorileri 
-                SET kategori_degeri = %s, guncelleme_tarihi = CURRENT_TIMESTAMP
-                WHERE id = %s
-                """
-                cursor.execute(update_query, (kategori_degeri, existing[0]))
-            else:
-                # Yeni ekle
-                insert_query = """
-                INSERT INTO hesap_kategorileri (kullanici_adi, hesap_turu, kategori_id, kategori_degeri)
-                VALUES (%s, %s, %s, %s)
-                """
-                cursor.execute(insert_query, (kullanici_adi, hesap_turu, kategori_id, kategori_degeri))
+            cursor.execute(insert_query, (kullanici_adi, hesap_turu, kategori_adi, kategori_degeri))
             
             connection.commit()
             return True
@@ -734,11 +722,11 @@ class MySQLManager:
         try:
             cursor = connection.cursor(dictionary=True)
             query = """
-            SELECT hk.*, pk.ana_kategori, pk.alt_kategori, pk.aciklama
+            SELECT hk.*, k.kategori_turu, k.aciklama
             FROM hesap_kategorileri hk
-            JOIN profil_kategorileri pk ON hk.kategori_id = pk.id
+            LEFT JOIN kategoriler k ON hk.kategori_adi = k.kategori_adi
             WHERE hk.kullanici_adi = %s AND hk.hesap_turu = %s
-            ORDER BY pk.ana_kategori, pk.alt_kategori
+            ORDER BY k.kategori_turu, hk.kategori_adi
             """
             cursor.execute(query, (kullanici_adi, hesap_turu))
             return cursor.fetchall()
