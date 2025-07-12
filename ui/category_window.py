@@ -14,9 +14,43 @@ class CategoryManagementDialog(QDialog):
     """Kategori yönetimi dialog'u"""
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("🛠 Kategori Yönetimi")
+        self.setWindowTitle("🛠 Kategori Yönetimi - Modern Arayüz")
         self.setModal(True)
-        self.resize(600, 500)
+        self.resize(900, 650)
+        
+        # Modern stil ekle
+        self.setStyleSheet("""
+            QDialog {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+            }
+            QTabWidget::pane {
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                background: white;
+                margin-top: 5px;
+            }
+            QTabBar::tab {
+                background: #f1f5f9;
+                padding: 12px 20px;
+                margin-right: 2px;
+                border-top-left-radius: 8px;
+                border-top-right-radius: 8px;
+                border: 1px solid #e2e8f0;
+                border-bottom: none;
+                font-weight: 600;
+                font-size: 13px;
+            }
+            QTabBar::tab:selected {
+                background: white;
+                border-bottom: 2px solid #3b82f6;
+                color: #3b82f6;
+            }
+            QTabBar::tab:hover {
+                background: #e2e8f0;
+            }
+        """)
 
         # Sayfalama değişkenleri
         self.photo_current_page = 1
@@ -25,24 +59,86 @@ class CategoryManagementDialog(QDialog):
         self.content_items_per_page = 20
 
         layout = QVBoxLayout()
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        # Başlık
+        title_label = QLabel("🛠 Kategori Yönetimi")
+        title_label.setStyleSheet("""
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 10px;
+        """)
+        layout.addWidget(title_label)
+
+        # Açıklama
+        desc_label = QLabel("Kategorilerinizi organize edin ve yönetin. Değişiklikler anında kaydedilir.")
+        desc_label.setStyleSheet("""
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 15px;
+        """)
+        layout.addWidget(desc_label)
 
         # Tab widget
         self.tabs = QTabWidget()
+        self.tabs.setStyleSheet("""
+            QTabWidget::tab-bar {
+                alignment: center;
+            }
+        """)
 
         # Profil içerik kategorileri
         profile_content_tab = self.create_content_categories_tab()
-        self.tabs.addTab(profile_content_tab, "📂 Profil İçerik Kategorileri")
+        self.tabs.addTab(profile_content_tab, "📂 İçerik Kategorileri")
 
         # Fotoğraf içeriği kategorileri
         photo_content_tab = self.create_photo_content_tab()
-        self.tabs.addTab(photo_content_tab, "📸 Fotoğraf İçeriği Kategorileri")
+        self.tabs.addTab(photo_content_tab, "📸 Fotoğraf Kategorileri")
 
         layout.addWidget(self.tabs)
 
-        # Butonlar
-        buttons = QDialogButtonBox(QDialogButtonBox.Close)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
+        # Modern butonlar
+        button_layout = QHBoxLayout()
+        
+        help_btn = QPushButton("❓ Yardım")
+        help_btn.setStyleSheet("""
+            QPushButton {
+                background: #f1f5f9;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-weight: 600;
+                color: #475569;
+            }
+            QPushButton:hover {
+                background: #e2e8f0;
+            }
+        """)
+        help_btn.clicked.connect(self.show_help)
+        
+        close_btn = QPushButton("✅ Tamam")
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background: #3b82f6;
+                border: none;
+                border-radius: 6px;
+                color: white;
+                padding: 8px 24px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background: #2563eb;
+            }
+        """)
+        close_btn.clicked.connect(self.accept)
+        
+        button_layout.addWidget(help_btn)
+        button_layout.addStretch()
+        button_layout.addWidget(close_btn)
+        
+        layout.addLayout(button_layout)
 
         self.setLayout(layout)
         self.load_categories()
@@ -233,22 +329,35 @@ class CategoryManagementDialog(QDialog):
 
     def load_categories(self):
         """Kategorileri yükle"""
-        # Profil içerik kategorileri - sadece ana kategorileri (alt_kategori NULL olanlar)
+        # Profil içerik kategorileri - tüm ana kategorileri göster
         self.main_categories_list.clear()
         profile_categories = mysql_manager.get_categories('icerik')
-        self.all_profile_categories = [cat for cat in profile_categories 
-                                     if cat.get('ana_kategori') != 'Fotoğraf İçeriği' 
-                                     and cat.get('alt_kategori') is None]
-
-        # Ana kategorileri tekrarsız şekilde ekle
-        added_main_categories = set()
-        for cat in self.all_profile_categories:
+        
+        # Ana kategorileri grupla (alt kategorisi olan/olmayan tüm ana kategoriler)
+        main_categories = {}
+        for cat in profile_categories:
             ana_kategori = cat.get('ana_kategori', '')
-            if ana_kategori and ana_kategori not in added_main_categories:
-                item = QListWidgetItem(ana_kategori)
-                item.setData(Qt.UserRole, cat)
-                self.main_categories_list.addItem(item)
-                added_main_categories.add(ana_kategori)
+            if ana_kategori != 'Fotoğraf İçeriği' and ana_kategori:
+                if ana_kategori not in main_categories:
+                    main_categories[ana_kategori] = {
+                        'data': cat,
+                        'has_subcategories': False
+                    }
+                if cat.get('alt_kategori'):
+                    main_categories[ana_kategori]['has_subcategories'] = True
+
+        # Ana kategorileri listeye ekle
+        self.all_profile_categories = []
+        for ana_kategori, info in main_categories.items():
+            display_name = f"📋 {ana_kategori}"
+            if info['has_subcategories']:
+                display_name += " (Alt kategoriler mevcut)"
+            
+            item = QListWidgetItem(display_name)
+            item.setData(Qt.UserRole, info['data'])
+            item.setData(Qt.UserRole + 1, ana_kategori)  # Gerçek kategori adı
+            self.main_categories_list.addItem(item)
+            self.all_profile_categories.append(info['data'])
 
         # Fotoğraf içeriği kategorileri - sadece alt kategorileri
         self.photo_content_list.clear()
@@ -414,8 +523,10 @@ class CategoryManagementDialog(QDialog):
 
     def on_main_category_selected(self, item):
         """Ana kategori seçildiğinde"""
-        category_data = item.data(Qt.UserRole)
-        category_name = category_data.get('ana_kategori')
+        category_name = item.data(Qt.UserRole + 1)  # Gerçek kategori adı
+        if not category_name:
+            category_data = item.data(Qt.UserRole)
+            category_name = category_data.get('ana_kategori')
 
         self.selected_main_label.setText(f"Seçili ana kategori: {category_name}")
         self.sub_category_input.setEnabled(True)
@@ -471,6 +582,33 @@ class CategoryManagementDialog(QDialog):
         self.photo_page_label.setText(f"Sayfa {self.photo_current_page}/{max_pages}")
         self.photo_prev_btn.setEnabled(self.photo_current_page > 1)
         self.photo_next_btn.setEnabled(self.photo_current_page < max_pages)
+
+    def show_help(self):
+        """Yardım dialog'unu göster"""
+        help_text = """
+        📋 <b>Kategori Yönetimi Yardımı</b><br><br>
+        
+        <b>📂 İçerik Kategorileri:</b><br>
+        • Sol panelden ana kategori seçin<br>
+        • Sağ panelde alt kategoriler görünür<br>
+        • Alt kategori eklemek için ana kategori seçimi zorunludur<br><br>
+        
+        <b>📸 Fotoğraf Kategorileri:</b><br>
+        • Profil fotoğraflarının içeriğini tanımlar<br>
+        • Direkt alt kategori olarak eklenir<br><br>
+        
+        <b>💡 İpuçları:</b><br>
+        • Kategoriler otomatik kaydedilir<br>
+        • Arama ile hızlıca kategori bulabilirsiniz<br>
+        • Silme işlemi geri alınamaz!
+        """
+        
+        msg = QMessageBox(self)
+        msg.setWindowTitle("📋 Yardım")
+        msg.setTextFormat(Qt.RichText)
+        msg.setText(help_text)
+        msg.setIcon(QMessageBox.Information)
+        msg.exec_()
 
     def show_info(self, message):
         QMessageBox.information(self, "Bilgi", message)
@@ -990,7 +1128,7 @@ class CategoryWindow(QWidget):
                 self.photo_content_layout.addWidget(checkbox)
 
     def load_profile_content_categories(self):
-        """Profil içerik kategorilerini yükle - hem ana hem alt kategorileri dahil et"""
+        """Profil içerik kategorilerini yükle - toplu seçim mantığı ile"""
         # Temizle
         for i in reversed(range(self.profile_content_layout.count())):
             child = self.profile_content_layout.itemAt(i).widget()
@@ -1024,13 +1162,25 @@ class CategoryWindow(QWidget):
         # Ana kategorileri ve alt kategorilerini ekle
         for ana_kategori, data in category_tree.items():
             # Ana kategori ekle
-            main_checkbox = QCheckBox(f"📋 {ana_kategori}")
+            has_subcategories = len(data['sub_categories']) > 0
+            main_text = f"📋 {ana_kategori}"
+            if has_subcategories:
+                main_text += f" ({len(data['sub_categories'])} alt kategori)"
+            
+            main_checkbox = QCheckBox(main_text)
             main_checkbox.setObjectName("contentCheckbox")
-            main_checkbox.setStyleSheet("font-weight: bold; margin-top: 8px;")
+            main_checkbox.setStyleSheet("font-weight: bold; margin-top: 8px; color: #2563eb;")
+            
+            # Toplu seçim için bağlantı
+            main_checkbox.stateChanged.connect(
+                lambda state, parent=ana_kategori: self.on_main_category_checkbox_changed(parent, state)
+            )
+            
             self.profile_content_checkboxes[ana_kategori] = {
                 'checkbox': main_checkbox,
                 'data': data['main_category'],
-                'type': 'main'
+                'type': 'main',
+                'subcategories': []
             }
             self.profile_content_layout.addWidget(main_checkbox)
 
@@ -1039,7 +1189,12 @@ class CategoryWindow(QWidget):
                 alt_kategori = sub_cat.get('alt_kategori', '')
                 sub_checkbox = QCheckBox(f"   └─ {alt_kategori}")
                 sub_checkbox.setObjectName("contentCheckbox")
-                sub_checkbox.setStyleSheet("margin-left: 20px; color: #666;")
+                sub_checkbox.setStyleSheet("margin-left: 25px; color: #64748b; font-size: 12px;")
+
+                # Alt kategori değişikliği için bağlantı
+                sub_checkbox.stateChanged.connect(
+                    lambda state, parent=ana_kategori: self.on_sub_category_checkbox_changed(parent, state)
+                )
 
                 # Alt kategori için benzersiz anahtar oluştur
                 sub_key = f"{ana_kategori}::{alt_kategori}"
@@ -1049,6 +1204,10 @@ class CategoryWindow(QWidget):
                     'type': 'sub',
                     'parent': ana_kategori
                 }
+                
+                # Ana kategorinin alt kategori listesine ekle
+                self.profile_content_checkboxes[ana_kategori]['subcategories'].append(sub_key)
+                
                 self.profile_content_layout.addWidget(sub_checkbox)
 
     def on_photo_exists_changed(self, button, checked):
@@ -1060,6 +1219,56 @@ class CategoryWindow(QWidget):
             # Fotoğraf içerik seçimlerini temizle
             for checkbox_data in self.photo_content_checkboxes.values():
                 checkbox_data['checkbox'].setChecked(False)
+
+    def on_main_category_checkbox_changed(self, parent_category, state):
+        """Ana kategori checkbox değiştiğinde alt kategorileri toplu seç/kaldır"""
+        if parent_category not in self.profile_content_checkboxes:
+            return
+        
+        parent_data = self.profile_content_checkboxes[parent_category]
+        is_checked = state == Qt.Checked
+        
+        # Alt kategorileri bul ve durumlarını güncelle
+        for sub_key in parent_data.get('subcategories', []):
+            if sub_key in self.profile_content_checkboxes:
+                sub_checkbox = self.profile_content_checkboxes[sub_key]['checkbox']
+                # Sinyalleri geçici olarak blokla
+                sub_checkbox.blockSignals(True)
+                sub_checkbox.setChecked(is_checked)
+                sub_checkbox.blockSignals(False)
+
+    def on_sub_category_checkbox_changed(self, parent_category, state):
+        """Alt kategori checkbox değiştiğinde ana kategori durumunu kontrol et"""
+        if parent_category not in self.profile_content_checkboxes:
+            return
+        
+        parent_data = self.profile_content_checkboxes[parent_category]
+        parent_checkbox = parent_data['checkbox']
+        
+        # Alt kategorilerin durumlarını kontrol et
+        checked_count = 0
+        total_count = len(parent_data.get('subcategories', []))
+        
+        for sub_key in parent_data.get('subcategories', []):
+            if sub_key in self.profile_content_checkboxes:
+                if self.profile_content_checkboxes[sub_key]['checkbox'].isChecked():
+                    checked_count += 1
+        
+        # Ana kategori durumunu güncelle
+        parent_checkbox.blockSignals(True)
+        if checked_count == 0:
+            parent_checkbox.setChecked(False)
+        elif checked_count == total_count:
+            parent_checkbox.setChecked(True)
+        else:
+            # Kısmi seçim durumu - görsel gösterim için stil değiştir
+            parent_checkbox.setChecked(True)
+            parent_checkbox.setStyleSheet("font-weight: bold; margin-top: 8px; color: #f59e0b;")  # Turuncu renk
+            return
+        
+        # Normal rengi geri yükle
+        parent_checkbox.setStyleSheet("font-weight: bold; margin-top: 8px; color: #2563eb;")
+        parent_checkbox.blockSignals(False)
 
     def set_view_mode(self):
         """Görüntüleme moduna geç"""
