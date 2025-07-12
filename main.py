@@ -1,100 +1,93 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
-import logging
+
+import sys
 import os
-from datetime import datetime
+import traceback
+from PyQt5.QtWidgets import QApplication, QMessageBox
+from PyQt5.QtCore import Qt
 
-# Projeye özgü import'lar
-from config.settings import load_config
-from database.mysql import mysql_manager
-from database.user_manager import user_manager
-from utils.logger import setup_logger
-
-app = Flask(__name__)
-app.secret_key = 'aktweetor_secret_key_2024'
-
-# Logger kurulumu
-logger = setup_logger()
-
-@app.route('/')
-def index():
-    """Ana sayfa"""
-    return render_template('index.html')
-
-@app.route('/categories')
-def categories():
-    """Kategori yönetimi sayfası"""
-    return render_template('categories.html')
-
-@app.route('/api/categories', methods=['GET'])
-def get_categories():
-    """Kategorileri getir"""
+def main():
+    """Ana program giriş noktası"""
     try:
-        categories = mysql_manager.get_categories('icerik')
-        return jsonify({'success': True, 'categories': categories})
+        # Uygulama oluştur
+        app = QApplication(sys.argv)
+        app.setApplicationName("AkTweetor")
+        
+        # High DPI desteği
+        try:
+            app.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+            app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+        except:
+            pass
+        
+        # Splash ekranını göster
+        try:
+            from ui.splash_screen import SplashScreen
+            splash = SplashScreen()
+            splash.show()
+        except Exception as e:
+            print(f"❌ Splash ekranı yüklenemedi: {str(e)}")
+            # Direkt ana pencereyi aç
+            from ui.main_window import MainWindow
+            window = MainWindow()
+            window.show()
+        
+        # Uygulamayı çalıştır
+        sys.exit(app.exec_())
+        
+    except ImportError as e:
+        print(f"❌ Modül import hatası: {str(e)}")
+        print("🌐 PyQt5 yüklenemedi, web arayüzü başlatılıyor...")
+        
+        # Flask web arayüzünü başlat
+        try:
+            start_web_interface()
+        except Exception as web_error:
+            print(f"❌ Web arayüzü de başlatılamadı: {str(web_error)}")
+            print("💡 Lütfen PyQt5'i yükleyin: pip install PyQt5")
+            
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        print(f"❌ Beklenmeyen hata: {str(e)}")
+        traceback.print_exc()
 
-@app.route('/api/accounts/<account_type>', methods=['GET'])
-def get_accounts(account_type):
-    """Hesapları getir"""
+def start_web_interface():
+    """Web arayüzünü başlat (fallback)"""
     try:
-        if account_type == 'giris_yapilan':
-            users = user_manager.get_all_users()
-            accounts = [user['kullanici_adi'] for user in users]
-        else:
-            targets = mysql_manager.get_all_targets()
-            accounts = [target['kullanici_adi'] for target in targets]
-
-        return jsonify({'success': True, 'accounts': accounts})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/save_categories', methods=['POST'])
-def save_categories():
-    """Kategorileri kaydet"""
-    try:
-        data = request.json
-        accounts = data.get('accounts', [])
-        categories_data = data.get('categories', {})
-        account_type = data.get('account_type', 'giris_yapilan')
-
-        saved_count = 0
-        for account in accounts:
-            # Hesabın kategorilerini sil
-            mysql_manager.delete_account_categories(account, account_type)
-
-            # Yeni kategorileri ekle
-            for category, value in categories_data.items():
-                if value and value != 'Belirtilmemiş':
-                    mysql_manager.assign_hierarchical_category_to_account(
-                        account, account_type, category, None, value
-                    )
-
-            saved_count += 1
-
-        return jsonify({'success': True, 'message': f'{saved_count} hesap için kategoriler kaydedildi'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/targets')
-def targets():
-    """Hedef hesaplar sayfası"""
-    return render_template('targets.html')
-
-@app.route('/stats')
-def stats():
-    """İstatistikler sayfası"""
-    return render_template('stats.html')
-
-if __name__ == '__main__':
-    # Konfigürasyonu yükle
-    try:
-        config = load_config()
-        logger.info("🚀 AkTweetor Web Arayüzü başlatılıyor...")
-
+        from flask import Flask, render_template, request, jsonify
+        from config.settings import load_config
+        from database.mysql import mysql_manager
+        from database.user_manager import user_manager
+        from utils.logger import setup_logger
+        
+        app = Flask(__name__)
+        app.secret_key = 'aktweetor_secret_key_2024'
+        
+        logger = setup_logger()
+        
+        @app.route('/')
+        def index():
+            return render_template('index.html')
+            
+        @app.route('/categories')
+        def categories():
+            return render_template('categories.html')
+            
+        @app.route('/targets')
+        def targets():
+            return render_template('targets.html')
+            
+        @app.route('/stats')
+        def stats():
+            return render_template('stats.html')
+            
+        print("🌐 Web arayüzü başlatılıyor...")
+        print("🔗 http://localhost:5000 adresinde erişilebilir")
+        
         # Web sunucusunu başlat
-        app.run(host='0.0.0.0', port=5000, debug=True)
-
+        app.run(host='0.0.0.0', port=5000, debug=False)
+        
     except Exception as e:
-        logger.error(f"❌ Başlatma hatası: {str(e)}")
-        print(f"❌ Hata: {str(e)}")
+        print(f"❌ Web arayüzü başlatma hatası: {str(e)}")
+        raise
+
+if __name__ == "__main__":
+    main()

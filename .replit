@@ -5,10 +5,19 @@ channel = "stable-24_05"
 packages = ["cargo", "geckodriver", "libiconv", "rustc", "xcodebuild", "zlib"]
 
 [workflows]
-runButton = "Flask Web Server"
+runButton = "AkTweetor PyQt5"
 
 [[workflows.workflow]]
 name = "Flask Web Server"
+author = 42888135
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+
+[[workflows.workflow]]
+name = "AkTweetor PyQt5"
 author = 42888135
 mode = "sequential"
 
