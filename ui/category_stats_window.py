@@ -6,12 +6,21 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                              QProgressBar, QComboBox, QCheckBox, QSplitter)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont, QPixmap, QPainter, QColor, QPen, QBrush
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
 import io
 import base64
+
+# Matplotlib import'unu try-except ile koruyalım
+try:
+    import matplotlib
+    matplotlib.use('Agg')  # Backend'i Agg olarak ayarla (GUI olmayan)
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.figure import Figure
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    MATPLOTLIB_AVAILABLE = False
+    print("⚠️ Matplotlib bulunamadı. Grafikler devre dışı.")
 from database.mysql import mysql_manager
 from database.user_manager import user_manager
 import json
@@ -426,6 +435,10 @@ class CategoryStatsDialog(QDialog):
     def update_chart(self):
         """Grafikleri güncelle"""
         try:
+            if not MATPLOTLIB_AVAILABLE:
+                self.show_empty_chart("Grafik modülü bulunamadı. Matplotlib yüklü değil.")
+                return
+                
             chart_type = self.chart_type_combo.currentText()
             data_type = self.chart_data_combo.currentText()
             
@@ -468,61 +481,77 @@ class CategoryStatsDialog(QDialog):
             
     def create_chart(self, chart_type, data):
         """Grafik oluştur"""
+        if not MATPLOTLIB_AVAILABLE:
+            self.show_empty_chart("Grafik oluşturulamadı: Matplotlib kütüphanesi bulunamadı")
+            return
+            
         try:
             # Matplotlib kullanarak grafik oluştur
+            plt.ioff()  # Interactive mode kapalı
             fig, ax = plt.subplots(figsize=(10, 6))
             
             labels = list(data.keys())
             values = list(data.values())
-            colors = plt.cm.Set3(range(len(labels)))
+            
+            # Güvenli renk paleti
+            colors = plt.cm.tab10(range(len(labels) % 10))
             
             if chart_type == "Pasta Grafik":
                 wedges, texts, autotexts = ax.pie(values, labels=labels, autopct='%1.1f%%', 
                                                  colors=colors, startangle=90)
-                ax.set_title("Kategori Dağılımı")
+                ax.set_title("Kategori Dağılımı", fontsize=14, fontweight='bold')
                 
             elif chart_type == "Bar Grafik":
                 bars = ax.bar(range(len(labels)), values, color=colors)
-                ax.set_xlabel("Kategoriler")
-                ax.set_ylabel("Hesap Sayısı")
-                ax.set_title("Kategori Kullanım İstatistikleri")
+                ax.set_xlabel("Kategoriler", fontsize=12)
+                ax.set_ylabel("Hesap Sayısı", fontsize=12)
+                ax.set_title("Kategori Kullanım İstatistikleri", fontsize=14, fontweight='bold')
                 ax.set_xticks(range(len(labels)))
-                ax.set_xticklabels(labels, rotation=45, ha='right')
+                ax.set_xticklabels(labels, rotation=45, ha='right', fontsize=10)
                 
                 # Bar'ların üzerine değer yazma
                 for bar in bars:
                     height = bar.get_height()
-                    ax.text(bar.get_x() + bar.get_width()/2., height,
-                           f'{int(height)}', ha='center', va='bottom')
+                    if height > 0:
+                        ax.text(bar.get_x() + bar.get_width()/2., height,
+                               f'{int(height)}', ha='center', va='bottom', fontsize=9)
                            
             elif chart_type == "Yatay Bar Grafik":
                 bars = ax.barh(range(len(labels)), values, color=colors)
-                ax.set_ylabel("Kategoriler")
-                ax.set_xlabel("Hesap Sayısı")
-                ax.set_title("Kategori Kullanım İstatistikleri")
+                ax.set_ylabel("Kategoriler", fontsize=12)
+                ax.set_xlabel("Hesap Sayısı", fontsize=12)
+                ax.set_title("Kategori Kullanım İstatistikleri", fontsize=14, fontweight='bold')
                 ax.set_yticks(range(len(labels)))
-                ax.set_yticklabels(labels)
+                ax.set_yticklabels(labels, fontsize=10)
                 
                 # Bar'ların sonuna değer yazma
                 for i, bar in enumerate(bars):
                     width = bar.get_width()
-                    ax.text(width, bar.get_y() + bar.get_height()/2.,
-                           f'{int(width)}', ha='left', va='center')
+                    if width > 0:
+                        ax.text(width, bar.get_y() + bar.get_height()/2.,
+                               f'{int(width)}', ha='left', va='center', fontsize=9)
             
             plt.tight_layout()
             
             # Grafik PNG olarak kaydet ve göster
             buffer = io.BytesIO()
-            plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+            plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight', 
+                       facecolor='white', edgecolor='none')
             buffer.seek(0)
             
             pixmap = QPixmap()
-            pixmap.loadFromData(buffer.getvalue())
+            success = pixmap.loadFromData(buffer.getvalue())
             
-            # Chart frame'e grafik ekle
-            self.show_chart_image(pixmap)
+            if success:
+                # Chart frame'e grafik ekle
+                self.show_chart_image(pixmap)
+            else:
+                self.show_empty_chart("Grafik gösterilemedi")
             
+            # Bellek temizliği
             plt.close(fig)
+            plt.clf()
+            buffer.close()
             
         except Exception as e:
             print(f"Grafik oluşturma hatası: {e}")
@@ -628,3 +657,21 @@ class CategoryStatsDialog(QDialog):
         except Exception as e:
             print(f"Detaylı veri hazırlama hatası: {e}")
             return []
+    
+    def closeEvent(self, event):
+        """Dialog kapandığında bellek temizliği"""
+        try:
+            if MATPLOTLIB_AVAILABLE:
+                plt.close('all')  # Tüm matplotlib figureleri kapat
+                plt.clf()         # Cache temizle
+        except:
+            pass
+        event.accept()
+        
+    def __del__(self):
+        """Destructor - bellek temizliği"""
+        try:
+            if MATPLOTLIB_AVAILABLE:
+                plt.close('all')
+        except:
+            pass
