@@ -2,7 +2,7 @@ modules = ["python-3.12"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["geckodriver", "xcodebuild", "zlib"]
+packages = ["cargo", "geckodriver", "libiconv", "rustc", "xcodebuild", "zlib"]
 
 [workflows]
 runButton = "Flask Web Server"
