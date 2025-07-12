@@ -18,6 +18,12 @@ class CategoryManagementDialog(QDialog):
         self.setWindowTitle("🛠 Kategori Yönetimi")
         self.setModal(True)
         self.resize(600, 500)
+        
+        # Sayfalama değişkenleri
+        self.photo_current_page = 1
+        self.photo_items_per_page = 20
+        self.content_current_page = 1
+        self.content_items_per_page = 20
 
         layout = QVBoxLayout()
 
@@ -51,6 +57,20 @@ class CategoryManagementDialog(QDialog):
         info_label = QLabel("📂 <b>İçerik Kategorileri:</b> Hesabın paylaştığı içerik türleri (Ana kategori → Alt kategoriler)")
         info_label.setObjectName("infoLabel")
         layout.addWidget(info_label)
+
+        # Arama çubuğu
+        search_layout = QHBoxLayout()
+        search_label = QLabel("🔍 Arama:")
+        self.content_search_input = QLineEdit()
+        self.content_search_input.setPlaceholderText("Kategori adı veya açıklama arayın...")
+        self.content_search_input.textChanged.connect(self.filter_content_categories)
+        
+        search_layout.addWidget(search_label)
+        search_layout.addWidget(self.content_search_input)
+        layout.addWidget(QFrame())  # Spacer
+        search_frame = QFrame()
+        search_frame.setLayout(search_layout)
+        layout.addWidget(search_frame)
 
         # Splitter - sol taraf ana kategoriler, sağ taraf alt kategoriler
         splitter = QSplitter(Qt.Horizontal)
@@ -153,6 +173,19 @@ class CategoryManagementDialog(QDialog):
         info_label.setObjectName("infoLabel")
         layout.addWidget(info_label)
 
+        # Arama çubuğu
+        photo_search_layout = QHBoxLayout()
+        photo_search_label = QLabel("🔍 Arama:")
+        self.photo_search_input = QLineEdit()
+        self.photo_search_input.setPlaceholderText("Fotoğraf kategorisi arayın...")
+        self.photo_search_input.textChanged.connect(self.filter_photo_categories)
+        
+        photo_search_layout.addWidget(photo_search_label)
+        photo_search_layout.addWidget(self.photo_search_input)
+        photo_search_frame = QFrame()
+        photo_search_frame.setLayout(photo_search_layout)
+        layout.addWidget(photo_search_frame)
+
         # Ekleme formu
         form_frame = QFrame()
         form_frame.setObjectName("addForm")
@@ -173,6 +206,19 @@ class CategoryManagementDialog(QDialog):
         self.photo_content_list = QListWidget()
         self.photo_content_list.setObjectName("categoryList")
 
+        # Sayfalama kontrolleri
+        pagination_layout = QHBoxLayout()
+        self.photo_prev_btn = QPushButton("◀ Önceki")
+        self.photo_prev_btn.clicked.connect(self.photo_prev_page)
+        self.photo_next_btn = QPushButton("Sonraki ▶")
+        self.photo_next_btn.clicked.connect(self.photo_next_page)
+        self.photo_page_label = QLabel("Sayfa 1")
+        
+        pagination_layout.addWidget(self.photo_prev_btn)
+        pagination_layout.addWidget(self.photo_page_label)
+        pagination_layout.addWidget(self.photo_next_btn)
+        pagination_layout.addStretch()
+
         # Sil butonu
         delete_photo_btn = QPushButton("🗑️ Seçileni Sil")
         delete_photo_btn.setObjectName("deleteButton")
@@ -180,6 +226,7 @@ class CategoryManagementDialog(QDialog):
 
         layout.addWidget(form_frame)
         layout.addWidget(self.photo_content_list, 1)
+        layout.addLayout(pagination_layout)
         layout.addWidget(delete_photo_btn)
 
         widget.setLayout(layout)
@@ -190,19 +237,49 @@ class CategoryManagementDialog(QDialog):
         # Profil içerik kategorileri
         self.main_categories_list.clear()
         profile_categories = mysql_manager.get_categories('icerik')
-        for cat in profile_categories:
-            if cat.get('ana_kategori') != 'Fotoğraf İçeriği':
+        self.all_profile_categories = [cat for cat in profile_categories if cat.get('ana_kategori') != 'Fotoğraf İçeriği']
+        
+        for cat in self.all_profile_categories:
+            item = QListWidgetItem(cat.get('ana_kategori', ''))
+            item.setData(Qt.UserRole, cat)
+            self.main_categories_list.addItem(item)
+
+        # Fotoğraf içeriği kategorileri
+        self.photo_content_list.clear()
+        self.all_photo_categories = [cat for cat in profile_categories if cat.get('ana_kategori') == 'Fotoğraf İçeriği']
+        
+        for cat in self.all_photo_categories:
+            item = QListWidgetItem(cat.get('alt_kategori', ''))
+            item.setData(Qt.UserRole, cat)
+            self.photo_content_list.addItem(item)
+
+    def filter_content_categories(self):
+        """İçerik kategorilerini filtrele"""
+        search_text = self.content_search_input.text().lower()
+        self.main_categories_list.clear()
+        
+        for cat in getattr(self, 'all_profile_categories', []):
+            ana_kategori = cat.get('ana_kategori', '').lower()
+            aciklama = cat.get('aciklama', '').lower()
+            
+            if search_text in ana_kategori or search_text in aciklama:
                 item = QListWidgetItem(cat.get('ana_kategori', ''))
                 item.setData(Qt.UserRole, cat)
                 self.main_categories_list.addItem(item)
 
-        # Fotoğraf içeriği kategorileri
+    def filter_photo_categories(self):
+        """Fotoğraf kategorilerini filtrele"""
+        search_text = self.photo_search_input.text().lower()
         self.photo_content_list.clear()
-        photo_categories = [cat for cat in profile_categories if cat.get('ana_kategori') == 'Fotoğraf İçeriği']
-        for cat in photo_categories:
-            item = QListWidgetItem(cat.get('alt_kategori', ''))
-            item.setData(Qt.UserRole, cat)
-            self.photo_content_list.addItem(item)
+        
+        for cat in getattr(self, 'all_photo_categories', []):
+            alt_kategori = cat.get('alt_kategori', '').lower()
+            aciklama = cat.get('aciklama', '').lower()
+            
+            if search_text in alt_kategori or search_text in aciklama:
+                item = QListWidgetItem(cat.get('alt_kategori', ''))
+                item.setData(Qt.UserRole, cat)
+                self.photo_content_list.addItem(item)
 
     def add_main_category(self):
         """Ana içerik kategorisi ekle"""
@@ -245,12 +322,26 @@ class CategoryManagementDialog(QDialog):
         if current:
             category_data = current.data(Qt.UserRole)
             category_name = category_data.get('ana_kategori')
-            # Veritabanında silme fonksiyonu eklenmelidir
-            if mysql_manager.delete_category('icerik', category_name, None):
-                self.load_categories()
-                self.show_info(f"✅ Ana kategori silindi: {category_name}")
-            else:
-                self.show_warning("Bu kategori silinemedi!")
+            
+            # Onay dialog'u
+            reply = QMessageBox.question(self, "Kategori Sil", 
+                f"'{category_name}' kategorisini ve tüm alt kategorilerini silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz!",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            
+            if reply == QMessageBox.Yes:
+                if mysql_manager.delete_category('icerik', category_name, None):
+                    self.load_categories()
+                    self.show_info(f"✅ Ana kategori silindi: {category_name}")
+                    # Seçimi temizle
+                    self.selected_main_label.setText("← Sol taraftan ana kategori seçin")
+                    self.sub_categories_list.clear()
+                    self.sub_category_input.setEnabled(False)
+                    self.add_sub_btn.setEnabled(False)
+                    self.delete_sub_btn.setEnabled(False)
+                else:
+                    self.show_warning("Bu kategori silinemedi! Kategori hala kullanımda olabilir.")
+        else:
+            self.show_warning("Silmek için bir kategori seçin!")
 
     def delete_sub_category(self):
         """Alt içerik kategorisi sil"""
@@ -260,18 +351,40 @@ class CategoryManagementDialog(QDialog):
             category_name = category_data.get('alt_kategori')
             main_category = self.selected_main_label.text().replace("Seçili ana kategori: ", "")
 
-            if mysql_manager.delete_category('icerik', main_category, category_name):
-                self.load_sub_categories(main_category)
-                self.show_info(f"✅ Alt kategori silindi: {category_name} (Ana kategori: {main_category})")
-            else:
-                self.show_warning("Bu kategori silinemedi!")
+            # Onay dialog'u
+            reply = QMessageBox.question(self, "Alt Kategori Sil", 
+                f"'{category_name}' alt kategorisini silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz!",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            
+            if reply == QMessageBox.Yes:
+                if mysql_manager.delete_category('icerik', main_category, category_name):
+                    self.load_sub_categories(main_category)
+                    self.show_info(f"✅ Alt kategori silindi: {category_name}")
+                else:
+                    self.show_warning("Bu kategori silinemedi! Kategori hala kullanımda olabilir.")
+        else:
+            self.show_warning("Silmek için bir alt kategori seçin!")
 
     def delete_photo_content_category(self):
         """Fotoğraf içerik kategorisi sil"""
         current = self.photo_content_list.currentItem()
         if current:
-            # Bu işlev için veritabanında silme fonksiyonu eklenmelidir
-            self.show_info("Silme işlevi henüz aktif değil")
+            category_data = current.data(Qt.UserRole)
+            category_name = category_data.get('alt_kategori')
+            
+            # Onay dialog'u
+            reply = QMessageBox.question(self, "Fotoğraf Kategorisi Sil", 
+                f"'{category_name}' fotoğraf kategorisini silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz!",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            
+            if reply == QMessageBox.Yes:
+                if mysql_manager.delete_category('icerik', 'Fotoğraf İçeriği', category_name):
+                    self.load_categories()
+                    self.show_info(f"✅ Fotoğraf kategorisi silindi: {category_name}")
+                else:
+                    self.show_warning("Bu kategori silinemedi! Kategori hala kullanımda olabilir.")
+        else:
+            self.show_warning("Silmek için bir fotoğraf kategorisi seçin!")
 
     def on_main_category_selected(self, item):
         """Ana kategori seçildiğinde"""
@@ -295,6 +408,43 @@ class CategoryManagementDialog(QDialog):
             item = QListWidgetItem(cat.get('alt_kategori', ''))
             item.setData(Qt.UserRole, cat)
             self.sub_categories_list.addItem(item)
+
+    def photo_prev_page(self):
+        """Fotoğraf kategorileri önceki sayfa"""
+        if self.photo_current_page > 1:
+            self.photo_current_page -= 1
+            self.update_photo_pagination()
+
+    def photo_next_page(self):
+        """Fotoğraf kategorileri sonraki sayfa"""
+        total_items = len(getattr(self, 'all_photo_categories', []))
+        max_pages = (total_items + self.photo_items_per_page - 1) // self.photo_items_per_page
+        if self.photo_current_page < max_pages:
+            self.photo_current_page += 1
+            self.update_photo_pagination()
+
+    def update_photo_pagination(self):
+        """Fotoğraf kategorileri sayfalama güncelle"""
+        self.photo_content_list.clear()
+        
+        all_categories = getattr(self, 'all_photo_categories', [])
+        total_items = len(all_categories)
+        max_pages = (total_items + self.photo_items_per_page - 1) // self.photo_items_per_page if total_items > 0 else 1
+        
+        start_idx = (self.photo_current_page - 1) * self.photo_items_per_page
+        end_idx = min(start_idx + self.photo_items_per_page, total_items)
+        
+        # Sayfadaki öğeleri göster
+        for i in range(start_idx, end_idx):
+            cat = all_categories[i]
+            item = QListWidgetItem(cat.get('alt_kategori', ''))
+            item.setData(Qt.UserRole, cat)
+            self.photo_content_list.addItem(item)
+        
+        # Sayfa bilgisini güncelle
+        self.photo_page_label.setText(f"Sayfa {self.photo_current_page}/{max_pages}")
+        self.photo_prev_btn.setEnabled(self.photo_current_page > 1)
+        self.photo_next_btn.setEnabled(self.photo_current_page < max_pages)
 
     def show_info(self, message):
         QMessageBox.information(self, "Bilgi", message)

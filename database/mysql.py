@@ -831,6 +831,82 @@ class MySQLManager:
             logger.error(f"❌ Hesap kategori dosya içe aktarma hatası: {e}")
             return 0
 
+    @handle_exception
+    def delete_category(self, kategori_turu, ana_kategori, alt_kategori=None):
+        """Kategori sil"""
+        connection = self.get_connection()
+        if not connection:
+            return False
+        
+        try:
+            cursor = connection.cursor()
+            
+            # İlgili hesap kategori atamalarını önce sil
+            delete_assignments_query = """
+            DELETE FROM hesap_kategorileri 
+            WHERE kategori_turu = %s AND ana_kategori = %s 
+            AND (alt_kategori = %s OR (alt_kategori IS NULL AND %s IS NULL))
+            """
+            cursor.execute(delete_assignments_query, (kategori_turu, ana_kategori, alt_kategori, alt_kategori))
+            
+            # Kategoriyi sil
+            delete_category_query = """
+            DELETE FROM kategoriler 
+            WHERE kategori_turu = %s AND ana_kategori = %s 
+            AND (alt_kategori = %s OR (alt_kategori IS NULL AND %s IS NULL))
+            """
+            cursor.execute(delete_category_query, (kategori_turu, ana_kategori, alt_kategori, alt_kategori))
+            
+            connection.commit()
+            return cursor.rowcount > 0
+        except Error as e:
+            logger.error(f"❌ Kategori silme hatası: {e}")
+            connection.rollback()
+            return False
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @handle_exception
+    def search_categories(self, kategori_turu=None, search_term=""):
+        """Kategorilerde arama yap"""
+        connection = self.get_connection()
+        if not connection:
+            return []
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            search_term = f"%{search_term}%"
+            
+            if kategori_turu:
+                query = """
+                SELECT * FROM kategoriler 
+                WHERE kategori_turu = %s 
+                AND (ana_kategori LIKE %s OR alt_kategori LIKE %s OR aciklama LIKE %s)
+                ORDER BY ana_kategori, alt_kategori
+                LIMIT 100
+                """
+                cursor.execute(query, (kategori_turu, search_term, search_term, search_term))
+            else:
+                query = """
+                SELECT * FROM kategoriler 
+                WHERE (ana_kategori LIKE %s OR alt_kategori LIKE %s OR aciklama LIKE %s)
+                ORDER BY kategori_turu, ana_kategori, alt_kategori
+                LIMIT 100
+                """
+                cursor.execute(query, (search_term, search_term, search_term))
+            
+            return cursor.fetchall()
+        except Error as e:
+            logger.error(f"❌ Kategori arama hatası: {e}")
+            return []
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
     # Eski metodları koruyalım (geriye uyumluluk için)
     @handle_exception
     def add_category(self, kategori_adi, kategori_turu, aciklama=None):
