@@ -616,167 +616,6 @@ class CategoryManagementDialog(QDialog):
     def show_warning(self, message):
         QMessageBox.warning(self, "Uyarı", message)
 
-class FileExportDialog(QDialog):
-    """Dosyaya dışa aktarma dialog'u"""
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("📤 Dosyaya Kategori Dışa Aktarma")
-        self.setModal(True)
-        self.resize(500, 300)
-
-        layout = QVBoxLayout()
-
-        # Açıklama
-        info_label = QLabel("""
-📤 <b>Gelişmiş Dışa Aktarma - TXT ve Excel Formatları</b>
-
-🔄 <b>Kapsamlı Dosya İşlemleri:</b>
-• 📋 Tüm kategoriler (kategoriler.txt)
-• 👥 Hesap kategori atamaları (hesap_kategorileri.txt)
-• 📊 Excel formatı (kategoriler.xlsx) - Çok sayfalı
-• 📈 İstatistiksel raporlar dahil
-
-💾 <b>Excel Özellikleri:</b>
-• Ayrı sayfalar: Kategoriler, Hesap Atamaları
-• Otomatik filtreleme ve sıralama
-• Grafik destekli istatistikler
-        """)
-        info_label.setObjectName("infoLabel")
-        layout.addWidget(info_label)
-
-        # Dışa aktarma butonları
-        self.export_categories_btn = QPushButton("📁 Kategorileri Dışa Aktar")
-        self.export_categories_btn.clicked.connect(self.export_categories)
-
-        self.export_account_categories_btn = QPushButton("📁 Hesap Kategorilerini Dışa Aktar")
-        self.export_account_categories_btn.clicked.connect(self.export_account_categories)
-
-        self.export_excel_btn = QPushButton("📊 Excel Formatında Dışa Aktar")
-        self.export_excel_btn.clicked.connect(self.export_excel)
-
-        layout.addWidget(self.export_categories_btn)
-        layout.addWidget(self.export_account_categories_btn)
-        layout.addWidget(self.export_excel_btn)
-
-        # Log alanı
-        self.log_text = QTextEdit()
-        self.log_text.setMaximumHeight(150)
-        layout.addWidget(self.log_text)
-
-        # Butonlar
-        buttons = QDialogButtonBox(QDialogButtonBox.Close)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
-
-        self.setLayout(layout)
-
-    def export_categories(self):
-        """Kategorileri dışa aktar"""
-        from PyQt5.QtWidgets import QFileDialog
-        file_path, _ = QFileDialog.getSaveFileName(self, "Kategoriler Dosyası Kaydet", "kategoriler.txt", "Metin Dosyaları (*.txt)")
-        if file_path:
-            try:
-                categories = mysql_manager.get_categories()
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    for cat in categories:
-                        line = f"{cat['kategori_turu']}:{cat['ana_kategori']}"
-                        if cat.get('alt_kategori'):
-                            line += f":{cat['alt_kategori']}"
-                        if cat.get('aciklama'):
-                            line += f":{cat['aciklama']}"
-                        f.write(line + '\n')
-                self.log_text.append(f"✅ {len(categories)} kategori dışa aktarıldı: {file_path}")
-            except Exception as e:
-                self.log_text.append(f"❌ Hata: {str(e)}")
-
-    def export_account_categories(self):
-        """Hesap kategorilerini dışa aktar"""
-        from PyQt5.QtWidgets import QFileDialog
-        file_path, _ = QFileDialog.getSaveFileName(self, "Hesap Kategorileri Dosyası Kaydet", "hesap_kategorileri.txt", "Metin Dosyaları (*.txt)")
-        if file_path:
-            try:
-                # Tüm kullanıcıları al
-                from database.user_manager import user_manager
-                users = user_manager.get_all_users()
-                targets = mysql_manager.get_all_targets()
-                
-                count = 0
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    # Giriş yapılan hesaplar
-                    for user in users:
-                        categories = mysql_manager.get_account_categories(user['kullanici_adi'], 'giris_yapilan')
-                        for cat in categories:
-                            line = f"{user['kullanici_adi']}:giris_yapilan:{cat['ana_kategori']}"
-                            if cat.get('alt_kategori'):
-                                line += f":{cat['alt_kategori']}"
-                            line += f":{cat.get('kategori_degeri', 'Seçili')}"
-                            f.write(line + '\n')
-                            count += 1
-                    
-                    # Hedef hesaplar
-                    for target in targets:
-                        categories = mysql_manager.get_account_categories(target['kullanici_adi'], 'hedef')
-                        for cat in categories:
-                            line = f"{target['kullanici_adi']}:hedef:{cat['ana_kategori']}"
-                            if cat.get('alt_kategori'):
-                                line += f":{cat['alt_kategori']}"
-                            line += f":{cat.get('kategori_degeri', 'Seçili')}"
-                            f.write(line + '\n')
-                            count += 1
-                
-                self.log_text.append(f"✅ {count} hesap kategorisi dışa aktarıldı: {file_path}")
-            except Exception as e:
-                self.log_text.append(f"❌ Hata: {str(e)}")
-
-    def export_excel(self):
-        """Excel formatında dışa aktar"""
-        from PyQt5.QtWidgets import QFileDialog
-        file_path, _ = QFileDialog.getSaveFileName(self, "Excel Dosyası Kaydet", "kategoriler.xlsx", "Excel Dosyaları (*.xlsx)")
-        if file_path:
-            try:
-                import pandas as pd
-                
-                # Kategoriler
-                categories = mysql_manager.get_categories()
-                df_categories = pd.DataFrame(categories)
-                
-                # Hesap kategorileri
-                from database.user_manager import user_manager
-                users = user_manager.get_all_users()
-                targets = mysql_manager.get_all_targets()
-                
-                account_categories = []
-                for user in users:
-                    cats = mysql_manager.get_account_categories(user['kullanici_adi'], 'giris_yapilan')
-                    for cat in cats:
-                        account_categories.append({
-                            'kullanici_adi': user['kullanici_adi'],
-                            'hesap_turu': 'giris_yapilan',
-                            **cat
-                        })
-                
-                for target in targets:
-                    cats = mysql_manager.get_account_categories(target['kullanici_adi'], 'hedef')
-                    for cat in cats:
-                        account_categories.append({
-                            'kullanici_adi': target['kullanici_adi'],
-                            'hesap_turu': 'hedef',
-                            **cat
-                        })
-                
-                df_account_categories = pd.DataFrame(account_categories)
-                
-                # Excel'e yaz
-                with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
-                    df_categories.to_excel(writer, sheet_name='Kategoriler', index=False)
-                    df_account_categories.to_excel(writer, sheet_name='Hesap Kategorileri', index=False)
-                
-                self.log_text.append(f"✅ Excel dosyası oluşturuldu: {file_path}")
-            except ImportError:
-                self.log_text.append("❌ Excel dışa aktarma için pandas ve openpyxl gerekli")
-            except Exception as e:
-                self.log_text.append(f"❌ Hata: {str(e)}")
-
 class FileImportDialog(QDialog):
     """Dosyadan içe aktarma dialog'u"""
     def __init__(self, parent=None):
@@ -876,30 +715,13 @@ class CategoryWindow(QWidget):
         manage_categories_btn.setObjectName("manageButton")
         manage_categories_btn.clicked.connect(self.show_category_management)
 
-        # Dosya işlemleri - Gelişmiş İçe/Dışa Aktarma
-        file_import_btn = QPushButton("🔄 Gelişmiş İçe Aktar")
+        # Dosya işlemleri
+        file_import_btn = QPushButton("📁 Dosyadan İçe Aktar")
         file_import_btn.setObjectName("importButton")
         file_import_btn.clicked.connect(self.show_file_import)
 
-        file_export_btn = QPushButton("📤 Dışa Aktarma (TXT/Excel)")
-        file_export_btn.setObjectName("exportButton")
-        file_export_btn.clicked.connect(self.show_file_export)
-
-        # İstatistikler - Kategori Dağılımları
-        stats_btn = QPushButton("📊 Kategori İstatistikleri")
-        stats_btn.setObjectName("statsButton")
-        stats_btn.clicked.connect(self.show_stats)
-
-        # Grafiksel İstatistikler
-        chart_btn = QPushButton("📈 Grafiksel İstatistikler")
-        chart_btn.setObjectName("chartButton")
-        chart_btn.clicked.connect(self.show_chart_stats)
-
         toolbar_layout.addWidget(manage_categories_btn)
         toolbar_layout.addWidget(file_import_btn)
-        toolbar_layout.addWidget(file_export_btn)
-        toolbar_layout.addWidget(stats_btn)
-        toolbar_layout.addWidget(chart_btn)
         toolbar_layout.addStretch()
 
         # Hesap türü seçimi
@@ -1494,63 +1316,6 @@ class CategoryWindow(QWidget):
         dialog = FileImportDialog(self)
         dialog.exec_()
 
-    def show_file_export(self):
-        """Dosya dışa aktarma dialog'unu göster"""
-        dialog = FileExportDialog(self)
-        dialog.exec_()
-
-    def show_stats(self):
-        """İstatistikler penceresini göster"""
-        from ui.category_stats_window import CategoryStatsWindow
-        try:
-            stats_window = CategoryStatsWindow(self.colors, self.return_to_main)
-            # Ana pencereye yönlendir
-            if hasattr(self.parent(), 'stacked_widget'):
-                self.parent().stacked_widget.addWidget(stats_window)
-                self.parent().stacked_widget.setCurrentWidget(stats_window)
-        except Exception as e:
-            self.show_error(f"İstatistikler açılırken hata: {str(e)}")
-
-    def show_chart_stats(self):
-        """Grafiksel İstatistikler penceresini göster"""
-        try:
-            # Grafiksel istatistikler için özel mesaj
-            chart_info = """
-            📈 <b>Grafiksel İstatistikler</b><br><br>
-            
-            <b>📊 Mevcut Grafikler:</b><br>
-            • Kategori türleri pasta grafiği<br>
-            • En popüler kategoriler bar grafiği<br>
-            • Kategori dağılım analizi<br><br>
-            
-            <b>🔍 Analiz Detayları:</b><br>
-            • Profil vs İçerik kategori oranları<br>
-            • Hesap türlerine göre kategori kullanımı<br>
-            • Kategori atama trendleri<br><br>
-            
-            <b>💡 Bu özellik şu anda:</b><br>
-            • 📊 Kategori İstatistikleri sekmesinde mevcuttur<br>
-            • Dağılım sekmesinde pasta ve bar grafikleri<br>
-            • Gerçek zamanlı güncellenen veriler
-            """
-            
-            msg = QMessageBox(self)
-            msg.setWindowTitle("📈 Grafiksel İstatistikler")
-            msg.setTextFormat(Qt.RichText)
-            msg.setText(chart_info)
-            msg.setIcon(QMessageBox.Information)
-            
-            # Ana istatistik penceresini aç
-            view_btn = msg.addButton("📊 İstatistikleri Görüntüle", QMessageBox.AcceptRole)
-            msg.addButton("İptal", QMessageBox.RejectRole)
-            
-            result = msg.exec_()
-            if msg.clickedButton() == view_btn:
-                self.show_stats()
-                
-        except Exception as e:
-            self.show_error(f"Grafiksel İstatistikler açılırken hata: {str(e)}")
-
     def filter_accounts(self):
         """Hesapları filtrele"""
         search_text = self.search_edit.text().lower()
@@ -1856,7 +1621,7 @@ class CategoryWindow(QWidget):
             font-weight: 600;
         }}
 
-        #manageButton, #importButton, #exportButton, #statsButton, #chartButton {{
+        #manageButton, #importButton {{
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #17A2B8, stop:1 #138496);
             color: white;
