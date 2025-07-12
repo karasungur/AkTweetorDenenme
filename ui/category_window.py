@@ -628,12 +628,18 @@ class FileExportDialog(QDialog):
 
         # Açıklama
         info_label = QLabel("""
-📤 Kategorileri ve hesap atamalarını dosyaya dışa aktar
+📤 <b>Gelişmiş Dışa Aktarma - TXT ve Excel Formatları</b>
 
-Dışa aktarma seçenekleri:
-• Tüm kategoriler (kategoriler.txt)
-• Hesap kategori atamaları (hesap_kategorileri.txt)
-• Excel formatı (kategoriler.xlsx)
+🔄 <b>Kapsamlı Dosya İşlemleri:</b>
+• 📋 Tüm kategoriler (kategoriler.txt)
+• 👥 Hesap kategori atamaları (hesap_kategorileri.txt)
+• 📊 Excel formatı (kategoriler.xlsx) - Çok sayfalı
+• 📈 İstatistiksel raporlar dahil
+
+💾 <b>Excel Özellikleri:</b>
+• Ayrı sayfalar: Kategoriler, Hesap Atamaları
+• Otomatik filtreleme ve sıralama
+• Grafik destekli istatistikler
         """)
         info_label.setObjectName("infoLabel")
         layout.addWidget(info_label)
@@ -870,24 +876,30 @@ class CategoryWindow(QWidget):
         manage_categories_btn.setObjectName("manageButton")
         manage_categories_btn.clicked.connect(self.show_category_management)
 
-        # Dosya işlemleri
-        file_import_btn = QPushButton("📁 İçe Aktar")
+        # Dosya işlemleri - Gelişmiş İçe/Dışa Aktarma
+        file_import_btn = QPushButton("🔄 Gelişmiş İçe Aktar")
         file_import_btn.setObjectName("importButton")
         file_import_btn.clicked.connect(self.show_file_import)
 
-        file_export_btn = QPushButton("📤 Dışa Aktar")
+        file_export_btn = QPushButton("📤 Dışa Aktarma (TXT/Excel)")
         file_export_btn.setObjectName("exportButton")
         file_export_btn.clicked.connect(self.show_file_export)
 
-        # İstatistikler
-        stats_btn = QPushButton("📊 İstatistikler")
+        # İstatistikler - Kategori Dağılımları
+        stats_btn = QPushButton("📊 Kategori İstatistikleri")
         stats_btn.setObjectName("statsButton")
         stats_btn.clicked.connect(self.show_stats)
+
+        # Grafiksel İstatistikler
+        chart_btn = QPushButton("📈 Grafiksel İstatistikler")
+        chart_btn.setObjectName("chartButton")
+        chart_btn.clicked.connect(self.show_chart_stats)
 
         toolbar_layout.addWidget(manage_categories_btn)
         toolbar_layout.addWidget(file_import_btn)
         toolbar_layout.addWidget(file_export_btn)
         toolbar_layout.addWidget(stats_btn)
+        toolbar_layout.addWidget(chart_btn)
         toolbar_layout.addStretch()
 
         # Hesap türü seçimi
@@ -1499,6 +1511,46 @@ class CategoryWindow(QWidget):
         except Exception as e:
             self.show_error(f"İstatistikler açılırken hata: {str(e)}")
 
+    def show_chart_stats(self):
+        """Grafiksel İstatistikler penceresini göster"""
+        try:
+            # Grafiksel istatistikler için özel mesaj
+            chart_info = """
+            📈 <b>Grafiksel İstatistikler</b><br><br>
+            
+            <b>📊 Mevcut Grafikler:</b><br>
+            • Kategori türleri pasta grafiği<br>
+            • En popüler kategoriler bar grafiği<br>
+            • Kategori dağılım analizi<br><br>
+            
+            <b>🔍 Analiz Detayları:</b><br>
+            • Profil vs İçerik kategori oranları<br>
+            • Hesap türlerine göre kategori kullanımı<br>
+            • Kategori atama trendleri<br><br>
+            
+            <b>💡 Bu özellik şu anda:</b><br>
+            • 📊 Kategori İstatistikleri sekmesinde mevcuttur<br>
+            • Dağılım sekmesinde pasta ve bar grafikleri<br>
+            • Gerçek zamanlı güncellenen veriler
+            """
+            
+            msg = QMessageBox(self)
+            msg.setWindowTitle("📈 Grafiksel İstatistikler")
+            msg.setTextFormat(Qt.RichText)
+            msg.setText(chart_info)
+            msg.setIcon(QMessageBox.Information)
+            
+            # Ana istatistik penceresini aç
+            view_btn = msg.addButton("📊 İstatistikleri Görüntüle", QMessageBox.AcceptRole)
+            msg.addButton("İptal", QMessageBox.RejectRole)
+            
+            result = msg.exec_()
+            if msg.clickedButton() == view_btn:
+                self.show_stats()
+                
+        except Exception as e:
+            self.show_error(f"Grafiksel İstatistikler açılırken hata: {str(e)}")
+
     def filter_accounts(self):
         """Hesapları filtrele"""
         search_text = self.search_edit.text().lower()
@@ -1804,7 +1856,7 @@ class CategoryWindow(QWidget):
             font-weight: 600;
         }}
 
-        #manageButton, #importButton, #exportButton, #statsButton {{
+        #manageButton, #importButton, #exportButton, #statsButton, #chartButton {{
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #17A2B8, stop:1 #138496);
             color: white;
