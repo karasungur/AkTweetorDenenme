@@ -1,5 +1,3 @@
-
-
 import mysql.connector
 from mysql.connector import Error
 from datetime import datetime
@@ -17,11 +15,11 @@ class MySQLManager:
         self.password = settings.get('database.password', '')
         self.port = settings.get('database.port', 3306)
         self.pool_size = settings.get('database.pool_size', 5)
-        
+
         # Bağlantı havuzu
         self.connection_pool = None
         self.init_connection_pool()
-    
+
     @handle_exception
     def init_connection_pool(self):
         """Bağlantı havuzunu başlat"""
@@ -41,15 +39,15 @@ class MySQLManager:
                 sql_mode='STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO'
             )
             logger.info("✅ MySQL bağlantı havuzu oluşturuldu")
-            
+
             # Tabloları oluştur
             self.create_tables()
-            
+
         except Exception as e:
             logger.error(f"❌ MySQL bağlantı havuzu hatası: {e}")
             self.connection_pool = None
             raise DatabaseException(f"MySQL bağlantı havuzu hatası: {e}")
-    
+
     @handle_exception
     def get_connection(self):
         """Bağlantı havuzundan bağlantı al"""
@@ -75,21 +73,21 @@ class MySQLManager:
         except Error as e:
             logger.error(f"❌ MySQL bağlantı hatası: {e}")
             raise DatabaseException(f"MySQL bağlantı hatası: {e}")
-    
+
     @handle_exception
     def create_tables(self):
         """Gerekli tabloları oluştur"""
         connection = self.get_connection()
         if not connection:
             raise DatabaseException("Bağlantı alınamadı")
-        
+
         try:
             cursor = connection.cursor()
-            
+
             # Tabloları silme - sadece ilk kurulumda gerekli
             # Bu kısımı kaldırarak mevcut verileri koruyoruz
             print("✅ Mevcut kategori tabloları korunuyor")
-            
+
             # kullanicilar tablosu
             create_users_table = """
             CREATE TABLE IF NOT EXISTS kullanicilar (
@@ -111,9 +109,9 @@ class MySQLManager:
                 INDEX idx_durum (durum)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
-            
+
             cursor.execute(create_users_table)
-            
+
             # hedef_hesaplar tablosu
             create_targets_table = """
             CREATE TABLE IF NOT EXISTS hedef_hesaplar (
@@ -135,9 +133,9 @@ class MySQLManager:
                 INDEX idx_kat_sayisi (kat_sayisi)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
-            
+
             cursor.execute(create_targets_table)
-            
+
             # Yeni hiyerarşik kategori tablosu - alt kategoriler tek satırda
             create_categories_table = """
             CREATE TABLE IF NOT EXISTS kategoriler (
@@ -152,9 +150,9 @@ class MySQLManager:
                 INDEX idx_ana_kategori (ana_kategori)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
-            
+
             cursor.execute(create_categories_table)
-            
+
             # Yeni hiyerarşik hesap kategorileri tablosu
             create_account_categories_table = """
             CREATE TABLE IF NOT EXISTS hesap_kategorileri (
@@ -173,19 +171,19 @@ class MySQLManager:
                 INDEX idx_ana_kategori (ana_kategori)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
-            
+
             cursor.execute(create_account_categories_table)
-            
+
             connection.commit()
             print("✅ Yeni hiyerarşik kategori yapısı oluşturuldu")
             logger.info("✅ MySQL tabloları oluşturuldu/kontrol edildi")
-            
+
             # Eksik sütunları ekle
             self.add_missing_columns()
-            
+
             # Varsayılan kategorileri ekle
             self.add_default_hierarchical_categories()
-            
+
         except Error as e:
             logger.error(f"❌ Tablo oluşturma hatası: {e}")
             connection.rollback()
@@ -194,17 +192,17 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def add_missing_columns(self):
         """Eksik sütunları ekle"""
         connection = self.get_connection()
         if not connection:
             return
-        
+
         try:
             cursor = connection.cursor()
-            
+
             # kullanicilar tablosu için eksik sütunları kontrol et ve ekle
             columns_to_add = [
                 ('kullanicilar', 'twitter_olusturma_tarihi', 'DATETIME'),
@@ -217,7 +215,7 @@ class MySQLManager:
                 ('hedef_hesaplar', 'proxy_port', 'INT'),
                 ('hedef_hesaplar', 'notlar', 'TEXT')
             ]
-            
+
             for table, column, data_type in columns_to_add:
                 try:
                     # Sütunun var olup olmadığını kontrol et
@@ -228,9 +226,9 @@ class MySQLManager:
                         logger.info(f"✅ {table} tablosuna {column} sütunu eklendi")
                 except Error as e:
                     logger.error(f"⚠️ {table} tablosuna {column} sütunu eklenirken hata: {e}")
-            
+
             connection.commit()
-            
+
         except Error as e:
             logger.error(f"❌ Sütun ekleme hatası: {e}")
             connection.rollback()
@@ -238,7 +236,7 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def test_connection(self):
         """Bağlantıyı test et"""
@@ -258,7 +256,7 @@ class MySQLManager:
                     cursor.close()
                     connection.close()
         return False
-    
+
     def get_connection_info(self):
         """Bağlantı bilgilerini al"""
         return {
@@ -268,14 +266,14 @@ class MySQLManager:
             'port': self.port,
             'pool_size': self.pool_size
         }
-    
+
     @handle_exception
     def get_all_targets(self):
         """Tüm hedef hesapları getir"""
         connection = self.get_connection()
         if not connection:
             return []
-        
+
         try:
             cursor = connection.cursor(dictionary=True)
             query = "SELECT * FROM hedef_hesaplar WHERE durum = 'aktif' ORDER BY kullanici_adi"
@@ -289,14 +287,14 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def get_target_creation_date(self, username):
         """Hedef hesabın Twitter oluşturma tarihini getir"""
         connection = self.get_connection()
         if not connection:
             return None
-        
+
         try:
             cursor = connection.cursor()
             query = "SELECT twitter_olusturma_tarihi FROM hedef_hesaplar WHERE kullanici_adi = %s"
@@ -310,17 +308,17 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def update_target_creation_date(self, username, creation_date):
         """Hedef hesabın Twitter oluşturma tarihini güncelle"""
         connection = self.get_connection()
         if not connection:
             return False
-        
+
         try:
             cursor = connection.cursor()
-            
+
             # DATETIME formatında kaydet
             if isinstance(creation_date, str):
                 try:
@@ -334,7 +332,7 @@ class MySQLManager:
                         '%Y:%m:%d:%H:%M',
                         '%Y:%m:%d'
                     ]
-                    
+
                     parsed_date = None
                     for fmt in formats:
                         try:
@@ -342,20 +340,20 @@ class MySQLManager:
                             break
                         except ValueError:
                             continue
-                    
+
                     if parsed_date is None:
                         print(f"⚠️ Tarih formatı tanınmadı: {creation_date}")
                         return False
-                    
+
                     creation_date = parsed_date
                 except Exception as e:
                     print(f"⚠️ Tarih dönüştürme hatası: {e}")
                     return False
-            
+
             query = "UPDATE hedef_hesaplar SET twitter_olusturma_tarihi = %s WHERE kullanici_adi = %s"
             cursor.execute(query, (creation_date, username))
             connection.commit()
-            
+
             return cursor.rowcount > 0
         except Error as e:
             logger.error(f"❌ Hedef hesap Twitter oluşturma tarihi güncelleme hatası: {e}")
@@ -365,27 +363,27 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def add_target(self, username, kat_sayisi=1, year=None, month=None, notlar=None):
         """Hedef hesap ekle"""
         connection = self.get_connection()
         if not connection:
             return False
-        
+
         try:
             cursor = connection.cursor()
-            
+
             # Var olup olmadığını kontrol et
             check_query = "SELECT id FROM hedef_hesaplar WHERE kullanici_adi = %s"
             cursor.execute(check_query, (username,))
             existing = cursor.fetchone()
-            
+
             if existing:
                 # Güncelle - sadece None olmayan değerleri güncelle
                 update_parts = []
                 update_values = []
-                
+
                 if kat_sayisi is not None:
                     update_parts.append("kat_sayisi = %s")
                     update_values.append(kat_sayisi)
@@ -398,11 +396,11 @@ class MySQLManager:
                 if notlar is not None:
                     update_parts.append("notlar = %s")
                     update_values.append(notlar)
-                
+
                 if update_parts:
                     update_parts.append("guncelleme_tarihi = CURRENT_TIMESTAMP")
                     update_values.append(username)
-                    
+
                     update_query = f"""
                     UPDATE hedef_hesaplar 
                     SET {', '.join(update_parts)}
@@ -416,7 +414,7 @@ class MySQLManager:
                 VALUES (%s, %s, %s, %s, %s, 'aktif', CURRENT_TIMESTAMP)
                 """
                 cursor.execute(insert_query, (username, kat_sayisi or 1, year, month, notlar))
-            
+
             connection.commit()
             return True
         except Error as e:
@@ -427,14 +425,14 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def delete_target(self, username):
         """Hedef hesabı sil"""
         connection = self.get_connection()
         if not connection:
             return False
-        
+
         try:
             cursor = connection.cursor()
             query = "DELETE FROM hedef_hesaplar WHERE kullanici_adi = %s"
@@ -449,29 +447,29 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def get_target_stats(self):
         """Hedef hesap istatistiklerini getir"""
         connection = self.get_connection()
         if not connection:
             return {}
-        
+
         try:
             cursor = connection.cursor(dictionary=True)
-            
+
             # Toplam sayı
             cursor.execute("SELECT COUNT(*) as toplam FROM hedef_hesaplar")
             toplam = cursor.fetchone()['toplam']
-            
+
             # Aktif sayı
             cursor.execute("SELECT COUNT(*) as aktif FROM hedef_hesaplar WHERE durum = 'aktif'")
             aktif = cursor.fetchone()['aktif']
-            
+
             # Tarihli sayı
             cursor.execute("SELECT COUNT(*) as tarihli FROM hedef_hesaplar WHERE twitter_olusturma_tarihi IS NOT NULL")
             tarihli = cursor.fetchone()['tarihli']
-            
+
             return {
                 'toplam': toplam,
                 'aktif': aktif,
@@ -484,20 +482,20 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def get_target_proxy(self, username):
         """Hedef hesabın proxy bilgilerini getir"""
         connection = self.get_connection()
         if not connection:
             return None
-        
+
         try:
             cursor = connection.cursor()
             query = "SELECT proxy_ip, proxy_port FROM hedef_hesaplar WHERE kullanici_adi = %s"
             cursor.execute(query, (username,))
             result = cursor.fetchone()
-            
+
             if result and result[0]:
                 return f"http://{result[0]}:{result[1]}" if result[1] else result[0]
             return None
@@ -508,7 +506,7 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def import_targets_from_file(self, file_path):
         """Dosyadan hedef hesapları içe aktar - Format: kullaniciadi:katsayisi"""
@@ -519,39 +517,39 @@ class MySQLManager:
                     line = line.strip()
                     if not line or line.startswith('#'):
                         continue
-                    
+
                     parts = line.split(':')
                     username = parts[0].strip()
                     kat_sayisi = int(parts[1]) if len(parts) > 1 and parts[1].strip().isdigit() else 1
-                    
+
                     if self.add_target(username, kat_sayisi):
                         imported_count += 1
-            
+
             return imported_count
         except Exception as e:
             logger.error(f"❌ Dosyadan içe aktarma hatası: {e}")
             return 0
-    
+
     @handle_exception
     def add_default_hierarchical_categories(self):
         """Varsayılan hiyerarşik kategorileri ekle"""
         connection = self.get_connection()
         if not connection:
             return
-        
+
         try:
             cursor = connection.cursor()
-            
+
             # Yeni sade ve mantıklı kategori yapısı
             default_categories = [
                 # Profil kategorileri (Sabit temel kategoriler)
                 ('profil', 'Yaş Grubu', None, 'Kullanıcının yaş grubu: Genç (18-30), Orta yaş (31-50), Yaşlı (50+)'),
                 ('profil', 'Cinsiyet', None, 'Kullanıcının cinsiyeti: Erkek, Kadın, Belirtmeyen/Diğer'),
                 ('profil', 'Profil Fotoğrafı', None, 'Profil fotoğrafının varlığı: Var, Yok'),
-                
+
                 # Fotoğraf içerik kategorileri (Alt kategoriler tek satırda)
                 ('icerik', 'Fotoğraf İçeriği', 'Parti Logosu,Dini Sembol,Selfie,Manzara,Avatar', 'Profil fotoğrafının içeriği'),
-                
+
                 # Profil içerik kategorileri (Ana kategoriler)
                 ('icerik', 'Siyasi Eğilim', None, 'Siyasi görüş ve ideolojik eğilim paylaşımları'),
                 ('icerik', 'Dini Paylaşımlar', None, 'Dini içerik, ayet, dua ve bayram paylaşımları'),
@@ -564,7 +562,7 @@ class MySQLManager:
                 ('icerik', 'Teknoloji', None, 'Teknoloji, dijital gelişmeler ve inovasyon'),
                 ('icerik', 'Sağlık', None, 'Sağlık, fitness ve yaşam kalitesi'),
             ]
-            
+
             # Her kategoriyi kontrol et ve yoksa ekle
             for kategori_turu, ana_kategori, alt_kategoriler, aciklama in default_categories:
                 check_query = """
@@ -572,16 +570,16 @@ class MySQLManager:
                 WHERE kategori_turu = %s AND ana_kategori = %s
                 """
                 cursor.execute(check_query, (kategori_turu, ana_kategori))
-                
+
                 if not cursor.fetchone():
                     insert_query = """
                     INSERT INTO kategoriler (kategori_turu, ana_kategori, alt_kategoriler, aciklama)
                     VALUES (%s, %s, %s, %s)
                     """
                     cursor.execute(insert_query, (kategori_turu, ana_kategori, alt_kategoriler, aciklama))
-            
+
             connection.commit()
-            
+
         except Error as e:
             logger.error(f"❌ Varsayılan kategori ekleme hatası: {e}")
             connection.rollback()
@@ -589,17 +587,17 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def get_categories(self, kategori_turu=None):
         """Hiyerarşik kategorileri getir"""
         connection = self.get_connection()
         if not connection:
             return []
-        
+
         try:
             cursor = connection.cursor(dictionary=True)
-            
+
             if kategori_turu:
                 query = """
                 SELECT * FROM kategoriler 
@@ -613,9 +611,9 @@ class MySQLManager:
                 ORDER BY kategori_turu, ana_kategori
                 """
                 cursor.execute(query)
-            
+
             results = cursor.fetchall()
-            
+
             # Alt kategorileri ayrı listeler halinde döndür
             expanded_results = []
             for row in results:
@@ -630,7 +628,7 @@ class MySQLManager:
                     # Ana kategori (alt kategori yok)
                     row['alt_kategori'] = None
                     expanded_results.append(row)
-            
+
             return expanded_results
         except Error as e:
             logger.error(f"❌ Kategori getirme hatası: {e}")
@@ -639,17 +637,17 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def add_hierarchical_category(self, kategori_turu, ana_kategori, alt_kategori=None, aciklama=None):
         """Hiyerarşik kategori ekle"""
         connection = self.get_connection()
         if not connection:
             return False
-        
+
         try:
             cursor = connection.cursor()
-            
+
             if alt_kategori is None:
                 # Ana kategori ekleme
                 check_query = """
@@ -657,10 +655,10 @@ class MySQLManager:
                 WHERE kategori_turu = %s AND ana_kategori = %s
                 """
                 cursor.execute(check_query, (kategori_turu, ana_kategori))
-                
+
                 if cursor.fetchone():
                     return False  # Zaten var
-                
+
                 insert_query = """
                 INSERT INTO kategoriler (kategori_turu, ana_kategori, alt_kategoriler, aciklama)
                 VALUES (%s, %s, %s, %s)
@@ -674,12 +672,12 @@ class MySQLManager:
                 """
                 cursor.execute(check_query, (kategori_turu, ana_kategori))
                 result = cursor.fetchone()
-                
+
                 if not result:
                     return False  # Ana kategori yok
-                
+
                 category_id, existing_subcategories = result
-                
+
                 # Mevcut alt kategorileri al
                 if existing_subcategories:
                     subcategories = [sub.strip() for sub in existing_subcategories.split(',')]
@@ -688,7 +686,7 @@ class MySQLManager:
                     subcategories.append(alt_kategori)
                 else:
                     subcategories = [alt_kategori]
-                
+
                 # Güncellenmiş alt kategorileri kaydet
                 new_subcategories = ','.join(subcategories)
                 update_query = """
@@ -697,7 +695,7 @@ class MySQLManager:
                 WHERE id = %s
                 """
                 cursor.execute(update_query, (new_subcategories, category_id))
-            
+
             connection.commit()
             return True
         except Error as e:
@@ -708,24 +706,24 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def delete_account_categories(self, kullanici_adi, hesap_turu):
         """Hesabın tüm kategorilerini sil"""
         connection = self.get_connection()
         if not connection:
             return False
-        
+
         try:
             cursor = connection.cursor()
-            
+
             delete_query = """
             DELETE FROM hesap_kategorileri 
             WHERE kullanici_adi = %s AND hesap_turu = %s
             """
             cursor.execute(delete_query, (kullanici_adi, hesap_turu))
             connection.commit()
-            
+
             return True
         except Error as e:
             logger.error(f"❌ Hesap kategorileri silme hatası: {e}")
@@ -735,17 +733,17 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def assign_hierarchical_category_to_account(self, kullanici_adi, hesap_turu, ana_kategori, alt_kategori=None, kategori_degeri="Seçili"):
         """Hesaba hiyerarşik kategori ata"""
         connection = self.get_connection()
         if not connection:
             return False
-        
+
         try:
             cursor = connection.cursor()
-            
+
             # Önce kategori türünü bul
             if alt_kategori:
                 # Alt kategori için: alt_kategoriler sütununda ara
@@ -764,9 +762,9 @@ class MySQLManager:
                 LIMIT 1
                 """
                 cursor.execute(find_type_query, (ana_kategori,))
-            
+
             result = cursor.fetchone()
-            
+
             if not result:
                 # Kategori bulunamadıysa, varsayılan türü kullan
                 if ana_kategori in ['Yaş Grubu', 'Cinsiyet', 'Profil Fotoğrafı']:
@@ -776,7 +774,7 @@ class MySQLManager:
                 logger.warning(f"Kategori veritabanında bulunamadı, varsayılan tür kullanılıyor: {ana_kategori} > {alt_kategori} -> {kategori_turu}")
             else:
                 kategori_turu = result[0]
-            
+
             # Var olan atamayı kontrol et ve güncelle veya ekle
             insert_query = """
             INSERT INTO hesap_kategorileri 
@@ -787,7 +785,7 @@ class MySQLManager:
             alt_kategori = VALUES(alt_kategori)
             """
             cursor.execute(insert_query, (kullanici_adi, hesap_turu, kategori_turu, ana_kategori, alt_kategori, kategori_degeri))
-            
+
             connection.commit()
             logger.info(f"✅ Kategori atandı: {kullanici_adi} -> {ana_kategori}:{alt_kategori} = {kategori_degeri}")
             return True
@@ -799,25 +797,25 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def get_account_categories(self, kullanici_adi, hesap_turu):
-        """Hesabın kategorilerini getir"""
+        """Hesabın kategorilerini getir - Hata düzeltmeleri ile"""
         connection = self.get_connection()
         if not connection:
             return []
-        
+
         try:
             cursor = connection.cursor(dictionary=True)
             query = """
-            SELECT hk.*, k.aciklama
-            FROM hesap_kategorileri hk
+            SELECT hk.*, k.ana_kategori, k.alt_kategori, k.aciklama 
+            FROM hesap_kategorileri hk 
             LEFT JOIN kategoriler k ON (
                 hk.kategori_turu = k.kategori_turu AND 
                 hk.ana_kategori = k.ana_kategori
             )
             WHERE hk.kullanici_adi = %s AND hk.hesap_turu = %s
-            ORDER BY hk.kategori_turu, hk.ana_kategori, hk.alt_kategori
+            ORDER BY k.ana_kategori, k.alt_kategori
             """
             cursor.execute(query, (kullanici_adi, hesap_turu))
             return cursor.fetchall()
@@ -828,7 +826,7 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def import_categories_from_file(self, file_path):
         """Dosyadan kategorileri içe aktar - Format: kategori_turu:ana_kategori:alt_kategori:aciklama"""
@@ -836,25 +834,26 @@ class MySQLManager:
             imported_count = 0
             with open(file_path, 'r', encoding='utf-8') as f:
                 for line in f:
-                    line = line.strip()
+                    line =```python
+ line.strip()
                     if not line or line.startswith('#'):
                         continue
-                    
+
                     parts = line.split(':')
                     if len(parts) >= 2:
                         kategori_turu = parts[0].strip()
                         ana_kategori = parts[1].strip()
                         alt_kategori = parts[2].strip() if len(parts) > 2 and parts[2].strip() else None
                         aciklama = parts[3].strip() if len(parts) > 3 and parts[3].strip() else None
-                        
+
                         if self.add_hierarchical_category(kategori_turu, ana_kategori, alt_kategori, aciklama):
                             imported_count += 1
-            
+
             return imported_count
         except Exception as e:
             logger.error(f"❌ Kategori dosya içe aktarma hatası: {e}")
             return 0
-    
+
     @handle_exception
     def import_account_categories_from_file(self, file_path, hesap_turu):
         """Dosyadan hesap kategorilerini içe aktar - Format: kullanici_adi:ana_kategori:alt_kategori:deger"""
@@ -865,19 +864,19 @@ class MySQLManager:
                     line = line.strip()
                     if not line or line.startswith('#'):
                         continue
-                    
+
                     parts = line.split(':')
                     if len(parts) >= 3:
                         kullanici_adi = parts[0].strip()
                         ana_kategori = parts[1].strip()
                         alt_kategori = parts[2].strip() if parts[2].strip() else None
                         kategori_degeri = parts[3].strip() if len(parts) > 3 and parts[3].strip() else "İçe Aktarıldı"
-                        
+
                         if self.assign_hierarchical_category_to_account(
                             kullanici_adi, hesap_turu, ana_kategori, alt_kategori, kategori_degeri
                         ):
                             imported_count += 1
-            
+
             return imported_count
         except Exception as e:
             logger.error(f"❌ Hesap kategori dosya içe aktarma hatası: {e}")
@@ -889,14 +888,14 @@ class MySQLManager:
         connection = self.get_connection()
         if not connection:
             return False
-        
+
         try:
             cursor = connection.cursor()
-            
+
             if alt_kategori is None:
                 # Ana kategori silme - tüm alt kategorileri ve atamaları sil
                 print(f"🔧 Ana kategori siliniyor: {ana_kategori}")
-                
+
                 # 1. İlgili tüm hesap kategori atamalarını sil (ana ve alt kategoriler)
                 delete_assignments_query = """
                 DELETE FROM hesap_kategorileri 
@@ -905,18 +904,18 @@ class MySQLManager:
                 cursor.execute(delete_assignments_query, (kategori_turu, ana_kategori))
                 deleted_assignments = cursor.rowcount
                 print(f"✅ {deleted_assignments} hesap ataması silindi")
-                
+
                 # 2. Ana kategoriyi sil (alt kategoriler de dahil - yeni yapıda tek satır)
                 delete_category_query = """
                 DELETE FROM kategoriler 
                 WHERE kategori_turu = %s AND ana_kategori = %s
                 """
                 cursor.execute(delete_category_query, (kategori_turu, ana_kategori))
-                
+
             else:
                 # Alt kategori silme - sadece o alt kategoriyi kaldır
                 print(f"🔧 Alt kategori siliniyor: {ana_kategori} -> {alt_kategori}")
-                
+
                 # 1. İlgili hesap kategori atamalarını sil (sadece bu alt kategori)
                 delete_assignments_query = """
                 DELETE FROM hesap_kategorileri 
@@ -925,7 +924,7 @@ class MySQLManager:
                 cursor.execute(delete_assignments_query, (kategori_turu, ana_kategori, alt_kategori))
                 deleted_assignments = cursor.rowcount
                 print(f"✅ {deleted_assignments} hesap ataması silindi")
-                
+
                 # 2. Ana kategoriden alt kategoriyi kaldır
                 # Önce mevcut alt kategorileri al
                 get_category_query = """
@@ -934,13 +933,13 @@ class MySQLManager:
                 """
                 cursor.execute(get_category_query, (kategori_turu, ana_kategori))
                 result = cursor.fetchone()
-                
+
                 if result and result[0]:
                     current_subcategories = [sub.strip() for sub in result[0].split(',')]
                     # Silinecek alt kategoriyi listeden çıkar
                     if alt_kategori in current_subcategories:
                         current_subcategories.remove(alt_kategori)
-                        
+
                         # Güncellenmiş listeyi kaydet
                         if current_subcategories:
                             new_subcategories = ','.join(current_subcategories)
@@ -964,11 +963,11 @@ class MySQLManager:
                 else:
                     print(f"⚠️ Ana kategori bulunamadı: {ana_kategori}")
                     return False
-            
+
             connection.commit()
             print(f"✅ Kategori başarıyla silindi: {ana_kategori}{' -> ' + alt_kategori if alt_kategori else ''}")
             return True
-            
+
         except Error as e:
             logger.error(f"❌ Kategori silme hatası: {e}")
             connection.rollback()
@@ -977,19 +976,19 @@ class MySQLManager:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
     @handle_exception
     def search_categories(self, kategori_turu=None, search_term=""):
         """Kategorilerde arama yap"""
         connection = self.get_connection()
         if not connection:
             return []
-        
+
         try:
             cursor = connection.cursor(dictionary=True)
-            
+
             search_term = f"%{search_term}%"
-            
+
             if kategori_turu:
                 query = """
                 SELECT * FROM kategoriler 
@@ -1007,7 +1006,7 @@ class MySQLManager:
                 LIMIT 100
                 """
                 cursor.execute(query, (search_term, search_term, search_term))
-            
+
             return cursor.fetchall()
         except Error as e:
             logger.error(f"❌ Kategori arama hatası: {e}")
@@ -1022,7 +1021,7 @@ class MySQLManager:
     def add_category(self, kategori_adi, kategori_turu, aciklama=None):
         """Eski format kategori ekleme (geriye uyumluluk)"""
         return self.add_hierarchical_category(kategori_turu, kategori_adi, None, aciklama)
-    
+
     @handle_exception
     def assign_category_to_account(self, kullanici_adi, hesap_turu, kategori_adi, kategori_degeri):
         """Eski format kategori atama (geriye uyumluluk)"""
@@ -1030,4 +1029,3 @@ class MySQLManager:
 
 # Global MySQL manager instance
 mysql_manager = MySQLManager()
-

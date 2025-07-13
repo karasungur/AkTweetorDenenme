@@ -1325,8 +1325,8 @@ class CategoryWindow(QWidget):
             dialog.exec_()
         except Exception as e:
             from PyQt5.QtWidgets import QMessageBox
-            QMessageBox.critical(self, "Hata", f"İstatistik penceresi açılamadı:\n{str(e)}")
-            print(f"İstatistik dialog hatası: {e}")
+            QMessageBox.critical(self, "❌ Hata", f"İstatistik penceresi açılamadı:\n{str(e)}")
+            print(f"📊 İstatistik dialog hatası: {e}")
 
     def show_advanced_operations(self):
         """İçe/Dışa aktarma işlemleri dialog'unu göster"""
@@ -1336,8 +1336,8 @@ class CategoryWindow(QWidget):
             dialog.exec_()
         except Exception as e:
             from PyQt5.QtWidgets import QMessageBox
-            QMessageBox.critical(self, "Hata", f"İçe/Dışa aktarma penceresi açılamadı:\n{str(e)}")
-            print(f"Advanced operations dialog hatası: {e}")
+            QMessageBox.critical(self, "❌ Hata", f"İçe/Dışa aktarma penceresi açılamadı:\n{str(e)}")
+            print(f"📁 Advanced operations dialog hatası: {e}")
 
     def filter_accounts(self):
         """Hesapları filtrele"""

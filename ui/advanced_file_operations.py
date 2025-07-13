@@ -1,10 +1,12 @@
+
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
                              QLabel, QGroupBox, QTabWidget, QWidget, QFileDialog,
                              QTextEdit, QProgressBar, QMessageBox, QCheckBox,
                              QComboBox, QSpinBox, QFormLayout, QFrame, QSplitter,
                              QListWidget, QListWidgetItem, QTableWidget, QTableWidgetItem,
-                             QHeaderView)
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
+                             QHeaderView, QScrollArea, QGridLayout, QSpacerItem, QSizePolicy)
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve
+from PyQt5.QtGui import QFont, QIcon, QLinearGradient, QColor, QPalette
 from database.mysql import mysql_manager
 from database.user_manager import user_manager
 import json
@@ -12,6 +14,29 @@ import csv
 import os
 from datetime import datetime
 import openpyxl
+
+class ModernProgressBar(QProgressBar):
+    """Modern progress bar"""
+    def __init__(self):
+        super().__init__()
+        self.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid #e2e8f0;
+                border-radius: 8px;
+                background: #f8fafc;
+                text-align: center;
+                font-weight: 600;
+                font-size: 13px;
+                color: #374151;
+            }
+            QProgressBar::chunk {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #3b82f6, stop:1 #2563eb);
+                border-radius: 6px;
+            }
+        """)
+        self.setMinimum(0)
+        self.setMaximum(100)
 
 class AdvancedImportThread(QThread):
     """Gelişmiş içe aktarma thread'i"""
@@ -37,7 +62,6 @@ class AdvancedImportThread(QThread):
                 self.merge_category_files()
             elif self.operation_type == "validate_data":
                 self.validate_import_data()
-
         except Exception as e:
             self.error.emit(str(e))
 
@@ -71,7 +95,7 @@ class AdvancedImportThread(QThread):
 
             self.progress.emit(int((i + 1) / total_files * 100))
 
-        self.finished.emit(f"Toplu içe aktarma tamamlandı: {imported_categories} kategori, {imported_accounts} hesap")
+        self.finished.emit(f"✅ Toplu içe aktarma tamamlandı: {imported_categories} kategori, {imported_accounts} hesap")
 
     def import_json_file(self, file_path):
         """JSON dosyası içe aktarma"""
@@ -206,7 +230,7 @@ class AdvancedImportThread(QThread):
                     ):
                         imported_accounts += 1
 
-        self.finished.emit(f"Excel içe aktarma tamamlandı: {imported_categories} kategori, {imported_accounts} hesap")
+        self.finished.emit(f"✅ Excel içe aktarma tamamlandı: {imported_categories} kategori, {imported_accounts} hesap")
 
     def validate_import_data(self):
         """İçe aktarma verilerini doğrula"""
@@ -241,7 +265,7 @@ class AdvancedImportThread(QThread):
                 self.log.emit(f"  🚨 {error}")
             self.log.emit("")
 
-        self.finished.emit("Doğrulama tamamlandı")
+        self.finished.emit("✅ Doğrulama tamamlandı")
 
     def validate_file(self, file_path):
         """Dosyayı doğrula"""
@@ -275,82 +299,248 @@ class AdvancedImportThread(QThread):
         return {'valid': valid_count, 'invalid': invalid_count, 'errors': errors}
 
 class AdvancedFileOperationsDialog(QDialog):
-    """Gelişmiş dosya işlemleri dialog'u"""
+    """Gelişmiş dosya işlemleri dialog'u - Modern tasarım"""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("🔄 Gelişmiş İçe/Dışa Aktarma İşlemleri")
         self.setModal(True)
-        self.resize(900, 700)
+        self.resize(1200, 800)
 
         self.worker_thread = None
-        self.setup_ui()
+        self.setup_modern_ui()
 
-    def setup_ui(self):
-        """UI'yi ayarla"""
-        layout = QVBoxLayout()
-
-        # Başlık
-        title_label = QLabel("🔄 Gelişmiş İçe/Dışa Aktarma İşlemleri")
-        title_label.setStyleSheet("""
-            font-size: 20px;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 15px;
+    def setup_modern_ui(self):
+        """Modern UI'yi ayarla"""
+        # Ana stil
+        self.setStyleSheet("""
+            QDialog {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #f8fafc, stop:1 #e2e8f0);
+                border: none;
+            }
+            QTabWidget::pane {
+                border: none;
+                background: white;
+                border-radius: 16px;
+                margin-top: 10px;
+            }
+            QTabBar::tab {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #f1f5f9, stop:1 #e2e8f0);
+                padding: 16px 28px;
+                margin-right: 4px;
+                border-top-left-radius: 12px;
+                border-top-right-radius: 12px;
+                border: none;
+                font-weight: 600;
+                font-size: 14px;
+                color: #64748b;
+            }
+            QTabBar::tab:selected {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #3b82f6, stop:1 #2563eb);
+                color: white;
+            }
+            QTabBar::tab:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #e2e8f0, stop:1 #cbd5e1);
+            }
+            QGroupBox {
+                font-size: 16px;
+                font-weight: 600;
+                color: #374151;
+                border: 2px solid #e2e8f0;
+                border-radius: 16px;
+                margin-top: 16px;
+                padding-top: 16px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 24px;
+                padding: 0 12px;
+                background: white;
+                border-radius: 8px;
+            }
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #3b82f6, stop:1 #2563eb);
+                color: white;
+                border: none;
+                border-radius: 12px;
+                padding: 14px 28px;
+                font-weight: 600;
+                font-size: 14px;
+                min-width: 120px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #2563eb, stop:1 #1d4ed8);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #1d4ed8, stop:1 #1e40af);
+            }
+            QListWidget {
+                border: 2px solid #e2e8f0;
+                border-radius: 12px;
+                background: white;
+                padding: 8px;
+                font-size: 13px;
+            }
+            QListWidget::item {
+                padding: 8px 12px;
+                border-radius: 8px;
+                margin: 2px 0px;
+            }
+            QListWidget::item:selected {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #3b82f6, stop:1 #2563eb);
+                color: white;
+            }
+            QTextEdit {
+                border: 2px solid #e2e8f0;
+                border-radius: 12px;
+                background: white;
+                padding: 12px;
+                font-size: 13px;
+                font-family: 'Consolas', 'Monaco', monospace;
+            }
+            QCheckBox {
+                font-size: 14px;
+                color: #374151;
+                spacing: 10px;
+            }
+            QCheckBox::indicator {
+                width: 20px;
+                height: 20px;
+                border: 2px solid #d1d5db;
+                border-radius: 6px;
+                background: white;
+            }
+            QCheckBox::indicator:checked {
+                background: #3b82f6;
+                border-color: #3b82f6;
+            }
+            QLabel {
+                color: #374151;
+                font-size: 14px;
+            }
         """)
-        layout.addWidget(title_label)
+
+        layout = QVBoxLayout()
+        layout.setSpacing(24)
+        layout.setContentsMargins(32, 32, 32, 32)
+
+        # Modern başlık
+        header_frame = QFrame()
+        header_layout = QVBoxLayout()
+        
+        title_label = QLabel("🔄 Gelişmiş İçe/Dışa Aktarma")
+        title_label.setStyleSheet("""
+            font-size: 36px;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 8px;
+        """)
+        
+        subtitle_label = QLabel("Toplu işlemler ve gelişmiş dosya yönetimi")
+        subtitle_label.setStyleSheet("""
+            font-size: 18px;
+            color: #64748b;
+            font-weight: 500;
+            margin-bottom: 20px;
+        """)
+        
+        header_layout.addWidget(title_label)
+        header_layout.addWidget(subtitle_label)
+        header_frame.setLayout(header_layout)
+        
+        layout.addWidget(header_frame)
 
         # Tab widget
         self.tabs = QTabWidget()
 
-        # Toplu içe aktarma
+        # Sekmeleri oluştur
         self.batch_import_tab = self.create_batch_import_tab()
         self.tabs.addTab(self.batch_import_tab, "📥 Toplu İçe Aktarma")
 
-        # Excel işlemleri
         self.excel_tab = self.create_excel_tab()
         self.tabs.addTab(self.excel_tab, "📗 Excel İşlemleri")
 
-        # Veri doğrulama
         self.validation_tab = self.create_validation_tab()
         self.tabs.addTab(self.validation_tab, "✅ Veri Doğrulama")
 
-        # Yedekleme ve geri yükleme
         self.backup_tab = self.create_backup_tab()
         self.tabs.addTab(self.backup_tab, "💾 Yedekleme")
 
-        layout.addWidget(self.tabs)
+        layout.addWidget(self.tabs, 1)
 
         # İlerleme ve log alanı
         progress_frame = QFrame()
+        progress_frame.setStyleSheet("""
+            QFrame {
+                background: white;
+                border: 2px solid #e2e8f0;
+                border-radius: 16px;
+                padding: 20px;
+            }
+        """)
+        
         progress_layout = QVBoxLayout()
 
-        self.progress_bar = QProgressBar()
+        status_layout = QHBoxLayout()
+        status_icon = QLabel("📊")
+        status_icon.setStyleSheet("font-size: 18px;")
+        
+        self.status_label = QLabel("Hazır")
+        self.status_label.setStyleSheet("font-size: 14px; font-weight: 600; color: #374151;")
+        
+        status_layout.addWidget(status_icon)
+        status_layout.addWidget(self.status_label)
+        status_layout.addStretch()
+
+        self.progress_bar = ModernProgressBar()
         self.progress_bar.setVisible(False)
 
-        self.status_label = QLabel("Hazır")
-        self.status_label.setStyleSheet("color: #64748b; font-size: 13px;")
-
         self.log_text = QTextEdit()
-        self.log_text.setMaximumHeight(150)
+        self.log_text.setMaximumHeight(180)
         self.log_text.setPlaceholderText("İşlem logları burada görünecek...")
 
-        progress_layout.addWidget(QLabel("İşlem Durumu:"))
+        progress_layout.addLayout(status_layout)
         progress_layout.addWidget(self.progress_bar)
-        progress_layout.addWidget(self.status_label)
-        progress_layout.addWidget(QLabel("İşlem Logları:"))
         progress_layout.addWidget(self.log_text)
 
         progress_frame.setLayout(progress_layout)
         layout.addWidget(progress_frame)
 
-        # Butonlar
+        # Alt butonlar
         button_layout = QHBoxLayout()
 
         self.clear_log_btn = QPushButton("🗑️ Logları Temizle")
+        self.clear_log_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #f59e0b, stop:1 #d97706);
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #d97706, stop:1 #b45309);
+            }
+        """)
         self.clear_log_btn.clicked.connect(self.log_text.clear)
 
-        self.close_btn = QPushButton("❌ Kapat")
-        self.close_btn.clicked.connect(self.reject)
+        self.close_btn = QPushButton("✅ Kapat")
+        self.close_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #10b981, stop:1 #059669);
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #059669, stop:1 #047857);
+            }
+        """)
+        self.close_btn.clicked.connect(self.accept)
 
         button_layout.addWidget(self.clear_log_btn)
         button_layout.addStretch()
@@ -363,26 +553,53 @@ class AdvancedFileOperationsDialog(QDialog):
         """Toplu içe aktarma sekmesi"""
         widget = QWidget()
         layout = QVBoxLayout()
+        layout.setSpacing(20)
 
-        # Açıklama
-        info_label = QLabel("""
-📥 <b>Toplu İçe Aktarma:</b> Birden fazla dosyayı aynı anda içe aktarın
-• JSON, TXT, CSV dosyalarını destekler
-• Kategori ve hesap kategori dosyalarını otomatik tanır
-• Hata durumunda diğer dosyalar işlenmeye devam eder
+        # Bilgi kartı
+        info_card = QFrame()
+        info_card.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #dbeafe, stop:1 #bfdbfe);
+                border: 2px solid #93c5fd;
+                border-radius: 16px;
+                padding: 20px;
+            }
         """)
-        info_label.setStyleSheet("background: #f0f9ff; padding: 15px; border-radius: 8px; border: 1px solid #bae6fd;")
-        layout.addWidget(info_label)
+        
+        info_layout = QVBoxLayout()
+        
+        info_title = QLabel("📥 Toplu İçe Aktarma")
+        info_title.setStyleSheet("font-size: 20px; font-weight: 700; color: #1e40af; margin-bottom: 8px;")
+        
+        info_desc = QLabel("Birden fazla dosyayı aynı anda içe aktarın\n• JSON, TXT, CSV formatlarını destekler\n• Kategori ve hesap verilerini otomatik tanır\n• Hata durumunda diğer dosyalar işlenmeye devam eder")
+        info_desc.setStyleSheet("color: #3730a3; font-size: 14px; line-height: 1.4;")
+        
+        info_layout.addWidget(info_title)
+        info_layout.addWidget(info_desc)
+        info_card.setLayout(info_layout)
+        
+        layout.addWidget(info_card)
 
         # Dosya seçimi
-        file_frame = QGroupBox("Dosya Seçimi")
+        file_frame = QGroupBox("📁 Dosya Seçimi")
         file_layout = QVBoxLayout()
 
         file_buttons_layout = QHBoxLayout()
         self.select_files_btn = QPushButton("📁 Dosyaları Seç")
-        self.select_files_btn.clicked.connect(self.select_batch_files)
-
         self.clear_files_btn = QPushButton("🗑️ Listeyi Temizle")
+        self.clear_files_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #ef4444, stop:1 #dc2626);
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #dc2626, stop:1 #b91c1c);
+            }
+        """)
+        
+        self.select_files_btn.clicked.connect(self.select_batch_files)
         self.clear_files_btn.clicked.connect(self.clear_file_list)
 
         file_buttons_layout.addWidget(self.select_files_btn)
@@ -390,15 +607,17 @@ class AdvancedFileOperationsDialog(QDialog):
         file_buttons_layout.addStretch()
 
         self.file_list = QListWidget()
-        self.file_list.setMaximumHeight(150)
+        self.file_list.setMinimumHeight(150)
 
         file_layout.addLayout(file_buttons_layout)
         file_layout.addWidget(self.file_list)
         file_frame.setLayout(file_layout)
 
+        layout.addWidget(file_frame)
+
         # Seçenekler
-        options_frame = QGroupBox("İçe Aktarma Seçenekleri")
-        options_layout = QFormLayout()
+        options_frame = QGroupBox("⚙️ İçe Aktarma Seçenekleri")
+        options_layout = QVBoxLayout()
 
         self.skip_duplicates_check = QCheckBox("Mevcut kategorileri atla")
         self.skip_duplicates_check.setChecked(True)
@@ -406,30 +625,29 @@ class AdvancedFileOperationsDialog(QDialog):
         self.create_backup_check = QCheckBox("İşlem öncesi yedek oluştur")
         self.create_backup_check.setChecked(True)
 
-        options_layout.addRow("Seçenekler:", self.skip_duplicates_check)
-        options_layout.addRow("", self.create_backup_check)
+        options_layout.addWidget(self.skip_duplicates_check)
+        options_layout.addWidget(self.create_backup_check)
         options_frame.setLayout(options_layout)
+
+        layout.addWidget(options_frame)
 
         # İşlem başlat
         self.start_batch_btn = QPushButton("🚀 Toplu İçe Aktarmayı Başlat")
         self.start_batch_btn.setStyleSheet("""
             QPushButton {
-                background: #10b981;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 12px 24px;
-                font-weight: 600;
-                font-size: 14px;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #10b981, stop:1 #059669);
+                font-size: 16px;
+                padding: 16px 32px;
+                min-height: 20px;
             }
             QPushButton:hover {
-                background: #059669;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #059669, stop:1 #047857);
             }
         """)
         self.start_batch_btn.clicked.connect(self.start_batch_import)
 
-        layout.addWidget(file_frame)
-        layout.addWidget(options_frame)
         layout.addWidget(self.start_batch_btn)
         layout.addStretch()
 
@@ -440,52 +658,75 @@ class AdvancedFileOperationsDialog(QDialog):
         """Excel işlemleri sekmesi"""
         widget = QWidget()
         layout = QVBoxLayout()
+        layout.setSpacing(20)
 
         # Excel içe aktarma
         import_frame = QGroupBox("📗 Excel Dosyasından İçe Aktarma")
         import_layout = QVBoxLayout()
 
-        excel_info = QLabel("""
-Excel dosyasında aşağıdaki sayfa adları aranır:
-• <b>Kategoriler:</b> Ana Kategori, Alt Kategori, Açıklama
-• <b>Hesap Kategorileri:</b> Kullanıcı Adı, Hesap Türü, Ana Kategori, Alt Kategori, Kategori Değeri
+        excel_info = QFrame()
+        excel_info.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #d1fae5, stop:1 #a7f3d0);
+                border: 2px solid #6ee7b7;
+                border-radius: 12px;
+                padding: 16px;
+            }
         """)
-        excel_info.setStyleSheet("background: #f0fdf4; padding: 10px; border-radius: 6px; border: 1px solid #bbf7d0;")
+        
+        excel_info_layout = QVBoxLayout()
+        excel_info_label = QLabel("Excel dosyasında aşağıdaki sayfa adları aranır:\n• Kategoriler: Ana Kategori, Alt Kategori, Açıklama\n• Hesap Kategorileri: Kullanıcı Adı, Hesap Türü, Ana Kategori, Alt Kategori, Kategori Değeri")
+        excel_info_label.setStyleSheet("color: #065f46; font-size: 13px;")
+        excel_info_layout.addWidget(excel_info_label)
+        excel_info.setLayout(excel_info_layout)
 
         excel_buttons_layout = QHBoxLayout()
         self.select_excel_btn = QPushButton("📁 Excel Dosyası Seç")
-        self.select_excel_btn.clicked.connect(self.select_excel_file)
-
         self.import_excel_btn = QPushButton("📥 Excel'den İçe Aktar")
-        self.import_excel_btn.clicked.connect(self.import_from_excel)
         self.import_excel_btn.setEnabled(False)
+        
+        self.select_excel_btn.clicked.connect(self.select_excel_file)
+        self.import_excel_btn.clicked.connect(self.import_from_excel)
 
         excel_buttons_layout.addWidget(self.select_excel_btn)
         excel_buttons_layout.addWidget(self.import_excel_btn)
         excel_buttons_layout.addStretch()
 
         self.excel_file_label = QLabel("Dosya seçilmedi")
-        self.excel_file_label.setStyleSheet("color: #64748b; font-style: italic;")
+        self.excel_file_label.setStyleSheet("color: #64748b; font-style: italic; font-size: 13px;")
 
         import_layout.addWidget(excel_info)
         import_layout.addLayout(excel_buttons_layout)
         import_layout.addWidget(self.excel_file_label)
         import_frame.setLayout(import_layout)
 
-        # Excel şablonu indirme
+        layout.addWidget(import_frame)
+
+        # Excel şablonu
         template_frame = QGroupBox("📋 Excel Şablonu")
         template_layout = QVBoxLayout()
 
-        template_info = QLabel("Boş Excel şablonu indirerek kendi verilerinizi hazırlayabilirsiniz.")
+        template_info = QLabel("Boş Excel şablonu indirerek kendi verilerinizi hazırlayabilirsiniz")
+        template_info.setStyleSheet("color: #64748b; font-size: 14px;")
 
         self.download_template_btn = QPushButton("⬇️ Excel Şablonunu İndir")
+        self.download_template_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #8b5cf6, stop:1 #7c3aed);
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #7c3aed, stop:1 #6d28d9);
+            }
+        """)
         self.download_template_btn.clicked.connect(self.download_excel_template)
 
         template_layout.addWidget(template_info)
         template_layout.addWidget(self.download_template_btn)
         template_frame.setLayout(template_layout)
 
-        layout.addWidget(import_frame)
         layout.addWidget(template_frame)
         layout.addStretch()
 
@@ -496,26 +737,53 @@ Excel dosyasında aşağıdaki sayfa adları aranır:
         """Veri doğrulama sekmesi"""
         widget = QWidget()
         layout = QVBoxLayout()
+        layout.setSpacing(20)
 
-        # Açıklama
-        info_label = QLabel("""
-✅ <b>Veri Doğrulama:</b> İçe aktarma öncesi dosyalarınızı kontrol edin
-• Format hatalarını tespit eder
-• Eksik alanları listeler
-• İçe aktarma öncesi problemleri çözer
+        # Bilgi kartı
+        info_card = QFrame()
+        info_card.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #fef3c7, stop:1 #fed7aa);
+                border: 2px solid #fbbf24;
+                border-radius: 16px;
+                padding: 20px;
+            }
         """)
-        info_label.setStyleSheet("background: #fefce8; padding: 15px; border-radius: 8px; border: 1px solid #fde047;")
-        layout.addWidget(info_label)
+        
+        info_layout = QVBoxLayout()
+        
+        info_title = QLabel("✅ Veri Doğrulama")
+        info_title.setStyleSheet("font-size: 20px; font-weight: 700; color: #92400e; margin-bottom: 8px;")
+        
+        info_desc = QLabel("İçe aktarma öncesi dosyalarınızı kontrol edin\n• Format hatalarını tespit eder\n• Eksik alanları listeler\n• İçe aktarma öncesi problemleri çözer")
+        info_desc.setStyleSheet("color: #78350f; font-size: 14px; line-height: 1.4;")
+        
+        info_layout.addWidget(info_title)
+        info_layout.addWidget(info_desc)
+        info_card.setLayout(info_layout)
+        
+        layout.addWidget(info_card)
 
         # Dosya seçimi
-        validation_frame = QGroupBox("Doğrulanacak Dosyalar")
+        validation_frame = QGroupBox("🔍 Doğrulanacak Dosyalar")
         validation_layout = QVBoxLayout()
 
         validation_buttons_layout = QHBoxLayout()
         self.select_validation_files_btn = QPushButton("📁 Dosyaları Seç")
-        self.select_validation_files_btn.clicked.connect(self.select_validation_files)
-
         self.validate_btn = QPushButton("🔍 Doğrulamayı Başlat")
+        self.validate_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #f59e0b, stop:1 #d97706);
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #d97706, stop:1 #b45309);
+            }
+        """)
+        
+        self.select_validation_files_btn.clicked.connect(self.select_validation_files)
         self.validate_btn.clicked.connect(self.start_validation)
 
         validation_buttons_layout.addWidget(self.select_validation_files_btn)
@@ -523,13 +791,12 @@ Excel dosyasında aşağıdaki sayfa adları aranır:
         validation_buttons_layout.addStretch()
 
         self.validation_file_list = QListWidget()
-        self.validation_file_list.setMaximumHeight(150)
+        self.validation_file_list.setMinimumHeight(200)
 
         validation_layout.addLayout(validation_buttons_layout)
         validation_layout.addWidget(self.validation_file_list)
         validation_frame.setLayout(validation_layout)
 
-        layout.addWidget(info_label)
         layout.addWidget(validation_frame)
         layout.addStretch()
 
@@ -540,33 +807,83 @@ Excel dosyasında aşağıdaki sayfa adları aranır:
         """Yedekleme sekmesi"""
         widget = QWidget()
         layout = QVBoxLayout()
+        layout.setSpacing(20)
 
-        # Açıklama
-        info_label = QLabel("""
-💾 <b>Yedekleme ve Geri Yükleme:</b> Verilerinizi güvenle yedekleyin
-• Kategori verilerini yedekle
-• Hesap kategorilerini yedekle
-• Tam veritabanı yedeği oluştur
+        # Bilgi kartı
+        info_card = QFrame()
+        info_card.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #e0e7ff, stop:1 #c7d2fe);
+                border: 2px solid #a5b4fc;
+                border-radius: 16px;
+                padding: 20px;
+            }
         """)
-        info_label.setStyleSheet("background: #f0f9ff; padding: 15px; border-radius: 8px; border: 1px solid #0ea5e9;")
-        layout.addWidget(info_label)
+        
+        info_layout = QVBoxLayout()
+        
+        info_title = QLabel("💾 Yedekleme ve Geri Yükleme")
+        info_title.setStyleSheet("font-size: 20px; font-weight: 700; color: #3730a3; margin-bottom: 8px;")
+        
+        info_desc = QLabel("Verilerinizi güvenle yedekleyin\n• Kategori verilerini yedekle\n• Hesap kategorilerini yedekle\n• Tam veritabanı yedeği oluştur")
+        info_desc.setStyleSheet("color: #312e81; font-size: 14px; line-height: 1.4;")
+        
+        info_layout.addWidget(info_title)
+        info_layout.addWidget(info_desc)
+        info_card.setLayout(info_layout)
+        
+        layout.addWidget(info_card)
 
         # Yedekleme seçenekleri
-        backup_frame = QGroupBox("Yedekleme Seçenekleri")
-        backup_layout = QVBoxLayout()
+        backup_frame = QGroupBox("💾 Yedekleme Seçenekleri")
+        backup_layout = QGridLayout()
 
+        # Butonlar
         self.backup_categories_btn = QPushButton("💾 Kategorileri Yedekle")
+        self.backup_categories_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #06b6d4, stop:1 #0891b2);
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #0891b2, stop:1 #0e7490);
+            }
+        """)
         self.backup_categories_btn.clicked.connect(self.backup_categories)
 
         self.backup_accounts_btn = QPushButton("💾 Hesap Kategorilerini Yedekle")
+        self.backup_accounts_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #8b5cf6, stop:1 #7c3aed);
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #7c3aed, stop:1 #6d28d9);
+            }
+        """)
         self.backup_accounts_btn.clicked.connect(self.backup_account_categories)
 
         self.full_backup_btn = QPushButton("💾 Tam Yedek Oluştur")
+        self.full_backup_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #10b981, stop:1 #059669);
+                font-size: 16px;
+                padding: 16px 32px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #059669, stop:1 #047857);
+            }
+        """)
         self.full_backup_btn.clicked.connect(self.create_full_backup)
 
-        backup_layout.addWidget(self.backup_categories_btn)
-        backup_layout.addWidget(self.backup_accounts_btn)
-        backup_layout.addWidget(self.full_backup_btn)
+        backup_layout.addWidget(self.backup_categories_btn, 0, 0)
+        backup_layout.addWidget(self.backup_accounts_btn, 0, 1)
+        backup_layout.addWidget(self.full_backup_btn, 1, 0, 1, 2)
         backup_frame.setLayout(backup_layout)
 
         layout.addWidget(backup_frame)
@@ -575,13 +892,98 @@ Excel dosyasında aşağıdaki sayfa adları aranır:
         widget.setLayout(layout)
         return widget
 
+    # Diğer metodlar (select_batch_files, import_from_excel, etc.) aynı kalabilir
+    # Sadece tasarım güncellendi, fonksiyonalite korundu
+    
+    def select_batch_files(self):
+        """Toplu içe aktarma için dosyaları seç"""
+        files, _ = QFileDialog.getOpenFileNames(
+            self, "İçe Aktarılacak Dosyaları Seç",
+            "", "Desteklenen Dosyalar (*.json *.txt *.csv);;Tüm Dosyalar (*)"
+        )
+
+        if files:
+            self.file_list.clear()
+            for file_path in files:
+                item = QListWidgetItem(f"📄 {os.path.basename(file_path)}")
+                item.setData(Qt.UserRole, file_path)
+                item.setToolTip(file_path)
+                self.file_list.addItem(item)
+
+    def clear_file_list(self):
+        """Dosya listesini temizle"""
+        self.file_list.clear()
+
+    def select_excel_file(self):
+        """Excel dosyası seç"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Excel Dosyası Seç",
+            "", "Excel Dosyaları (*.xlsx *.xls)"
+        )
+
+        if file_path:
+            self.excel_file_path = file_path
+            self.excel_file_label.setText(f"📄 {os.path.basename(file_path)}")
+            self.excel_file_label.setStyleSheet("color: #059669; font-weight: 600;")
+            self.import_excel_btn.setEnabled(True)
+
+    def select_validation_files(self):
+        """Doğrulama için dosyaları seç"""
+        files, _ = QFileDialog.getOpenFileNames(
+            self, "Doğrulanacak Dosyaları Seç",
+            "", "Desteklenen Dosyalar (*.json *.txt *.csv);;Tüm Dosyalar (*)"
+        )
+
+        if files:
+            self.validation_file_list.clear()
+            for file_path in files:
+                item = QListWidgetItem(f"📄 {os.path.basename(file_path)}")
+                item.setData(Qt.UserRole, file_path)
+                item.setToolTip(file_path)
+                self.validation_file_list.addItem(item)
+
+    def start_batch_import(self):
+        """Toplu içe aktarmayı başlat"""
+        if self.file_list.count() == 0:
+            QMessageBox.warning(self, "⚠️ Uyarı", "Lütfen önce dosyaları seçin!")
+            return
+
+        file_paths = []
+        for i in range(self.file_list.count()):
+            item = self.file_list.item(i)
+            file_paths.append(item.data(Qt.UserRole))
+
+        options = {
+            'skip_duplicates': self.skip_duplicates_check.isChecked(),
+            'create_backup': self.create_backup_check.isChecked()
+        }
+
+        self.start_worker("batch_import", file_paths, options)
+
+    def import_from_excel(self):
+        """Excel'den içe aktarma"""
+        if not hasattr(self, 'excel_file_path'):
+            QMessageBox.warning(self, "⚠️ Uyarı", "Lütfen önce Excel dosyasını seçin!")
+            return
+
+        self.start_worker("excel_import", [self.excel_file_path], {})
+
+    def start_validation(self):
+        """Doğrulamayı başlat"""
+        if self.validation_file_list.count() == 0:
+            QMessageBox.warning(self, "⚠️ Uyarı", "Lütfen önce dosyaları seçin!")
+            return
+
+        file_paths = []
+        for i in range(self.validation_file_list.count()):
+            item = self.validation_file_list.item(i)
+            file_paths.append(item.data(Qt.UserRole))
+
+        self.start_worker("validate_data", file_paths, {})
+
     def backup_categories(self):
         """Kategorileri yedekle"""
         try:
-            from PyQt5.QtWidgets import QFileDialog
-            from datetime import datetime
-            import json
-
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             file_path, _ = QFileDialog.getSaveFileName(
                 self, "Kategori Yedeği Kaydet", 
@@ -601,128 +1003,28 @@ Excel dosyasında aşağıdaki sayfa adları aranır:
                     with open(file_path, 'w', encoding='utf-8') as f:
                         json.dump(backup_data, f, ensure_ascii=False, indent=2)
 
-                    QMessageBox.information(self, "Başarılı", f"Kategoriler yedeklendi:\n{file_path}")
+                    QMessageBox.information(self, "✅ Başarılı", f"Kategoriler yedeklendi:\n{file_path}")
                 else:
-                    QMessageBox.warning(self, "Hata", "MySQL bağlantısı bulunamadı")
+                    QMessageBox.warning(self, "❌ Hata", "MySQL bağlantısı bulunamadı")
 
         except Exception as e:
-            QMessageBox.critical(self, "Hata", f"Yedekleme hatası: {str(e)}")
+            QMessageBox.critical(self, "❌ Hata", f"Yedekleme hatası: {str(e)}")
 
     def backup_account_categories(self):
         """Hesap kategorilerini yedekle"""
-        QMessageBox.information(self, "Bilgi", "Hesap kategorileri yedeklemesi henüz hazırlanıyor...")
+        QMessageBox.information(self, "💡 Bilgi", "Hesap kategorileri yedeklemesi henüz hazırlanıyor...")
 
     def create_full_backup(self):
         """Tam yedek oluştur"""
-        QMessageBox.information(self, "Bilgi", "Tam yedekleme henüz hazırlanıyor...")
+        try:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "Tam Yedek Dosyasını Kaydet",
+                f"aktweetor_tam_yedek_{timestamp}.json",
+                "JSON Dosyaları (*.json)"
+            )
 
-    def select_batch_files(self):
-        """Toplu içe aktarma için dosyaları seç"""
-        files, _ = QFileDialog.getOpenFileNames(
-            self, "İçe Aktarılacak Dosyaları Seç",
-            "", "Desteklenen Dosyalar (*.json *.txt *.csv);;Tüm Dosyalar (*)"
-        )
-
-        if files:
-            self.file_list.clear()
-            for file_path in files:
-                item = QListWidgetItem(os.path.basename(file_path))
-                item.setData(Qt.UserRole, file_path)
-                self.file_list.addItem(item)
-
-    def clear_file_list(self):
-        """Dosya listesini temizle"""
-        self.file_list.clear()
-
-    def select_excel_file(self):
-        """Excel dosyası seç"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Excel Dosyası Seç",
-            "", "Excel Dosyaları (*.xlsx *.xls)"
-        )
-
-        if file_path:
-            self.excel_file_path = file_path
-            self.excel_file_label.setText(os.path.basename(file_path))
-            self.import_excel_btn.setEnabled(True)
-
-    def select_validation_files(self):
-        """Doğrulama için dosyaları seç"""
-        files, _ = QFileDialog.getOpenFileNames(
-            self, "Doğrulanacak Dosyaları Seç",
-            "", "Desteklenen Dosyalar (*.json *.txt *.csv);;Tüm Dosyalar (*)"
-        )
-
-        if files:
-            self.validation_file_list.clear()
-            for file_path in files:
-                item = QListWidgetItem(os.path.basename(file_path))
-                item.setData(Qt.UserRole, file_path)
-                self.validation_file_list.addItem(item)
-
-    def select_backup_file(self):
-        """Yedek dosyası seç"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Yedek Dosyası Seç",
-            "", "JSON Dosyaları (*.json);;Tüm Dosyalar (*)"
-        )
-
-        if file_path:
-            self.backup_file_path = file_path
-            self.backup_file_label.setText(os.path.basename(file_path))
-            self.restore_backup_btn.setEnabled(True)
-
-    def start_batch_import(self):
-        """Toplu içe aktarmayı başlat"""
-        if self.file_list.count() == 0:
-            QMessageBox.warning(self, "Uyarı", "Lütfen önce dosyaları seçin!")
-            return
-
-        file_paths = []
-        for i in range(self.file_list.count()):
-            item = self.file_list.item(i)
-            file_paths.append(item.data(Qt.UserRole))
-
-        options = {
-            'skip_duplicates': self.skip_duplicates_check.isChecked(),
-            'create_backup': self.create_backup_check.isChecked()
-        }
-
-        self.start_worker("batch_import", file_paths, options)
-
-    def import_from_excel(self):
-        """Excel'den içe aktarma"""
-        if not hasattr(self, 'excel_file_path'):
-            QMessageBox.warning(self, "Uyarı", "Lütfen önce Excel dosyasını seçin!")
-            return
-
-        self.start_worker("excel_import", [self.excel_file_path], {})
-
-    def start_validation(self):
-        """Doğrulamayı başlat"""
-        if self.validation_file_list.count() == 0:
-            QMessageBox.warning(self, "Uyarı", "Lütfen önce dosyaları seçin!")
-            return
-
-        file_paths = []
-        for i in range(self.validation_file_list.count()):
-            item = self.validation_file_list.item(i)
-            file_paths.append(item.data(Qt.UserRole))
-
-        self.start_worker("validate_data", file_paths, {})
-
-    def create_full_backup(self):
-        """Tam yedek oluştur"""
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        default_name = f"aktweetor_backup_{timestamp}.json"
-
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "Yedek Dosyasını Kaydet",
-            default_name, "JSON Dosyaları (*.json)"
-        )
-
-        if file_path:
-            try:
+            if file_path:
                 # Tüm kategori verilerini topla
                 categories = mysql_manager.get_categories('icerik')
 
@@ -747,7 +1049,7 @@ Excel dosyasında aşağıdaki sayfa adları aranır:
 
                 backup_data = {
                     'backup_date': datetime.now().isoformat(),
-                    'version': '1.0',
+                    'version': '2.0',
                     'categories': categories,
                     'account_categories': all_account_categories
                 }
@@ -755,54 +1057,11 @@ Excel dosyasında aşağıdaki sayfa adları aranır:
                 with open(file_path, 'w', encoding='utf-8') as f:
                     json.dump(backup_data, f, ensure_ascii=False, indent=2)
 
-                self.log_text.append(f"✅ Yedek oluşturuldu: {file_path}")
-                QMessageBox.information(self, "Başarılı", "Yedek başarıyla oluşturuldu!")
+                self.log_text.append(f"✅ Tam yedek oluşturuldu: {file_path}")
+                QMessageBox.information(self, "✅ Başarılı", "Tam yedek başarıyla oluşturuldu!")
 
-            except Exception as e:
-                QMessageBox.critical(self, "Hata", f"Yedek oluşturulamadı: {str(e)}")
-
-    def restore_backup(self):
-        """Yedek geri yükle"""
-        reply = QMessageBox.question(
-            self, "Onay",
-            "Bu işlem mevcut tüm kategori verilerini silecek ve yedekteki verilerle değiştirecektir.\n\nDevam etmek istediğinizden emin misiniz?",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-        )
-
-        if reply == QMessageBox.Yes:
-            try:
-                with open(self.backup_file_path, 'r', encoding='utf-8') as f:
-                    backup_data = json.load(f)
-
-                # Mevcut verileri temizle (dikkatli!)
-                # Bu kısım gerçek bir veritabanı işlemi olduğu için dikkatli olunmalı
-
-                # Kategorileri geri yükle
-                categories = backup_data.get('categories', [])
-                for cat in categories:
-                    mysql_manager.add_hierarchical_category(
-                        'icerik',
-                        cat.get('ana_kategori', ''),
-                        cat.get('alt_kategori'),
-                        cat.get('aciklama', '')
-                    )
-
-                # Hesap kategorilerini geri yükle
-                account_categories = backup_data.get('account_categories', [])
-                for acc_cat in account_categories:
-                    mysql_manager.assign_hierarchical_category_to_account(
-                        acc_cat.get('kullanici_adi', ''),
-                        acc_cat.get('hesap_turu', 'hedef'),
-                        acc_cat.get('ana_kategori', ''),
-                        acc_cat.get('alt_kategori'),
-                        acc_cat.get('kategori_degeri', 'Geri Yüklendi')
-                    )
-
-                self.log_text.append(f"✅ Yedek geri yüklendi: {len(categories)} kategori, {len(account_categories)} hesap kategorisi")
-                QMessageBox.information(self, "Başarılı", "Yedek başarıyla geri yüklendi!")
-
-            except Exception as e:
-                QMessageBox.critical(self, "Hata", f"Yedek geri yüklenemedi: {str(e)}")
+        except Exception as e:
+            QMessageBox.critical(self, "❌ Hata", f"Yedek oluşturulamadı: {str(e)}")
 
     def download_excel_template(self):
         """Excel şablonunu indir"""
@@ -825,8 +1084,8 @@ Excel dosyasında aşağıdaki sayfa adları aranır:
                 headers = ['Ana Kategori', 'Alt Kategori', 'Açıklama']
                 for col, header in enumerate(headers, 1):
                     cell = ws_categories.cell(row=1, column=col, value=header)
-                    cell.font = Font(bold=True)
-                    cell.fill = PatternFill(start_color='DDDDDD', end_color='DDDDDD', fill_type='solid')
+                    cell.font = Font(bold=True, color='FFFFFF')
+                    cell.fill = PatternFill(start_color='3B82F6', end_color='3B82F6', fill_type='solid')
                     cell.alignment = Alignment(horizontal='center')
 
                 # Örnek veriler
@@ -846,8 +1105,8 @@ Excel dosyasında aşağıdaki sayfa adları aranır:
                 headers = ['Kullanıcı Adı', 'Hesap Türü', 'Ana Kategori', 'Alt Kategori', 'Kategori Değeri']
                 for col, header in enumerate(headers, 1):
                     cell = ws_accounts.cell(row=1, column=col, value=header)
-                    cell.font = Font(bold=True)
-                    cell.fill = PatternFill(start_color='DDDDDD', end_color='DDDDDD', fill_type='solid')
+                    cell.font = Font(bold=True, color='FFFFFF')
+                    cell.fill = PatternFill(start_color='10B981', end_color='10B981', fill_type='solid')
                     cell.alignment = Alignment(horizontal='center')
 
                 # Örnek veriler
@@ -869,12 +1128,12 @@ Excel dosyasında aşağıdaki sayfa adları aranır:
 
                 wb.save(file_path)
 
-                QMessageBox.information(self, "Başarılı", f"Excel şablonu oluşturuldu:\n{file_path}")
+                QMessageBox.information(self, "✅ Başarılı", f"Excel şablonu oluşturuldu:\n{file_path}")
 
         except ImportError:
-            QMessageBox.warning(self, "Uyarı", "Excel şablonu için openpyxl kütüphanesi gerekli.\nLütfen 'pip install openpyxl' çalıştırın.")
+            QMessageBox.warning(self, "⚠️ Uyarı", "Excel şablonu için openpyxl kütüphanesi gerekli.\nLütfen 'pip install openpyxl' çalıştırın.")
         except Exception as e:
-            QMessageBox.critical(self, "Hata", f"Şablon oluşturulamadı: {str(e)}")
+            QMessageBox.critical(self, "❌ Hata", f"Şablon oluşturulamadı: {str(e)}")
 
     def start_worker(self, operation_type, file_paths, options):
         """Worker thread'i başlat"""
@@ -897,7 +1156,7 @@ Excel dosyasında aşağıdaki sayfa adları aranır:
         self.status_label.setText("✅ " + message)
         self.log_text.append("✅ " + message)
 
-        QMessageBox.information(self, "Başarılı", message)
+        QMessageBox.information(self, "✅ Başarılı", message)
 
     def on_operation_error(self, error_message):
         """İşlem hatası"""
@@ -905,7 +1164,7 @@ Excel dosyasında aşağıdaki sayfa adları aranır:
         self.status_label.setText("❌ " + error_message)
         self.log_text.append("❌ " + error_message)
 
-        QMessageBox.critical(self, "Hata", error_message)
+        QMessageBox.critical(self, "❌ Hata", error_message)
 
     def closeEvent(self, event):
         """Dialog kapatılırken"""
