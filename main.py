@@ -41,21 +41,19 @@ def main():
             splash.show()
             app.processEvents()  # Splash ekranını göster
             
-            # Ana pencereyi yükle
-            from ui.main_window import MainWindow
-            window = MainWindow()
+            print("🚀 AkTweetor splash screen başlatıldı!")
+            print("⏳ Yükleme işlemi devam ediyor...")
             
-            # Splash'ı kapat ve ana pencereyi göster
-            splash.close()
-            window.show()
+            # Splash screen kendi kendine ana pencereyi açacak
+            # Burada ana pencere oluşturmasına gerek yok
             
-            print("🚀 AkTweetor başlatıldı!")
         except Exception as e:
             print(f"❌ Splash ekranı yüklenemedi: {str(e)}")
             # Direkt ana pencereyi aç
             from ui.main_window import MainWindow
             window = MainWindow()
             window.show()
+            print("🚀 AkTweetor direkt başlatıldı!")
         
         # Uygulamayı çalıştır
         sys.exit(app.exec_())

@@ -90,8 +90,8 @@ class InitializationWorker(QThread):
             
             print("🔍 InitializationWorker başlatıldı")
             
-            # Toplam süre 7-10 saniye arasında rastgele
-            total_time = random.uniform(7.0, 10.0)
+            # Toplam süre 8-12 saniye arasında rastgele (biraz uzattık)
+            total_time = random.uniform(8.0, 12.0)
             print(f"🕐 Toplam yükleme süresi: {total_time:.2f} saniye")
             
             # Adım 1: Dosya sistemi kontrolü
@@ -383,9 +383,9 @@ class SplashScreen(QWidget):
         """Başlatma tamamlandığında çağrılır"""
         print(f"🔍 Initialization finished: {success}")
         if success:
-            # 800ms bekle ve ana pencereyi aç
+            # 1.5 saniye bekle ve ana pencereyi aç (daha uzun süre)
             print("✅ Başlatma başarılı, ana pencere açılıyor...")
-            QTimer.singleShot(800, self.open_main_window)
+            QTimer.singleShot(1500, self.open_main_window)
         else:
             # Hata durumunda 3 saniye bekle
             print("❌ Başlatma başarısız!")
