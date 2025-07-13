@@ -834,8 +834,7 @@ class MySQLManager:
             imported_count = 0
             with open(file_path, 'r', encoding='utf-8') as f:
                 for line in f:
-                    line =```python
- line.strip()
+                    line = line.strip()
                     if not line or line.startswith('#'):
                         continue
 
