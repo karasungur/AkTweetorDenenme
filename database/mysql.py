@@ -814,8 +814,7 @@ class MySQLManager:
             FROM hesap_kategorileri hk
             LEFT JOIN kategoriler k ON (
                 hk.kategori_turu = k.kategori_turu AND 
-                hk.ana_kategori = k.ana_kategori AND 
-                (hk.alt_kategori = k.alt_kategori OR (hk.alt_kategori IS NULL AND k.alt_kategori IS NULL))
+                hk.ana_kategori = k.ana_kategori
             )
             WHERE hk.kullanici_adi = %s AND hk.hesap_turu = %s
             ORDER BY hk.kategori_turu, hk.ana_kategori, hk.alt_kategori

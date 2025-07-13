@@ -715,37 +715,19 @@ class CategoryWindow(QWidget):
         manage_categories_btn.setObjectName("manageButton")
         manage_categories_btn.clicked.connect(self.show_category_management)
 
-        # Kategori istatistikleri
-        stats_btn = QPushButton("📊 Kategori İstatistikleri")
+        # İstatistikler (tüm istatistik işlemleri tek menüde)
+        stats_btn = QPushButton("📊 İstatistikler")
         stats_btn.setObjectName("statsButton")
         stats_btn.clicked.connect(self.show_category_statistics)
 
-        # Dışa aktarma
-        export_btn = QPushButton("📤 Dışa Aktarma")
-        export_btn.setObjectName("exportButton")
-        export_btn.clicked.connect(self.show_export_dialog)
-
-        # Grafiksel istatistikler
-        charts_btn = QPushButton("📈 Grafiksel İstatistikler")
-        charts_btn.setObjectName("chartsButton")
-        charts_btn.clicked.connect(self.show_charts_dialog)
-
-        # Gelişmiş dosya işlemleri
-        advanced_ops_btn = QPushButton("🔄 Gelişmiş İçe/Dışa Aktarma")
-        advanced_ops_btn.setObjectName("advancedButton")
-        advanced_ops_btn.clicked.connect(self.show_advanced_operations)
-
-        # Dosya işlemleri (basit)
-        file_import_btn = QPushButton("📁 Basit İçe Aktar")
-        file_import_btn.setObjectName("importButton")
-        file_import_btn.clicked.connect(self.show_file_import)
+        # İçe/Dışa Aktarma (tüm dosya işlemleri tek menüde)
+        file_ops_btn = QPushButton("📁 İçe/Dışa Aktarma")
+        file_ops_btn.setObjectName("advancedButton")
+        file_ops_btn.clicked.connect(self.show_advanced_operations)
 
         toolbar_layout.addWidget(manage_categories_btn)
         toolbar_layout.addWidget(stats_btn)
-        toolbar_layout.addWidget(export_btn)
-        toolbar_layout.addWidget(charts_btn)
-        toolbar_layout.addWidget(advanced_ops_btn)
-        toolbar_layout.addWidget(file_import_btn)
+        toolbar_layout.addWidget(file_ops_btn)
         toolbar_layout.addStretch()
 
         # Hesap türü seçimi
@@ -1346,45 +1328,16 @@ class CategoryWindow(QWidget):
             QMessageBox.critical(self, "Hata", f"İstatistik penceresi açılamadı:\n{str(e)}")
             print(f"İstatistik dialog hatası: {e}")
 
-    def show_export_dialog(self):
-        """Dışa aktarma dialog'unu göster"""
-        try:
-            from .export_dialog import ExportDialog
-            dialog = ExportDialog(self)
-            dialog.exec_()
-        except Exception as e:
-            from PyQt5.QtWidgets import QMessageBox
-            QMessageBox.critical(self, "Hata", f"Dışa aktarma penceresi açılamadı:\n{str(e)}")
-            print(f"Export dialog hatası: {e}")
-
-    def show_charts_dialog(self):
-        """Grafiksel istatistikler dialog'unu göster"""
-        try:
-            from .category_stats_window import CategoryStatsDialog
-            dialog = CategoryStatsDialog(self)
-            # Doğrudan grafikler sekmesini aç
-            dialog.tabs.setCurrentIndex(3)  # Grafiksel görünüm sekmesi
-            dialog.exec_()
-        except Exception as e:
-            from PyQt5.QtWidgets import QMessageBox
-            QMessageBox.critical(self, "Hata", f"Grafik penceresi açılamadı:\n{str(e)}")
-            print(f"Charts dialog hatası: {e}")
-
     def show_advanced_operations(self):
-        """Gelişmiş dosya işlemleri dialog'unu göster"""
+        """İçe/Dışa aktarma işlemleri dialog'unu göster"""
         try:
             from .advanced_file_operations import AdvancedFileOperationsDialog
             dialog = AdvancedFileOperationsDialog(self)
             dialog.exec_()
         except Exception as e:
             from PyQt5.QtWidgets import QMessageBox
-            QMessageBox.critical(self, "Hata", f"Gelişmiş işlemler penceresi açılamadı:\n{str(e)}")
+            QMessageBox.critical(self, "Hata", f"İçe/Dışa aktarma penceresi açılamadı:\n{str(e)}")
             print(f"Advanced operations dialog hatası: {e}")
-
-    def show_file_import(self):
-        """Dosya içe aktarma dialog'unu göster"""
-        dialog = FileImportDialog(self)
-        dialog.exec_()
 
     def filter_accounts(self):
         """Hesapları filtrele"""

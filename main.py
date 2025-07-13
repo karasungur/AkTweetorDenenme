@@ -34,13 +34,28 @@ def main():
         except:
             pass
 
-        # Ana pencereyi göster
-        from ui.main_window import MainWindow
-        window = MainWindow()
-        window.show()
-
-        print("🚀 AkTweetor başlatıldı!")
-        print("📱 GUI penceresi açıldı")
+        # Splash ekranını göster
+        try:
+            from ui.splash_screen import SplashScreen
+            splash = SplashScreen()
+            splash.show()
+            app.processEvents()  # Splash ekranını göster
+            
+            # Ana pencereyi yükle
+            from ui.main_window import MainWindow
+            window = MainWindow()
+            
+            # Splash'ı kapat ve ana pencereyi göster
+            splash.close()
+            window.show()
+            
+            print("🚀 AkTweetor başlatıldı!")
+        except Exception as e:
+            print(f"❌ Splash ekranı yüklenemedi: {str(e)}")
+            # Direkt ana pencereyi aç
+            from ui.main_window import MainWindow
+            window = MainWindow()
+            window.show()
         
         # Uygulamayı çalıştır
         sys.exit(app.exec_())
