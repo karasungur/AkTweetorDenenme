@@ -22,8 +22,16 @@ except ImportError:
 except Exception as e:
     MATPLOTLIB_AVAILABLE = False
     print(f"⚠️ Matplotlib yükleme hatası: {e}")
-from database.mysql import mysql_manager
-from database.user_manager import user_manager
+
+# Database imports'ını güvenli hale getirelim
+try:
+    from database.mysql import mysql_manager
+    from database.user_manager import user_manager
+except ImportError as e:
+    print(f"⚠️ Database modül import hatası: {e}")
+    mysql_manager = None
+    user_manager = None
+
 import json
 from collections import Counter, defaultdict
 

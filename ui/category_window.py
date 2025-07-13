@@ -1337,29 +1337,49 @@ class CategoryWindow(QWidget):
 
     def show_category_statistics(self):
         """Kategori istatistikleri dialog'unu göster"""
-        from .category_stats_window import CategoryStatsDialog
-        dialog = CategoryStatsDialog(self)
-        dialog.exec_()
+        try:
+            from .category_stats_window import CategoryStatsDialog
+            dialog = CategoryStatsDialog(self)
+            dialog.exec_()
+        except Exception as e:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Hata", f"İstatistik penceresi açılamadı:\n{str(e)}")
+            print(f"İstatistik dialog hatası: {e}")
 
     def show_export_dialog(self):
         """Dışa aktarma dialog'unu göster"""
-        from .export_dialog import ExportDialog
-        dialog = ExportDialog(self)
-        dialog.exec_()
+        try:
+            from .export_dialog import ExportDialog
+            dialog = ExportDialog(self)
+            dialog.exec_()
+        except Exception as e:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Hata", f"Dışa aktarma penceresi açılamadı:\n{str(e)}")
+            print(f"Export dialog hatası: {e}")
 
     def show_charts_dialog(self):
         """Grafiksel istatistikler dialog'unu göster"""
-        from .category_stats_window import CategoryStatsDialog
-        dialog = CategoryStatsDialog(self)
-        # Doğrudan grafikler sekmesini aç
-        dialog.tabs.setCurrentIndex(3)  # Grafiksel görünüm sekmesi
-        dialog.exec_()
+        try:
+            from .category_stats_window import CategoryStatsDialog
+            dialog = CategoryStatsDialog(self)
+            # Doğrudan grafikler sekmesini aç
+            dialog.tabs.setCurrentIndex(3)  # Grafiksel görünüm sekmesi
+            dialog.exec_()
+        except Exception as e:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Hata", f"Grafik penceresi açılamadı:\n{str(e)}")
+            print(f"Charts dialog hatası: {e}")
 
     def show_advanced_operations(self):
         """Gelişmiş dosya işlemleri dialog'unu göster"""
-        from .advanced_file_operations import AdvancedFileOperationsDialog
-        dialog = AdvancedFileOperationsDialog(self)
-        dialog.exec_()
+        try:
+            from .advanced_file_operations import AdvancedFileOperationsDialog
+            dialog = AdvancedFileOperationsDialog(self)
+            dialog.exec_()
+        except Exception as e:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Hata", f"Gelişmiş işlemler penceresi açılamadı:\n{str(e)}")
+            print(f"Advanced operations dialog hatası: {e}")
 
     def show_file_import(self):
         """Dosya içe aktarma dialog'unu göster"""
