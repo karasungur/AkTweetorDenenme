@@ -6,9 +6,19 @@ import traceback
 def main():
     """Ana program giriş noktası"""
     try:
-        # Replit GUI ayarları
-        os.environ['DISPLAY'] = ':0'
-        os.environ['QT_QPA_PLATFORM'] = 'xcb'
+        # Ortam tespiti (Replit vs PyCharm)
+        if 'REPL_ID' in os.environ:
+            # Replit ortamı
+            os.environ['DISPLAY'] = ':0'
+            os.environ['QT_QPA_PLATFORM'] = 'xcb'
+        else:
+            # PyCharm/Local ortam - Qt platformu ayarlama
+            if sys.platform == "win32":
+                os.environ['QT_QPA_PLATFORM'] = 'windows'
+            elif sys.platform == "darwin":
+                os.environ['QT_QPA_PLATFORM'] = 'cocoa'
+            else:
+                os.environ['QT_QPA_PLATFORM'] = 'xcb'
         
         from PyQt5.QtWidgets import QApplication, QMessageBox
         from PyQt5.QtCore import Qt
