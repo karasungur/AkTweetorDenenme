@@ -1417,6 +1417,7 @@ class CategoryWindow(QWidget):
         """Hesap kategorilerini görüntüleme modunda göster"""
         try:
             account_categories = mysql_manager.get_account_categories(account, self.selected_account_type)
+            print(f"🔍 Görüntülenen kategoriler - {account}: {account_categories}")  # Debug
 
             if not account_categories:
                 self.view_text.setHtml(f"""
@@ -1429,27 +1430,48 @@ class CategoryWindow(QWidget):
 
             html = f"<h2>👤 {account} - Kategori Bilgileri</h2>"
 
-            # Kategorileri grupla
-            categories_by_type = {}
-            for cat in account_categories:
-                ana = cat.get('ana_kategori', '')
-                if ana not in categories_by_type:
-                    categories_by_type[ana] = []
-                categories_by_type[ana].append(cat)
+            # Kategorileri türe göre grupla
+            profil_kategorileri = []
+            icerik_kategorileri = {}
 
-            for ana_kategori, cats in categories_by_type.items():
-                html += f"<h3>📋 {ana_kategori}</h3><ul>"
-                for cat in cats:
-                    alt = cat.get('alt_kategori', '')
-                    deger = cat.get('kategori_degeri', '')
-                    display = alt if alt else deger
-                    html += f"<li>{display}</li>"
+            for cat in account_categories:
+                kategori_turu = cat.get('kategori_turu', '')
+                ana_kategori = cat.get('ana_kategori', '')
+                alt_kategori = cat.get('alt_kategori', '')
+                deger = cat.get('kategori_degeri', '')
+
+                if kategori_turu == 'profil':
+                    profil_kategorileri.append(f"{ana_kategori}: {deger}")
+                elif kategori_turu == 'icerik':
+                    if ana_kategori not in icerik_kategorileri:
+                        icerik_kategorileri[ana_kategori] = []
+                    
+                    if alt_kategori:
+                        icerik_kategorileri[ana_kategori].append(f"{alt_kategori}")
+                    else:
+                        icerik_kategorileri[ana_kategori].append(f"{ana_kategori} (Ana Kategori)")
+
+            # Profil kategorilerini göster
+            if profil_kategorileri:
+                html += "<h3>👤 Profil Kategorileri</h3><ul>"
+                for kategori in profil_kategorileri:
+                    html += f"<li>{kategori}</li>"
                 html += "</ul>"
+
+            # İçerik kategorilerini göster
+            if icerik_kategorileri:
+                html += "<h3>📂 İçerik Kategorileri</h3>"
+                for ana_kategori, alt_kategoriler in icerik_kategorileri.items():
+                    html += f"<h4>📋 {ana_kategori}</h4><ul>"
+                    for alt in alt_kategoriler:
+                        html += f"<li>{alt}</li>"
+                    html += "</ul>"
 
             self.view_text.setHtml(html)
 
         except Exception as e:
             self.show_error(f"Kategoriler yüklenirken hata: {str(e)}")
+            print(f"❌ Kategori görüntüleme hatası: {e}")  # Debug
 
     def load_account_categories_edit(self, account):
         """Hesap kategorilerini düzenleme modunda yükle"""

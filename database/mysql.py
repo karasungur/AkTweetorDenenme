@@ -153,22 +153,18 @@ class MySQLManager:
 
             cursor.execute(create_categories_table)
 
-            # Yeni hiyerarşik hesap kategorileri tablosu
+            # Yeni JSON tabanlı hesap kategorileri tablosu - tek satır per kullanıcı
             create_account_categories_table = """
             CREATE TABLE IF NOT EXISTS hesap_kategorileri (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 kullanici_adi VARCHAR(255) NOT NULL,
                 hesap_turu ENUM('giris_yapilan', 'hedef') NOT NULL,
-                kategori_turu ENUM('profil', 'icerik') NOT NULL,
-                ana_kategori VARCHAR(255) NOT NULL,
-                alt_kategori VARCHAR(255),
-                kategori_degeri VARCHAR(255),
+                kategoriler JSON,
                 olusturma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE KEY unique_user_category (kullanici_adi, hesap_turu, kategori_turu, ana_kategori, alt_kategori),
+                guncelleme_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_user (kullanici_adi, hesap_turu),
                 INDEX idx_kullanici_adi (kullanici_adi),
-                INDEX idx_hesap_turu (hesap_turu),
-                INDEX idx_kategori_turu (kategori_turu),
-                INDEX idx_ana_kategori (ana_kategori)
+                INDEX idx_hesap_turu (hesap_turu)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """
 
@@ -709,21 +705,32 @@ class MySQLManager:
 
     @handle_exception
     def delete_account_categories(self, kullanici_adi, hesap_turu):
-        """Hesabın tüm kategorilerini sil"""
+        """Hesabın tüm kategorilerini sil - JSON formatında"""
         connection = self.get_connection()
         if not connection:
             return False
 
         try:
             cursor = connection.cursor()
+            import json
 
-            delete_query = """
-            DELETE FROM hesap_kategorileri 
+            # Boş JSON ile güncelle (silme yerine)
+            update_query = """
+            UPDATE hesap_kategorileri 
+            SET kategoriler = %s, guncelleme_tarihi = CURRENT_TIMESTAMP
             WHERE kullanici_adi = %s AND hesap_turu = %s
             """
-            cursor.execute(delete_query, (kullanici_adi, hesap_turu))
-            connection.commit()
+            cursor.execute(update_query, (json.dumps({}), kullanici_adi, hesap_turu))
+            
+            # Eğer kayıt yoksa yeni boş kayıt oluştur
+            if cursor.rowcount == 0:
+                insert_query = """
+                INSERT INTO hesap_kategorileri (kullanici_adi, hesap_turu, kategoriler)
+                VALUES (%s, %s, %s)
+                """
+                cursor.execute(insert_query, (kullanici_adi, hesap_turu, json.dumps({})))
 
+            connection.commit()
             return True
         except Error as e:
             logger.error(f"❌ Hesap kategorileri silme hatası: {e}")
@@ -736,55 +743,66 @@ class MySQLManager:
 
     @handle_exception
     def assign_hierarchical_category_to_account(self, kullanici_adi, hesap_turu, ana_kategori, alt_kategori=None, kategori_degeri="Seçili"):
-        """Hesaba hiyerarşik kategori ata"""
+        """Hesaba hiyerarşik kategori ata - JSON formatında tek satırda"""
         connection = self.get_connection()
         if not connection:
             return False
 
         try:
             cursor = connection.cursor()
+            import json
 
-            # Önce kategori türünü bul
-            if alt_kategori:
-                # Alt kategori için: alt_kategoriler sütununda ara
-                find_type_query = """
-                SELECT kategori_turu FROM kategoriler 
-                WHERE ana_kategori = %s AND alt_kategoriler IS NOT NULL 
-                AND FIND_IN_SET(%s, alt_kategoriler) > 0
-                LIMIT 1
-                """
-                cursor.execute(find_type_query, (ana_kategori, alt_kategori))
-            else:
-                # Ana kategori için: alt_kategoriler NULL olan kayıt
-                find_type_query = """
-                SELECT kategori_turu FROM kategoriler 
-                WHERE ana_kategori = %s
-                LIMIT 1
-                """
-                cursor.execute(find_type_query, (ana_kategori,))
-
+            # Önce mevcut kategorileri al
+            select_query = """
+            SELECT kategoriler FROM hesap_kategorileri 
+            WHERE kullanici_adi = %s AND hesap_turu = %s
+            """
+            cursor.execute(select_query, (kullanici_adi, hesap_turu))
             result = cursor.fetchone()
 
-            if not result:
-                # Kategori bulunamadıysa, varsayılan türü kullan
-                if ana_kategori in ['Yaş Grubu', 'Cinsiyet', 'Profil Fotoğrafı']:
-                    kategori_turu = 'profil'
-                else:
-                    kategori_turu = 'icerik'
-                logger.warning(f"Kategori veritabanında bulunamadı, varsayılan tür kullanılıyor: {ana_kategori} > {alt_kategori} -> {kategori_turu}")
+            if result and result[0]:
+                # Mevcut kategoriler var, JSON'u parse et
+                kategoriler = json.loads(result[0])
             else:
-                kategori_turu = result[0]
+                # Yeni kullanıcı, boş kategoriler dict'i oluştur
+                kategoriler = {}
 
-            # Var olan atamayı kontrol et ve güncelle veya ekle
-            insert_query = """
-            INSERT INTO hesap_kategorileri 
-            (kullanici_adi, hesap_turu, kategori_turu, ana_kategori, alt_kategori, kategori_degeri)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE 
-            kategori_degeri = VALUES(kategori_degeri),
-            alt_kategori = VALUES(alt_kategori)
-            """
-            cursor.execute(insert_query, (kullanici_adi, hesap_turu, kategori_turu, ana_kategori, alt_kategori, kategori_degeri))
+            # Kategori türünü belirle
+            if ana_kategori in ['Yaş Grubu', 'Cinsiyet', 'Profil Fotoğrafı']:
+                kategori_turu = 'profil'
+            else:
+                kategori_turu = 'icerik'
+
+            # Kategori türü dict'ini oluştur yoksa
+            if kategori_turu not in kategoriler:
+                kategoriler[kategori_turu] = {}
+
+            # Ana kategori dict'ini oluştur yoksa
+            if ana_kategori not in kategoriler[kategori_turu]:
+                kategoriler[kategori_turu][ana_kategori] = {}
+
+            # Kategoriyi ekle/güncelle
+            if alt_kategori:
+                kategoriler[kategori_turu][ana_kategori][alt_kategori] = kategori_degeri
+            else:
+                kategoriler[kategori_turu][ana_kategori]['_value'] = kategori_degeri
+
+            # JSON'u geri veritabanına kaydet
+            if result:
+                # Güncelle
+                update_query = """
+                UPDATE hesap_kategorileri 
+                SET kategoriler = %s, guncelleme_tarihi = CURRENT_TIMESTAMP
+                WHERE kullanici_adi = %s AND hesap_turu = %s
+                """
+                cursor.execute(update_query, (json.dumps(kategoriler), kullanici_adi, hesap_turu))
+            else:
+                # Yeni kayıt ekle
+                insert_query = """
+                INSERT INTO hesap_kategorileri (kullanici_adi, hesap_turu, kategoriler)
+                VALUES (%s, %s, %s)
+                """
+                cursor.execute(insert_query, (kullanici_adi, hesap_turu, json.dumps(kategoriler)))
 
             connection.commit()
             logger.info(f"✅ Kategori atandı: {kullanici_adi} -> {ana_kategori}:{alt_kategori} = {kategori_degeri}")
@@ -800,25 +818,59 @@ class MySQLManager:
 
     @handle_exception
     def get_account_categories(self, kullanici_adi, hesap_turu):
-        """Hesabın kategorilerini getir - Hata düzeltmeleri ile"""
+        """Hesabın kategorilerini getir - JSON formatından parse et"""
         connection = self.get_connection()
         if not connection:
             return []
 
         try:
-            cursor = connection.cursor(dictionary=True)
+            cursor = connection.cursor()
+            import json
+
             query = """
-            SELECT hk.*, k.ana_kategori, k.alt_kategori, k.aciklama 
-            FROM hesap_kategorileri hk 
-            LEFT JOIN kategoriler k ON (
-                hk.kategori_turu = k.kategori_turu AND 
-                hk.ana_kategori = k.ana_kategori
-            )
-            WHERE hk.kullanici_adi = %s AND hk.hesap_turu = %s
-            ORDER BY k.ana_kategori, k.alt_kategori
+            SELECT kategoriler FROM hesap_kategorileri 
+            WHERE kullanici_adi = %s AND hesap_turu = %s
             """
             cursor.execute(query, (kullanici_adi, hesap_turu))
-            return cursor.fetchall()
+            result = cursor.fetchone()
+
+            if not result or not result[0]:
+                return []
+
+            # JSON'u parse et ve liste formatına çevir
+            kategoriler_json = json.loads(result[0])
+            kategoriler_list = []
+
+            for kategori_turu, ana_kategoriler in kategoriler_json.items():
+                for ana_kategori, alt_kategoriler in ana_kategoriler.items():
+                    if isinstance(alt_kategoriler, dict):
+                        for alt_kategori, deger in alt_kategoriler.items():
+                            if alt_kategori == '_value':
+                                # Ana kategori değeri
+                                kategoriler_list.append({
+                                    'kategori_turu': kategori_turu,
+                                    'ana_kategori': ana_kategori,
+                                    'alt_kategori': None,
+                                    'kategori_degeri': deger
+                                })
+                            else:
+                                # Alt kategori değeri
+                                kategoriler_list.append({
+                                    'kategori_turu': kategori_turu,
+                                    'ana_kategori': ana_kategori,
+                                    'alt_kategori': alt_kategori,
+                                    'kategori_degeri': deger
+                                })
+                    else:
+                        # Doğrudan değer (eski format uyumluluğu)
+                        kategoriler_list.append({
+                            'kategori_turu': kategori_turu,
+                            'ana_kategori': ana_kategori,
+                            'alt_kategori': None,
+                            'kategori_degeri': alt_kategoriler
+                        })
+
+            return kategoriler_list
         except Error as e:
             logger.error(f"❌ Hesap kategori getirme hatası: {e}")
             return []
