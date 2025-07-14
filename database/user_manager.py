@@ -27,21 +27,40 @@ class UserManager:
 
             if existing_user:
                 # Kullanıcı var, güncelle
-                update_query = """
+                update_parts = ["sifre = %s", "proxy_ip = %s", "proxy_port = %s", "user_agent = %s", "guncelleme_tarihi = CURRENT_TIMESTAMP"]
+                update_values = [password, proxy_ip, proxy_port, user_agent]
+                
+                if cookie_dict:
+                    import json
+                    update_parts.append("cerezler = %s")
+                    update_values.append(json.dumps(cookie_dict))
+                
+                update_values.append(username)
+                
+                update_query = f"""
                 UPDATE kullanicilar 
-                SET sifre = %s, proxy_ip = %s, proxy_port = %s, user_agent = %s,
-                    guncelleme_tarihi = CURRENT_TIMESTAMP 
+                SET {', '.join(update_parts)}
                 WHERE kullanici_adi = %s
                 """
-                cursor.execute(update_query, (password, proxy_ip, proxy_port, user_agent, username))
+                cursor.execute(update_query, update_values)
             else:
                 # Yeni kullanıcı ekle
-                insert_query = """
+                insert_parts = ["kullanici_adi", "sifre", "proxy_ip", "proxy_port", "user_agent", "durum", "olusturma_tarihi"]
+                insert_values = [username, password, proxy_ip, proxy_port, user_agent, 'aktif']
+                insert_placeholders = ["%s", "%s", "%s", "%s", "%s", "%s", "CURRENT_TIMESTAMP"]
+                
+                if cookie_dict:
+                    import json
+                    insert_parts.append("cerezler")
+                    insert_values.append(json.dumps(cookie_dict))
+                    insert_placeholders.append("%s")
+                
+                insert_query = f"""
                 INSERT INTO kullanicilar 
-                (kullanici_adi, sifre, proxy_ip, proxy_port, user_agent, durum, olusturma_tarihi) 
-                VALUES (%s, %s, %s, %s, %s, 'aktif', CURRENT_TIMESTAMP)
+                ({', '.join(insert_parts)}) 
+                VALUES ({', '.join(insert_placeholders)})
                 """
-                cursor.execute(insert_query, (username, password, proxy_ip, proxy_port, user_agent))
+                cursor.execute(insert_query, insert_values)
 
             connection.commit()
             return True

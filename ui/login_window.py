@@ -799,22 +799,9 @@ class LoginWindow(QWidget):
 
             # MySQL'e kaydet
             if cookie_dict:
-                # Şifreyi user listesinden bul
-                user_password = next((u['password'] for u in self.users if u['username'] == user['username']), '')
-
-                # MySQL'e kullanıcı ve çerez bilgilerini kaydet
-                existing_user_agent = user_manager.get_user_agent(user['username'])
-                success = user_manager.save_user(
-                    user['username'], 
-                    user_password, 
-                    cookie_dict,
-                    user.get('year'),
-                    user.get('month'),
-                    user.get('proxy'),
-                    user.get('proxy_port'),
-                    existing_user_agent
-                )
-                if success:
+                # Çerezleri ayrı bir fonksiyon ile kaydet
+                cookie_success = user_manager.update_user_cookies(user['username'], cookie_dict)
+                if cookie_success:
                     self.log_message(f"✅ {user['username']} çerezleri MySQL'e kaydedildi ({len(cookie_dict)} çerez)")
                 else:
                     self.log_message(f"⚠️ {user['username']} çerezleri MySQL'e kaydedilemedi")
