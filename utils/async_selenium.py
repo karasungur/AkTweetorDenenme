@@ -192,15 +192,17 @@ class AsyncSeleniumWrapper:
                     get: () => {selected_device['screen_height'] - 24},
                 }});
                 
-                // Chrome çalışma zamanı
-                Object.defineProperty(window, 'chrome', {{
-                    get: () => ({{
-                        runtime: {{
-                            onConnect: null,
-                            onMessage: null
-                        }}
-                    }}),
-                }});
+                // Chrome çalışma zamanı (sadece yoksa tanımla)
+                if (!window.chrome) {{
+                    Object.defineProperty(window, 'chrome', {{
+                        get: () => ({{
+                            runtime: {{
+                                onConnect: null,
+                                onMessage: null
+                            }}
+                        }}),
+                    }});
+                }}
                 
                 // Console.log geçmişini temizle
                 console.clear();
