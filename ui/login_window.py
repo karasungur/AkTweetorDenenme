@@ -28,16 +28,18 @@ class LoginWindow(QWidget):
         self.current_ip = "Kontrol ediliyor..."
         self.ip_thread_running = True
 
-        # iPhone User-Agent listesi
-        self.iphone_user_agents = [
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_11 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.7 Mobile/15E148 Safari/604.1",  # iPhone 8/8 Plus
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_11 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.7 Mobile/15E148 Safari/604.1",  # iPhone X
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",  # iPhone XR/XS/XS Max
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",  # iPhone 11 series
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",  # iPhone 12 series
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",  # iPhone 13 series
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",  # iPhone 14 series
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1"   # iPhone 15 series
+        # Android User-Agent listesi (Daha güvenli ve çeşitli)
+        self.android_user_agents = [
+            "Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Samsung Galaxy S21
+            "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Samsung Galaxy S23 Ultra
+            "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Google Pixel 7
+            "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Google Pixel 8 Pro
+            "Mozilla/5.0 (Linux; Android 13; 2201116SG) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Xiaomi 12
+            "Mozilla/5.0 (Linux; Android 14; 23013RK75G) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Xiaomi 13 Pro
+            "Mozilla/5.0 (Linux; Android 13; OnePlus11) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # OnePlus 11
+            "Mozilla/5.0 (Linux; Android 14; CPH2493) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # OnePlus 12
+            "Mozilla/5.0 (Linux; Android 13; RMX3511) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Realme GT 2 Pro
+            "Mozilla/5.0 (Linux; Android 14; RMX3771) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"   # Realme GT 5 Pro
         ]
 
         # IP monitoring timer
@@ -633,13 +635,13 @@ class LoginWindow(QWidget):
             if existing_user_agent:
                 # Mevcut user-agent'ı kullan
                 selected_user_agent = existing_user_agent
-                self.log_message(f"📱 {user['username']} için mevcut iPhone user-agent kullanılıyor")
+                self.log_message(f"📱 {user['username']} için mevcut Android user-agent kullanılıyor")
             else:
-                # Rastgele iPhone user-agent seç ve kaydet
-                selected_user_agent = random.choice(self.iphone_user_agents)
+                # Rastgele Android user-agent seç ve kaydet
+                selected_user_agent = random.choice(self.android_user_agents)
                 user_agent_updated = user_manager.update_user_agent(user['username'], selected_user_agent)
                 if user_agent_updated:
-                    self.log_message(f"📱 {user['username']} için yeni iPhone user-agent atandı ve kaydedildi")
+                    self.log_message(f"📱 {user['username']} için yeni Android user-agent atandı ve kaydedildi")
                 else:
                     self.log_message(f"⚠️ {user['username']} user-agent kaydedilemedi")
 
