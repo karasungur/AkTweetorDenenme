@@ -11,7 +11,7 @@ class UserManager:
         """MySQL bağlantısı al"""
         return self.mysql_manager.get_connection()
 
-    def save_user(self, username, password, cookie_dict=None, year=None, month=None, proxy_ip=None, proxy_port=None):
+    def save_user(self, username, password, cookie_dict=None, year=None, month=None, proxy_ip=None, proxy_port=None, user_agent=None):
         """Kullanıcıyı veritabanına kaydet"""
         connection = self.get_connection()
         if not connection:
@@ -29,19 +29,19 @@ class UserManager:
                 # Kullanıcı var, güncelle
                 update_query = """
                 UPDATE kullanicilar 
-                SET sifre = %s, proxy_ip = %s, proxy_port = %s, 
+                SET sifre = %s, proxy_ip = %s, proxy_port = %s, user_agent = %s,
                     guncelleme_tarihi = CURRENT_TIMESTAMP 
                 WHERE kullanici_adi = %s
                 """
-                cursor.execute(update_query, (password, proxy_ip, proxy_port, username))
+                cursor.execute(update_query, (password, proxy_ip, proxy_port, user_agent, username))
             else:
                 # Yeni kullanıcı ekle
                 insert_query = """
                 INSERT INTO kullanicilar 
-                (kullanici_adi, sifre, proxy_ip, proxy_port, durum, olusturma_tarihi) 
-                VALUES (%s, %s, %s, %s, 'aktif', CURRENT_TIMESTAMP)
+                (kullanici_adi, sifre, proxy_ip, proxy_port, user_agent, durum, olusturma_tarihi) 
+                VALUES (%s, %s, %s, %s, %s, 'aktif', CURRENT_TIMESTAMP)
                 """
-                cursor.execute(insert_query, (username, password, proxy_ip, proxy_port))
+                cursor.execute(insert_query, (username, password, proxy_ip, proxy_port, user_agent))
 
             connection.commit()
             return True
@@ -345,6 +345,52 @@ class UserManager:
 
         except Error as e:
             print(f"❌ Kullanıcı çerez güncelleme hatası: {e}")
+            connection.rollback()
+            return False
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
+    def get_user_agent(self, username):
+        """Kullanıcının user-agent'ını getir"""
+        connection = self.get_connection()
+        if not connection:
+            return None
+
+        try:
+            cursor = connection.cursor()
+            query = "SELECT user_agent FROM kullanicilar WHERE kullanici_adi = %s"
+            cursor.execute(query, (username,))
+            result = cursor.fetchone()
+
+            return result[0] if result and result[0] else None
+
+        except Error as e:
+            print(f"❌ Kullanıcı user-agent getirme hatası: {e}")
+            return None
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
+    def update_user_agent(self, username, user_agent):
+        """Kullanıcının user-agent'ını güncelle"""
+        connection = self.get_connection()
+        if not connection:
+            return False
+
+        try:
+            cursor = connection.cursor()
+            
+            query = "UPDATE kullanicilar SET user_agent = %s WHERE kullanici_adi = %s"
+            cursor.execute(query, (user_agent, username))
+            connection.commit()
+
+            return cursor.rowcount > 0
+
+        except Error as e:
+            print(f"❌ Kullanıcı user-agent güncelleme hatası: {e}")
             connection.rollback()
             return False
         finally:

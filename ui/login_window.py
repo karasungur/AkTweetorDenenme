@@ -28,6 +28,18 @@ class LoginWindow(QWidget):
         self.current_ip = "Kontrol ediliyor..."
         self.ip_thread_running = True
 
+        # iPhone User-Agent listesi
+        self.iphone_user_agents = [
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_11 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.7 Mobile/15E148 Safari/604.1",  # iPhone 8/8 Plus
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_11 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.7 Mobile/15E148 Safari/604.1",  # iPhone X
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",  # iPhone XR/XS/XS Max
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",  # iPhone 11 series
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",  # iPhone 12 series
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",  # iPhone 13 series
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",  # iPhone 14 series
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1"   # iPhone 15 series
+        ]
+
         # IP monitoring timer
         self.ip_timer = QTimer()
         self.ip_timer.timeout.connect(self.update_ip)
@@ -596,6 +608,20 @@ class LoginWindow(QWidget):
             options.add_argument("--no-default-browser-check")
             options.add_argument("--disable-default-apps")
 
+            # iPhone User-Agent atama
+            existing_user_agent = user_manager.get_user_agent(user['username'])
+            if existing_user_agent:
+                # Mevcut user-agent'ı kullan
+                selected_user_agent = existing_user_agent
+                self.log_message(f"📱 {user['username']} için mevcut iPhone user-agent kullanılıyor")
+            else:
+                # Rastgele iPhone user-agent seç ve kaydet
+                selected_user_agent = random.choice(self.iphone_user_agents)
+                user_manager.update_user_agent(user['username'], selected_user_agent)
+                self.log_message(f"📱 {user['username']} için yeni iPhone user-agent atandı ve kaydedildi")
+
+            options.add_argument(f"--user-agent={selected_user_agent}")
+
             if not self.browser_visible.isChecked():
                 options.add_argument("--headless=new")
 
@@ -777,6 +803,7 @@ class LoginWindow(QWidget):
                 user_password = next((u['password'] for u in self.users if u['username'] == user['username']), '')
 
                 # MySQL'e kullanıcı ve çerez bilgilerini kaydet
+                existing_user_agent = user_manager.get_user_agent(user['username'])
                 success = user_manager.save_user(
                     user['username'], 
                     user_password, 
@@ -784,7 +811,8 @@ class LoginWindow(QWidget):
                     user.get('year'),
                     user.get('month'),
                     user.get('proxy'),
-                    user.get('proxy_port')
+                    user.get('proxy_port'),
+                    existing_user_agent
                 )
                 if success:
                     self.log_message(f"✅ {user['username']} çerezleri MySQL'e kaydedildi ({len(cookie_dict)} çerez)")
@@ -852,6 +880,7 @@ class LoginWindow(QWidget):
                 self.log_message(f"⚠️ {username} kullanıcı bilgisi bulunamadı.")
                 return
 
+            existing_user_agent = user_manager.get_user_agent(username)
             success = user_manager.save_user(
                 username,
                 user['password'],
@@ -859,7 +888,8 @@ class LoginWindow(QWidget):
                 user.get('year'),
                 user.get('month'),
                 user.get('proxy'),
-                user.get('proxy_port')
+                user.get('proxy_port'),
+                existing_user_agent
             )
 
             if success:
