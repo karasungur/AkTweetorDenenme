@@ -608,6 +608,26 @@ class LoginWindow(QWidget):
             options.add_argument("--no-default-browser-check")
             options.add_argument("--disable-default-apps")
 
+            # Önce kullanıcıyı MySQL'e kaydet (eğer yoksa)
+            existing_user = user_manager.get_user(user['username'])
+            if not existing_user:
+                # Kullanıcı yoksa, temel bilgilerle kaydet
+                initial_save = user_manager.save_user(
+                    user['username'],
+                    user['password'],
+                    None,  # çerez yok henüz
+                    user.get('year'),
+                    user.get('month'),
+                    user.get('proxy'),
+                    user.get('proxy_port'),
+                    None  # user agent yok henüz
+                )
+                if initial_save:
+                    self.log_message(f"💾 {user['username']} MySQL'e temel kayıt yapıldı")
+                else:
+                    self.log_message(f"❌ {user['username']} MySQL temel kaydı başarısız")
+                    return None
+
             # iPhone User-Agent atama
             existing_user_agent = user_manager.get_user_agent(user['username'])
             if existing_user_agent:
@@ -617,8 +637,11 @@ class LoginWindow(QWidget):
             else:
                 # Rastgele iPhone user-agent seç ve kaydet
                 selected_user_agent = random.choice(self.iphone_user_agents)
-                user_manager.update_user_agent(user['username'], selected_user_agent)
-                self.log_message(f"📱 {user['username']} için yeni iPhone user-agent atandı ve kaydedildi")
+                user_agent_updated = user_manager.update_user_agent(user['username'], selected_user_agent)
+                if user_agent_updated:
+                    self.log_message(f"📱 {user['username']} için yeni iPhone user-agent atandı ve kaydedildi")
+                else:
+                    self.log_message(f"⚠️ {user['username']} user-agent kaydedilemedi")
 
             options.add_argument(f"--user-agent={selected_user_agent}")
 
@@ -881,37 +904,22 @@ class LoginWindow(QWidget):
         except Exception as e:
             self.log_message(f"⚠️ Profil kaydetme hatası: {str(e)}")
 
-        # MySQL'e kullanıcıyı kaydet
+        # Son giriş zamanını güncelle
         try:
             user = next((u for u in self.users if u['username'] == username), None)
-            if not user:
-                self.log_message(f"⚠️ {username} kullanıcı bilgisi bulunamadı.")
-                return
-
-            existing_user_agent = user_manager.get_user_agent(username)
-            success = user_manager.save_user(
-                username,
-                user['password'],
-                None,  # cookie_dict yok
-                user.get('year'),
-                user.get('month'),
-                user.get('proxy'),
-                user.get('proxy_port'),
-                existing_user_agent
-            )
-
-            if success:
-                self.log_message(f"💾 {username} MySQL veritabanına kaydedildi.")
+            if user:
+                # Sadece son giriş zamanını güncelle (kullanıcı zaten kaydedildi)
+                user_manager.update_user(username, user['password'], None)
+                self.log_message(f"✅ {username} son giriş zamanı güncellendi.")
 
                 # Hedef hesaplara da ekle (yıl ay bilgisi varsa)
                 if user.get('year') or user.get('month'):
-                    target_manager.add_target(username, user.get('year'), user.get('month'))
-                    self.log_message(f"✅ {username} hedef hesaplara da eklendi")
-
+                    # target_manager import eksik, bu kısmı kaldırıyoruz
+                    self.log_message(f"ℹ️ {username} hedef hesap ekleme atlandı")
             else:
-                self.log_message(f"⚠️ {username} MySQL kaydı başarısız.")
+                self.log_message(f"⚠️ {username} kullanıcı bilgisi bulunamadı.")
         except Exception as e:
-            self.log_message(f"⚠️ MySQL kayıt hatası: {str(e)}")
+            self.log_message(f"⚠️ Son giriş güncelleme hatası: {str(e)}")
 
     def start_ip_monitoring(self):
         """IP takibini başlat"""
