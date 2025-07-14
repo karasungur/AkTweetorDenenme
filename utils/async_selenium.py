@@ -14,6 +14,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from config.settings import settings
 from utils.logger import logger
+from database.user_manager import user_manager
 
 class AsyncSeleniumWrapper:
     def __init__(self, max_workers: int = 3):
@@ -47,6 +48,60 @@ class AsyncSeleniumWrapper:
             options.add_argument("--no-first-run")
             options.add_argument("--no-default-browser-check")
             options.add_argument("--disable-default-apps")
+            
+            # Profil adını path'ten çıkar
+            profile_name = profile_path.split('/')[-1] if '/' in profile_path else profile_path.split('\\')[-1]
+            
+            # Cihaz özelliklerini MySQL'den al
+            device_specs = user_manager.get_device_specs(profile_name)
+            user_agent = user_manager.get_user_agent(profile_name)
+            
+            if device_specs and user_agent:
+                # Mevcut cihaz özelliklerini kullan
+                selected_device = {
+                    'name': device_specs['device_name'],
+                    'user_agent': user_agent,
+                    'screen_width': device_specs['screen_width'],
+                    'screen_height': device_specs['screen_height'],
+                    'device_pixel_ratio': device_specs['device_pixel_ratio']
+                }
+                
+                options.add_argument(f"--user-agent={selected_device['user_agent']}")
+                
+                # 🔒 Anti-Bot Gelişmiş Ayarlar
+                options.add_argument("--lang=tr-TR,tr")
+                options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
+                
+                # Mobil cihaz simülasyonu
+                mobile_emulation = {
+                    "deviceMetrics": {
+                        "width": selected_device['screen_width'],
+                        "height": selected_device['screen_height'],
+                        "pixelRatio": selected_device['device_pixel_ratio']
+                    },
+                    "userAgent": selected_device['user_agent'],
+                    "clientHints": {
+                        "platform": "Android",
+                        "mobile": True
+                    }
+                }
+                options.add_experimental_option("mobileEmulation", mobile_emulation)
+                
+                # Zaman dilimi ayarı
+                options.add_argument("--timezone=Europe/Istanbul")
+                
+                # Canvas fingerprint koruması
+                options.add_argument("--disable-canvas-aa")
+                options.add_argument("--disable-2d-canvas-clip-aa")
+                
+                # WebGL fingerprint koruması  
+                options.add_argument("--disable-gl-drawing-for-tests")
+                options.add_argument("--disable-accelerated-2d-canvas")
+                
+                logger.info(f"Android cihaz özellikleri uygulandı: {selected_device['name']}")
+            else:
+                logger.warning(f"Cihaz özellikleri bulunamadı: {profile_name}")
+            
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--disable-blink-features=AutomationControlled")
@@ -68,7 +123,94 @@ class AsyncSeleniumWrapper:
             service.hide_command_prompt_window = True
             
             driver = webdriver.Chrome(service=service, options=options)
-            driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            
+            # 🔒 Gelişmiş Anti-Bot Script'leri
+            if device_specs and user_agent:
+                stealth_script = f"""
+                // WebDriver izini gizle
+                Object.defineProperty(navigator, 'webdriver', {{
+                    get: () => false,
+                }});
+                
+                // Chrome automation extension'ı gizle
+                Object.defineProperty(navigator, 'plugins', {{
+                    get: () => [{{
+                        name: 'Chrome PDF Plugin',
+                        filename: 'internal-pdf-viewer',
+                        description: 'Portable Document Format'
+                    }}],
+                }});
+                
+                // Gerçekçi dokunmatik özellikler
+                Object.defineProperty(navigator, 'maxTouchPoints', {{
+                    get: () => 5,
+                }});
+                
+                // Dil ayarları
+                Object.defineProperty(navigator, 'language', {{
+                    get: () => 'tr-TR',
+                }});
+                
+                Object.defineProperty(navigator, 'languages', {{
+                    get: () => ['tr-TR', 'tr', 'en-US', 'en'],
+                }});
+                
+                // Platform bilgisi
+                Object.defineProperty(navigator, 'platform', {{
+                    get: () => 'Linux armv7l',
+                }});
+                
+                // Cihaz belleği simülasyonu
+                Object.defineProperty(navigator, 'deviceMemory', {{
+                    get: () => {random.choice([4, 6, 8, 12])},
+                }});
+                
+                // Donanım eşzamanlılığı
+                Object.defineProperty(navigator, 'hardwareConcurrency', {{
+                    get: () => {random.choice([4, 6, 8])},
+                }});
+                
+                // User-Agent doğrulama
+                Object.defineProperty(navigator, 'userAgent', {{
+                    get: () => '{selected_device['user_agent']}',
+                }});
+                
+                // Viewport boyutu
+                Object.defineProperty(screen, 'width', {{
+                    get: () => {selected_device['screen_width']},
+                }});
+                
+                Object.defineProperty(screen, 'height', {{
+                    get: () => {selected_device['screen_height']},
+                }});
+                
+                Object.defineProperty(screen, 'availWidth', {{
+                    get: () => {selected_device['screen_width']},
+                }});
+                
+                Object.defineProperty(screen, 'availHeight', {{
+                    get: () => {selected_device['screen_height'] - 24},
+                }});
+                
+                // Chrome çalışma zamanı
+                Object.defineProperty(window, 'chrome', {{
+                    get: () => ({{
+                        runtime: {{
+                            onConnect: null,
+                            onMessage: null
+                        }}
+                    }}),
+                }});
+                
+                // Console.log geçmişini temizle
+                console.clear();
+                """
+                
+                driver.execute_script(stealth_script)
+                logger.info(f"Anti-bot korumaları aktif edildi: {profile_name}")
+            else:
+                # Fallback anti-bot
+                driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
             # Timeout ayarları
             driver.set_page_load_timeout(settings.get('selenium.page_load_timeout', 30))
