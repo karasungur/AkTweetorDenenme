@@ -155,6 +155,15 @@ class CookieWorkerThread(QThread):
 
             options.add_argument(f"--user-data-dir={profile_path}")
 
+            # User-Agent ayarı (MySQL'den al)
+            from database.user_manager import user_manager
+            user_agent = user_manager.get_user_agent(profile)
+            if user_agent:
+                options.add_argument(f"--user-agent={user_agent}")
+                self.log_signal.emit(f"🔧 {profile} için user-agent kullanılıyor")
+            else:
+                self.log_signal.emit(f"⚠️ {profile} için user-agent bulunamadı, varsayılan kullanılacak")
+
             # Proxy ayarı
             if self.settings['proxy_enabled'] and self.settings['proxy_address']:
                 options.add_argument(f"--proxy-server={self.settings['proxy_address']}")

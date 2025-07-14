@@ -733,6 +733,14 @@ class ValidationWindow(QWidget):
 
             options.add_argument(f"--user-data-dir={original_profile_path}")
 
+            # User-Agent ayarı (MySQL'den al)
+            user_agent = user_manager.get_user_agent(profile)
+            if user_agent:
+                options.add_argument(f"--user-agent={user_agent}")
+                print(f"🔧 {profile} için user-agent kullanılıyor")
+            else:
+                print(f"⚠️ {profile} için user-agent bulunamadı, varsayılan kullanılacak")
+
             # Proxy ayarı
             if self.proxy_enabled.isChecked() and self.proxy_entry.text():
                 proxy = self.proxy_entry.text()
