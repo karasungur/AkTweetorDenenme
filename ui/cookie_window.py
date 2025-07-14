@@ -155,14 +155,39 @@ class CookieWorkerThread(QThread):
 
             options.add_argument(f"--user-data-dir={profile_path}")
 
-            # User-Agent ayarı (MySQL'den al)
+            # Cihaz özelliklerini MySQL'den al
             from database.user_manager import user_manager
+            device_specs = user_manager.get_device_specs(profile)
             user_agent = user_manager.get_user_agent(profile)
-            if user_agent:
+            
+            if device_specs and user_agent:
+                # Mevcut cihaz özelliklerini kullan
                 options.add_argument(f"--user-agent={user_agent}")
-                self.log_signal.emit(f"🔧 {profile} için user-agent kullanılıyor")
+                
+                # Mobil cihaz simülasyonu
+                mobile_emulation = {
+                    "deviceMetrics": {
+                        "width": device_specs['screen_width'],
+                        "height": device_specs['screen_height'],
+                        "pixelRatio": device_specs['device_pixel_ratio']
+                    },
+                    "userAgent": user_agent,
+                    "clientHints": {
+                        "platform": "Android",
+                        "mobile": True
+                    }
+                }
+                options.add_experimental_option("mobileEmulation", mobile_emulation)
+                
+                # Anti-bot ayarları
+                options.add_argument("--lang=tr-TR,tr")
+                options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
+                options.add_argument("--timezone=Europe/Istanbul")
+                
+                self.log_signal.emit(f"📱 {profile} için {device_specs['device_name']} cihaz özellikleri kullanılıyor")
+                self.log_signal.emit(f"🔧 Ekran: {device_specs['screen_width']}x{device_specs['screen_height']}")
             else:
-                self.log_signal.emit(f"⚠️ {profile} için user-agent bulunamadı, varsayılan kullanılacak")
+                self.log_signal.emit(f"⚠️ {profile} için cihaz özellikleri bulunamadı, varsayılan kullanılacak")
 
             # Proxy ayarı
             if self.settings['proxy_enabled'] and self.settings['proxy_address']:

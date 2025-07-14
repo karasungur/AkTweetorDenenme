@@ -206,6 +206,7 @@ class MySQLManager:
                 ('kullanicilar', 'proxy_port', 'INT'),
                 ('kullanicilar', 'cerezler', 'TEXT'),
                 ('kullanicilar', 'user_agent', 'TEXT'),
+                ('kullanicilar', 'cihaz_ozellikleri', 'JSON'),
                 ('hedef_hesaplar', 'kat_sayisi', 'INT DEFAULT 1'),
                 ('hedef_hesaplar', 'twitter_olusturma_tarihi', 'DATETIME'),
                 ('hedef_hesaplar', 'proxy_ip', 'VARCHAR(255)'),

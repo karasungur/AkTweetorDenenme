@@ -28,18 +28,148 @@ class LoginWindow(QWidget):
         self.current_ip = "Kontrol ediliyor..."
         self.ip_thread_running = True
 
-        # Android User-Agent listesi (Daha güvenli ve çeşitli)
-        self.android_user_agents = [
-            "Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Samsung Galaxy S21
-            "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Samsung Galaxy S23 Ultra
-            "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Google Pixel 7
-            "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Google Pixel 8 Pro
-            "Mozilla/5.0 (Linux; Android 13; 2201116SG) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Xiaomi 12
-            "Mozilla/5.0 (Linux; Android 14; 23013RK75G) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Xiaomi 13 Pro
-            "Mozilla/5.0 (Linux; Android 13; OnePlus11) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # OnePlus 11
-            "Mozilla/5.0 (Linux; Android 14; CPH2493) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # OnePlus 12
-            "Mozilla/5.0 (Linux; Android 13; RMX3511) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",  # Realme GT 2 Pro
-            "Mozilla/5.0 (Linux; Android 14; RMX3771) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"   # Realme GT 5 Pro
+        # Gerçek Android Cihaz User-Agent'ları (2024-2025 Güncel)
+        self.android_devices = [
+            {
+                "name": "Google Pixel 8",
+                "user_agent": "Mozilla/5.0 (Linux; Android 16; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
+                "screen_width": 1080,
+                "screen_height": 2400,
+                "device_pixel_ratio": 2.625
+            },
+            {
+                "name": "Samsung Galaxy S25",
+                "user_agent": "Mozilla/5.0 (Linux; Android 16; SM-S925B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
+                "screen_width": 1080,
+                "screen_height": 2340,
+                "device_pixel_ratio": 3.0
+            },
+            {
+                "name": "OnePlus 12",
+                "user_agent": "Mozilla/5.0 (Linux; Android 16; OnePlus 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
+                "screen_width": 1440,
+                "screen_height": 3168,
+                "device_pixel_ratio": 3.0
+            },
+            {
+                "name": "Xiaomi 13 Pro",
+                "user_agent": "Mozilla/5.0 (Linux; Android 15; Xiaomi 13 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
+                "screen_width": 1440,
+                "screen_height": 3200,
+                "device_pixel_ratio": 3.2
+            },
+            {
+                "name": "Samsung Galaxy Z Fold5",
+                "user_agent": "Mozilla/5.0 (Linux; Android 15; Samsung Galaxy Z Fold5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
+                "screen_width": 1812,
+                "screen_height": 2176,
+                "device_pixel_ratio": 3.0
+            },
+            {
+                "name": "ASUS ROG Phone 7",
+                "user_agent": "Mozilla/5.0 (Linux; Android 15; ASUS ROG Phone 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
+                "screen_width": 1080,
+                "screen_height": 2448,
+                "device_pixel_ratio": 2.5
+            },
+            {
+                "name": "Google Pixel 7 Pro",
+                "user_agent": "Mozilla/5.0 (Linux; Android 15; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
+                "screen_width": 1440,
+                "screen_height": 3120,
+                "device_pixel_ratio": 3.5
+            },
+            {
+                "name": "Samsung Galaxy S22",
+                "user_agent": "Mozilla/5.0 (Linux; Android 14; SM-G901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Mobile Safari/537.36",
+                "screen_width": 1080,
+                "screen_height": 2340,
+                "device_pixel_ratio": 3.0
+            },
+            {
+                "name": "OnePlus 11R",
+                "user_agent": "Mozilla/5.0 (Linux; Android 14; OnePlus 11R) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Mobile Safari/537.36",
+                "screen_width": 1240,
+                "screen_height": 2772,
+                "device_pixel_ratio": 2.5
+            },
+            {
+                "name": "Xiaomi 12T Pro",
+                "user_agent": "Mozilla/5.0 (Linux; Android 14; Xiaomi 12T Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Mobile Safari/537.36",
+                "screen_width": 1220,
+                "screen_height": 2712,
+                "device_pixel_ratio": 3.0
+            },
+            {
+                "name": "Google Pixel 6a",
+                "user_agent": "Mozilla/5.0 (Linux; Android 14; Pixel 6a) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Mobile Safari/537.36",
+                "screen_width": 1080,
+                "screen_height": 2400,
+                "device_pixel_ratio": 2.2
+            },
+            {
+                "name": "Google Pixel 7",
+                "user_agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.133 Mobile Safari/537.36",
+                "screen_width": 1080,
+                "screen_height": 2400,
+                "device_pixel_ratio": 2.625
+            },
+            {
+                "name": "Samsung Galaxy A73",
+                "user_agent": "Mozilla/5.0 (Linux; Android 13; Samsung Galaxy A73) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.133 Mobile Safari/537.36",
+                "screen_width": 1080,
+                "screen_height": 2400,
+                "device_pixel_ratio": 2.2
+            },
+            {
+                "name": "Redmi Note 12 Pro",
+                "user_agent": "Mozilla/5.0 (Linux; Android 13; Redmi Note 12 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.133 Mobile Safari/537.36",
+                "screen_width": 1080,
+                "screen_height": 2400,
+                "device_pixel_ratio": 2.76
+            },
+            {
+                "name": "Motorola Edge 40",
+                "user_agent": "Mozilla/5.0 (Linux; Android 13; Motorola Edge 40) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.133 Mobile Safari/537.36",
+                "screen_width": 1080,
+                "screen_height": 2400,
+                "device_pixel_ratio": 2.5
+            },
+            {
+                "name": "Realme GT Neo 3T",
+                "user_agent": "Mozilla/5.0 (Linux; Android 13; Realme GT Neo 3T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.133 Mobile Safari/537.36",
+                "screen_width": 1080,
+                "screen_height": 2412,
+                "device_pixel_ratio": 2.4
+            },
+            {
+                "name": "Tecno Phantom V Fold",
+                "user_agent": "Mozilla/5.0 (Linux; Android 14; Tecno Phantom V Fold) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Mobile Safari/537.36",
+                "screen_width": 1080,
+                "screen_height": 2296,
+                "device_pixel_ratio": 2.4
+            },
+            {
+                "name": "Vivo X90 Pro",
+                "user_agent": "Mozilla/5.0 (Linux; Android 15; Vivo X90 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
+                "screen_width": 1260,
+                "screen_height": 2800,
+                "device_pixel_ratio": 3.0
+            },
+            {
+                "name": "Honor Magic 6 Pro",
+                "user_agent": "Mozilla/5.0 (Linux; Android 16; Honor Magic 6 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
+                "screen_width": 1280,
+                "screen_height": 2800,
+                "device_pixel_ratio": 2.92
+            },
+            {
+                "name": "Nothing Phone 3",
+                "user_agent": "Mozilla/5.0 (Linux; Android 16; Nothing Phone 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
+                "screen_width": 1080,
+                "screen_height": 2400,
+                "device_pixel_ratio": 2.55
+            }
         ]
 
         # IP monitoring timer
@@ -630,22 +760,71 @@ class LoginWindow(QWidget):
                     self.log_message(f"❌ {user['username']} MySQL temel kaydı başarısız")
                     return None
 
-            # iPhone User-Agent atama
+            # Mobil Cihaz User-Agent atama
             existing_user_agent = user_manager.get_user_agent(user['username'])
+            selected_device = None
+            
             if existing_user_agent:
-                # Mevcut user-agent'ı kullan
-                selected_user_agent = existing_user_agent
-                self.log_message(f"📱 {user['username']} için mevcut Android user-agent kullanılıyor")
+                # Mevcut user-agent'ı kullan ve cihazı bul
+                for device in self.android_devices:
+                    if device['user_agent'] == existing_user_agent:
+                        selected_device = device
+                        break
+                
+                if selected_device:
+                    self.log_message(f"📱 {user['username']} için mevcut cihaz kullanılıyor: {selected_device['name']}")
+                else:
+                    # Eski user-agent varsa yeni cihaz seç
+                    selected_device = random.choice(self.android_devices)
+                    self.log_message(f"🔄 {user['username']} için eski user-agent tespit edildi, yeni cihaz atanıyor: {selected_device['name']}")
             else:
-                # Rastgele Android user-agent seç ve kaydet
-                selected_user_agent = random.choice(self.android_user_agents)
-                user_agent_updated = user_manager.update_user_agent(user['username'], selected_user_agent)
+                # Rastgele cihaz seç ve kaydet
+                selected_device = random.choice(self.android_devices)
+                self.log_message(f"📱 {user['username']} için yeni cihaz atandı: {selected_device['name']}")
+            
+            # User-agent'ı güncelle/kaydet
+            if not existing_user_agent or existing_user_agent != selected_device['user_agent']:
+                user_agent_updated = user_manager.update_user_agent(user['username'], selected_device['user_agent'])
                 if user_agent_updated:
-                    self.log_message(f"📱 {user['username']} için yeni Android user-agent atandı ve kaydedildi")
+                    # Cihaz özelliklerini de kaydet
+                    user_manager.update_device_specs(user['username'], selected_device)
+                    self.log_message(f"✅ {user['username']} - {selected_device['name']} user-agent ve cihaz özellikleri kaydedildi")
+                    self.log_message(f"🔧 Ekran: {selected_device['screen_width']}x{selected_device['screen_height']}, DPR: {selected_device['device_pixel_ratio']}")
                 else:
                     self.log_message(f"⚠️ {user['username']} user-agent kaydedilemedi")
 
-            options.add_argument(f"--user-agent={selected_user_agent}")
+            options.add_argument(f"--user-agent={selected_device['user_agent']}")
+
+            # 🔒 Anti-Bot Gelişmiş Ayarlar
+            # Dil ve yerelleştirme ayarları
+            options.add_argument("--lang=tr-TR,tr")
+            options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
+            
+            # Mobil cihaz simülasyonu
+            mobile_emulation = {
+                "deviceMetrics": {
+                    "width": selected_device['screen_width'],
+                    "height": selected_device['screen_height'],
+                    "pixelRatio": selected_device['device_pixel_ratio']
+                },
+                "userAgent": selected_device['user_agent'],
+                "clientHints": {
+                    "platform": "Android",
+                    "mobile": True
+                }
+            }
+            options.add_experimental_option("mobileEmulation", mobile_emulation)
+            
+            # Zaman dilimi ayarı
+            options.add_argument("--timezone=Europe/Istanbul")
+            
+            # Canvas fingerprint koruması
+            options.add_argument("--disable-canvas-aa")
+            options.add_argument("--disable-2d-canvas-clip-aa")
+            
+            # WebGL fingerprint koruması  
+            options.add_argument("--disable-gl-drawing-for-tests")
+            options.add_argument("--disable-accelerated-2d-canvas")
 
             if not self.browser_visible.isChecked():
                 options.add_argument("--headless=new")
@@ -678,7 +857,95 @@ class LoginWindow(QWidget):
             service.hide_command_prompt_window = True
 
             driver = webdriver.Chrome(service=service, options=options)
-            driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            
+            # 🔒 Gelişmiş Anti-Bot Script'leri
+            stealth_script = f"""
+            // WebDriver izini gizle
+            Object.defineProperty(navigator, 'webdriver', {{
+                get: () => false,
+            }});
+            
+            // Chrome automation extension'ı gizle
+            Object.defineProperty(navigator, 'plugins', {{
+                get: () => [{{
+                    name: 'Chrome PDF Plugin',
+                    filename: 'internal-pdf-viewer',
+                    description: 'Portable Document Format'
+                }}],
+            }});
+            
+            // Gerçekçi dokunmatik özellikler
+            Object.defineProperty(navigator, 'maxTouchPoints', {{
+                get: () => 5,
+            }});
+            
+            // Dil ayarları
+            Object.defineProperty(navigator, 'language', {{
+                get: () => 'tr-TR',
+            }});
+            
+            Object.defineProperty(navigator, 'languages', {{
+                get: () => ['tr-TR', 'tr', 'en-US', 'en'],
+            }});
+            
+            // Zaman dilimi ayarı
+            Date.prototype.getTimezoneOffset = function() {{
+                return -180; // UTC+3 (Istanbul)
+            }};
+            
+            // Platform bilgisi
+            Object.defineProperty(navigator, 'platform', {{
+                get: () => 'Linux armv7l',
+            }});
+            
+            // Cihaz belleği simülasyonu
+            Object.defineProperty(navigator, 'deviceMemory', {{
+                get: () => {random.choice([4, 6, 8, 12])},
+            }});
+            
+            // Donanım eşzamanlılığı
+            Object.defineProperty(navigator, 'hardwareConcurrency', {{
+                get: () => {random.choice([4, 6, 8])},
+            }});
+            
+            // User-Agent doğrulama
+            Object.defineProperty(navigator, 'userAgent', {{
+                get: () => '{selected_device['user_agent']}',
+            }});
+            
+            // Viewport boyutu
+            Object.defineProperty(screen, 'width', {{
+                get: () => {selected_device['screen_width']},
+            }});
+            
+            Object.defineProperty(screen, 'height', {{
+                get: () => {selected_device['screen_height']},
+            }});
+            
+            Object.defineProperty(screen, 'availWidth', {{
+                get: () => {selected_device['screen_width']},
+            }});
+            
+            Object.defineProperty(screen, 'availHeight', {{
+                get: () => {selected_device['screen_height'] - 24},
+            }});
+            
+            // Chrome çalışma zamanı
+            Object.defineProperty(window, 'chrome', {{
+                get: () => ({{
+                    runtime: {{
+                        onConnect: null,
+                        onMessage: null
+                    }}
+                }}),
+            }});
+            
+            // Console.log geçmişini temizle
+            console.clear();
+            """
+            
+            driver.execute_script(stealth_script)
+            self.log_message(f"🛡️ {user['username']} için anti-bot korumaları aktif ({selected_device['name']})")
 
             return driver
 

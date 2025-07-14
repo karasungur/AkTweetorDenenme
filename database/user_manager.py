@@ -439,5 +439,68 @@ class UserManager:
                 cursor.close()
                 connection.close()
 
+    def update_device_specs(self, username, device_info):
+        """Kullanıcının cihaz özelliklerini güncelle"""
+        connection = self.get_connection()
+        if not connection:
+            return False
+
+        try:
+            cursor = connection.cursor()
+            
+            # Cihaz özelliklerini JSON formatında kaydet
+            import json
+            device_specs = {
+                'device_name': device_info['name'],
+                'screen_width': device_info['screen_width'],
+                'screen_height': device_info['screen_height'],
+                'device_pixel_ratio': device_info['device_pixel_ratio'],
+                'user_agent': device_info['user_agent']
+            }
+            
+            query = "UPDATE kullanicilar SET cihaz_ozellikleri = %s WHERE kullanici_adi = %s"
+            cursor.execute(query, (json.dumps(device_specs), username))
+            connection.commit()
+
+            return cursor.rowcount > 0
+
+        except Error as e:
+            print(f"❌ Kullanıcı cihaz özellikleri güncelleme hatası: {e}")
+            connection.rollback()
+            return False
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
+    def get_device_specs(self, username):
+        """Kullanıcının cihaz özelliklerini getir"""
+        connection = self.get_connection()
+        if not connection:
+            return None
+
+        try:
+            cursor = connection.cursor()
+            query = "SELECT cihaz_ozellikleri FROM kullanicilar WHERE kullanici_adi = %s"
+            cursor.execute(query, (username,))
+            result = cursor.fetchone()
+
+            if result and result[0]:
+                import json
+                try:
+                    return json.loads(result[0])
+                except json.JSONDecodeError:
+                    print(f"⚠️ {username} için cihaz özellikleri JSON formatı hatalı")
+                    return None
+            return None
+
+        except Error as e:
+            print(f"❌ Kullanıcı cihaz özellikleri getirme hatası: {e}")
+            return None
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
 # Global user manager instance
 user_manager = UserManager()
