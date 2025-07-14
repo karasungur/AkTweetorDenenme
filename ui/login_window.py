@@ -799,12 +799,33 @@ class LoginWindow(QWidget):
 
             # MySQL'e kaydet
             if cookie_dict:
+                self.log_message(f"🔍 {user['username']} için {len(cookie_dict)} çerez bulundu: {list(cookie_dict.keys())}")
+                
                 # Çerezleri ayrı bir fonksiyon ile kaydet
                 cookie_success = user_manager.update_user_cookies(user['username'], cookie_dict)
                 if cookie_success:
                     self.log_message(f"✅ {user['username']} çerezleri MySQL'e kaydedildi ({len(cookie_dict)} çerez)")
                 else:
                     self.log_message(f"⚠️ {user['username']} çerezleri MySQL'e kaydedilemedi")
+                    
+                    # Alternatif olarak save_user fonksiyonunu dene
+                    try:
+                        alternative_success = user_manager.save_user(
+                            user['username'],
+                            user['password'],
+                            cookie_dict,
+                            user.get('year'),
+                            user.get('month'),
+                            user.get('proxy'),
+                            user.get('proxy_port'),
+                            user_manager.get_user_agent(user['username'])
+                        )
+                        if alternative_success:
+                            self.log_message(f"✅ {user['username']} çerezleri alternatif yöntemle kaydedildi")
+                        else:
+                            self.log_message(f"❌ {user['username']} çerezleri alternatif yöntemle de kaydedilemedi")
+                    except Exception as e:
+                        self.log_message(f"❌ {user['username']} alternatif kaydetme hatası: {str(e)}")
             else:
                 self.log_message(f"⚠️ {user['username']} için çerez bulunamadı")
 

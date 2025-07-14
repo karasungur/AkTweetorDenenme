@@ -350,20 +350,42 @@ class UserManager:
         """Kullanıcının çerezlerini güncelle"""
         connection = self.get_connection()
         if not connection:
+            print(f"❌ {username} için MySQL bağlantısı alınamadı")
             return False
 
         try:
             cursor = connection.cursor()
             import json
             
-            query = "UPDATE kullanicilar SET cerezler = %s WHERE kullanici_adi = %s"
-            cursor.execute(query, (json.dumps(cookie_dict), username))
+            # Önce kullanıcının var olup olmadığını kontrol et
+            check_query = "SELECT id FROM kullanicilar WHERE kullanici_adi = %s"
+            cursor.execute(check_query, (username,))
+            user_exists = cursor.fetchone()
+            
+            if not user_exists:
+                print(f"❌ {username} kullanıcısı veritabanında bulunamadı")
+                return False
+            
+            # Çerezleri JSON olarak hazırla
+            cookies_json = json.dumps(cookie_dict)
+            print(f"🔍 {username} için çerez JSON boyutu: {len(cookies_json)} karakter")
+            
+            # Çerezleri güncelle
+            query = "UPDATE kullanicilar SET cerezler = %s, guncelleme_tarihi = CURRENT_TIMESTAMP WHERE kullanici_adi = %s"
+            cursor.execute(query, (cookies_json, username))
             connection.commit()
-
-            return cursor.rowcount > 0
+            
+            affected_rows = cursor.rowcount
+            print(f"✅ {username} için {affected_rows} satır güncellendi")
+            
+            return affected_rows > 0
 
         except Error as e:
-            print(f"❌ Kullanıcı çerez güncelleme hatası: {e}")
+            print(f"❌ {username} çerez güncelleme hatası: {e}")
+            connection.rollback()
+            return False
+        except Exception as e:
+            print(f"❌ {username} beklenmeyen hata: {e}")
             connection.rollback()
             return False
         finally:
