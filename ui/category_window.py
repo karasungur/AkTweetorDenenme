@@ -756,7 +756,7 @@ class CategoryWindow(QWidget):
 
         # İlk yükleme
         self.load_accounts()
-        self.ensure_default_categories()
+        # self.ensure_default_categories() # Otomatik kategori yükleme kaldırıldı
 
     def create_account_type_selection(self):
         """Hesap türü seçimi"""

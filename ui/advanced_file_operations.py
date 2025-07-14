@@ -1,4 +1,3 @@
-
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
                              QLabel, QGroupBox, QTabWidget, QWidget, QFileDialog,
                              QTextEdit, QProgressBar, QMessageBox, QCheckBox,
@@ -267,23 +266,23 @@ class AdvancedImportThread(QThread):
 
         self.finished.emit("✅ Doğrulama tamamlandı")
 
-    def validate_file(self, file_path):
+    def validate_file(self, file, path):
         """Dosyayı doğrula"""
         valid_count = 0
         invalid_count = 0
         errors = []
 
-        if file_path.endswith('.json'):
+        if file.path.endswith('.json'):
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file.path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 valid_count = 1
             except json.JSONDecodeError as e:
                 errors.append(f"JSON formatı geçersiz: {str(e)}")
                 invalid_count = 1
 
-        elif file_path.endswith('.txt'):
-            with open(file_path, 'r', encoding='utf-8') as f:
+        elif file.path.endswith('.txt'):
+            with open(file.path, 'r', encoding='utf-8') as f:
                 for line_num, line in enumerate(f, 1):
                     line = line.strip()
                     if not line or line.startswith('#'):
@@ -434,7 +433,7 @@ class AdvancedFileOperationsDialog(QDialog):
         # Modern başlık
         header_frame = QFrame()
         header_layout = QVBoxLayout()
-        
+
         title_label = QLabel("🔄 Gelişmiş İçe/Dışa Aktarma")
         title_label.setStyleSheet("""
             font-size: 36px;
@@ -442,7 +441,7 @@ class AdvancedFileOperationsDialog(QDialog):
             color: #1e293b;
             margin-bottom: 8px;
         """)
-        
+
         subtitle_label = QLabel("Toplu işlemler ve gelişmiş dosya yönetimi")
         subtitle_label.setStyleSheet("""
             font-size: 18px;
@@ -450,11 +449,11 @@ class AdvancedFileOperationsDialog(QDialog):
             font-weight: 500;
             margin-bottom: 20px;
         """)
-        
+
         header_layout.addWidget(title_label)
         header_layout.addWidget(subtitle_label)
         header_frame.setLayout(header_layout)
-        
+
         layout.addWidget(header_frame)
 
         # Tab widget
@@ -485,16 +484,16 @@ class AdvancedFileOperationsDialog(QDialog):
                 padding: 20px;
             }
         """)
-        
+
         progress_layout = QVBoxLayout()
 
         status_layout = QHBoxLayout()
         status_icon = QLabel("📊")
         status_icon.setStyleSheet("font-size: 18px;")
-        
+
         self.status_label = QLabel("Hazır")
         self.status_label.setStyleSheet("font-size: 14px; font-weight: 600; color: #374151;")
-        
+
         status_layout.addWidget(status_icon)
         status_layout.addWidget(self.status_label)
         status_layout.addStretch()
@@ -566,19 +565,19 @@ class AdvancedFileOperationsDialog(QDialog):
                 padding: 20px;
             }
         """)
-        
+
         info_layout = QVBoxLayout()
-        
+
         info_title = QLabel("📥 Toplu İçe Aktarma")
         info_title.setStyleSheet("font-size: 20px; font-weight: 700; color: #1e40af; margin-bottom: 8px;")
-        
+
         info_desc = QLabel("Birden fazla dosyayı aynı anda içe aktarın\n• JSON, TXT, CSV formatlarını destekler\n• Kategori ve hesap verilerini otomatik tanır\n• Hata durumunda diğer dosyalar işlenmeye devam eder")
         info_desc.setStyleSheet("color: #3730a3; font-size: 14px; line-height: 1.4;")
-        
+
         info_layout.addWidget(info_title)
         info_layout.addWidget(info_desc)
         info_card.setLayout(info_layout)
-        
+
         layout.addWidget(info_card)
 
         # Dosya seçimi
@@ -598,7 +597,7 @@ class AdvancedFileOperationsDialog(QDialog):
                     stop:0 #dc2626, stop:1 #b91c1c);
             }
         """)
-        
+
         self.select_files_btn.clicked.connect(self.select_batch_files)
         self.clear_files_btn.clicked.connect(self.clear_file_list)
 
@@ -674,7 +673,7 @@ class AdvancedFileOperationsDialog(QDialog):
                 padding: 16px;
             }
         """)
-        
+
         excel_info_layout = QVBoxLayout()
         excel_info_label = QLabel("Excel dosyasında aşağıdaki sayfa adları aranır:\n• Kategoriler: Ana Kategori, Alt Kategori, Açıklama\n• Hesap Kategorileri: Kullanıcı Adı, Hesap Türü, Ana Kategori, Alt Kategori, Kategori Değeri")
         excel_info_label.setStyleSheet("color: #065f46; font-size: 13px;")
@@ -685,7 +684,7 @@ class AdvancedFileOperationsDialog(QDialog):
         self.select_excel_btn = QPushButton("📁 Excel Dosyası Seç")
         self.import_excel_btn = QPushButton("📥 Excel'den İçe Aktar")
         self.import_excel_btn.setEnabled(False)
-        
+
         self.select_excel_btn.clicked.connect(self.select_excel_file)
         self.import_excel_btn.clicked.connect(self.import_from_excel)
 
@@ -750,19 +749,19 @@ class AdvancedFileOperationsDialog(QDialog):
                 padding: 20px;
             }
         """)
-        
+
         info_layout = QVBoxLayout()
-        
+
         info_title = QLabel("✅ Veri Doğrulama")
         info_title.setStyleSheet("font-size: 20px; font-weight: 700; color: #92400e; margin-bottom: 8px;")
-        
+
         info_desc = QLabel("İçe aktarma öncesi dosyalarınızı kontrol edin\n• Format hatalarını tespit eder\n• Eksik alanları listeler\n• İçe aktarma öncesi problemleri çözer")
         info_desc.setStyleSheet("color: #78350f; font-size: 14px; line-height: 1.4;")
-        
+
         info_layout.addWidget(info_title)
         info_layout.addWidget(info_desc)
         info_card.setLayout(info_layout)
-        
+
         layout.addWidget(info_card)
 
         # Dosya seçimi
@@ -782,7 +781,7 @@ class AdvancedFileOperationsDialog(QDialog):
                     stop:0 #d97706, stop:1 #b45309);
             }
         """)
-        
+
         self.select_validation_files_btn.clicked.connect(self.select_validation_files)
         self.validate_btn.clicked.connect(self.start_validation)
 
@@ -820,19 +819,19 @@ class AdvancedFileOperationsDialog(QDialog):
                 padding: 20px;
             }
         """)
-        
+
         info_layout = QVBoxLayout()
-        
+
         info_title = QLabel("💾 Yedekleme ve Geri Yükleme")
         info_title.setStyleSheet("font-size: 20px; font-weight: 700; color: #3730a3; margin-bottom: 8px;")
-        
+
         info_desc = QLabel("Verilerinizi güvenle yedekleyin\n• Kategori verilerini yedekle\n• Hesap kategorilerini yedekle\n• Tam veritabanı yedeği oluştur")
         info_desc.setStyleSheet("color: #312e81; font-size: 14px; line-height: 1.4;")
-        
+
         info_layout.addWidget(info_title)
         info_layout.addWidget(info_desc)
         info_card.setLayout(info_layout)
-        
+
         layout.addWidget(info_card)
 
         # Yedekleme seçenekleri
@@ -894,7 +893,7 @@ class AdvancedFileOperationsDialog(QDialog):
 
     # Diğer metodlar (select_batch_files, import_from_excel, etc.) aynı kalabilir
     # Sadece tasarım güncellendi, fonksiyonalite korundu
-    
+
     def select_batch_files(self):
         """Toplu içe aktarma için dosyaları seç"""
         files, _ = QFileDialog.getOpenFileNames(
@@ -1172,3 +1171,101 @@ class AdvancedFileOperationsDialog(QDialog):
             self.worker_thread.terminate()
             self.worker_thread.wait()
         event.accept()
+    
+    def setup_import_tab(self):
+        """İçe aktarma sekmesi"""
+        widget = QWidget()
+        layout = QVBoxLayout()
+        layout.setSpacing(20)
+
+        # Bilgi kartı
+        info_card = QFrame()
+        info_card.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #dbeafe, stop:1 #bfdbfe);
+                border: 2px solid #93c5fd;
+                border-radius: 16px;
+                padding: 20px;
+            }
+        """)
+
+        info_layout = QVBoxLayout()
+
+        info_title = QLabel("📁 Kategori İçe Aktarma")
+        info_title.setStyleSheet("font-size: 20px; font-weight: 700; color: #1e40af; margin-bottom: 8px;")
+
+        info_desc = QLabel("Kategori ve hesap verilerini içe aktarın\n• JSON ve TXT formatlarını destekler\n• Hızlı ve kolay içe aktarma")
+        info_desc.setStyleSheet("color: #3730a3; font-size: 14px; line-height: 1.4;")
+
+        info_layout.addWidget(info_title)
+        info_layout.addWidget(info_desc)
+        info_card.setLayout(info_layout)
+
+        layout.addWidget(info_card)
+
+        # Dosya seçimi
+        file_frame = QGroupBox("📁 Dosya Seçimi")
+        file_layout = QVBoxLayout()
+
+        file_buttons_layout = QHBoxLayout()
+
+        self.import_categories_btn = QPushButton("📁 Kategori Dosyası Seç (.txt)")
+        self.import_categories_btn.clicked.connect(self.import_categories)
+
+        self.import_json_btn = QPushButton("📄 JSON Kategorileri Seç")
+        self.import_json_btn.clicked.connect(self.import_json_categories)
+        
+        self.import_account_categories_btn = QPushButton("👤 Hesap Kategorileri Dosyası Seç")
+        self.import_account_categories_btn.clicked.connect(self.import_account_categories)
+
+        file_buttons_layout.addWidget(self.import_categories_btn)
+        file_buttons_layout.addWidget(self.import_json_btn)
+        file_buttons_layout.addWidget(self.import_account_categories_btn)
+        file_buttons_layout.addStretch()
+
+        self.file_list = QListWidget()
+        self.file_list.setMinimumHeight(150)
+
+        file_layout.addLayout(file_buttons_layout)
+        file_layout.addWidget(self.file_list)
+        file_frame.setLayout(file_layout)
+
+        layout.addWidget(file_frame)
+
+        layout.addStretch()
+
+        widget.setLayout(layout)
+        return widget
+
+    def import_json_categories(self):
+        """JSON kategori dosyası içe aktar"""
+        file_path, _ = QFileDialog.getOpenFileName(self, "JSON Kategori Dosyası Seç", "", "JSON Dosyaları (*.json)")
+        if file_path:
+            count = mysql_manager.import_categories_from_json(file_path)
+            self.log_text.append(f"✅ {count} JSON kategorisi içe aktarıldı")
+            # Kategori listelerini yenile
+            if hasattr(self.parent(), 'load_photo_content_categories'):
+                self.parent().load_photo_content_categories()
+            if hasattr(self.parent(), 'load_profile_content_categories'):
+                self.parent().load_profile_content_categories()
+
+    def import_account_categories(self):
+        """Hesap kategorileri dosyası içe aktar"""
+        file_path, _ = QFileDialog.getOpenFileName(self, "Hesap Kategorileri Dosyası Seç", "", "Metin Dosyaları (*.txt)")
+        if file_path:
+            # Hesap türü seçimi gerekli - şimdilik hedef hesap olarak varsayalım
+            count = mysql_manager.import_account_categories_from_file(file_path, 'hedef')
+            self.log_text.append(f"✅ {count} hesap kategorisi içe aktarıldı")
+
+    def import_categories(self):
+        """Kategori dosyası içe aktar"""
+        file_path, _ = QFileDialog.getOpenFileName(self, "Kategori Dosyası Seç", "", "Metin Dosyaları (*.txt)")
+        if file_path:
+            count = mysql_manager.import_categories_from_file(file_path)
+            self.log_text.append(f"✅ {count} kategori içe aktarıldı")
+            # Kategori listelerini yenile
+            if hasattr(self.parent(), 'load_photo_content_categories'):
+                self.parent().load_photo_content_categories()
+            if hasattr(self.parent(), 'load_profile_content_categories'):
+                self.parent().load_profile_content_categories()

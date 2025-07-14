@@ -177,8 +177,8 @@ class MySQLManager:
             # Eksik sütunları ekle
             self.add_missing_columns()
 
-            # Varsayılan kategorileri ekle
-            self.add_default_hierarchical_categories()
+            # Varsayılan kategorileri ekle - otomatik yükleme kaldırıldı
+            # self.add_default_hierarchical_categories()
 
         except Error as e:
             logger.error(f"❌ Tablo oluşturma hatası: {e}")
@@ -903,6 +903,66 @@ class MySQLManager:
             return imported_count
         except Exception as e:
             logger.error(f"❌ Kategori dosya içe aktarma hatası: {e}")
+            return 0
+
+    @handle_exception
+    def import_categories_from_json(self, file_path):
+        """JSON dosyasından kategorileri içe aktar"""
+        try:
+            import json
+            
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            imported_count = 0
+            
+            # Profil kategorileri
+            if 'profil_kategorileri' in data:
+                for kategori in data['profil_kategorileri']:
+                    if self.add_hierarchical_category(
+                        kategori['kategori_turu'], 
+                        kategori['ana_kategori'], 
+                        None, 
+                        kategori.get('aciklama', '')
+                    ):
+                        imported_count += 1
+            
+            # İçerik kategorileri
+            if 'icerik_kategorileri' in data:
+                for kategori in data['icerik_kategorileri']:
+                    kategori_turu = kategori['kategori_turu']
+                    ana_kategori = kategori['ana_kategori']
+                    alt_kategoriler = kategori.get('alt_kategoriler', None)
+                    aciklama = kategori.get('aciklama', '')
+                    
+                    # Ana kategoriyi ekle
+                    if self.add_hierarchical_category(kategori_turu, ana_kategori, None, aciklama):
+                        imported_count += 1
+                    
+                    # Alt kategorileri ekle
+                    if alt_kategoriler:
+                        connection = self.get_connection()
+                        if connection:
+                            try:
+                                cursor = connection.cursor()
+                                update_query = """
+                                UPDATE kategoriler 
+                                SET alt_kategoriler = %s 
+                                WHERE kategori_turu = %s AND ana_kategori = %s
+                                """
+                                cursor.execute(update_query, (alt_kategoriler, kategori_turu, ana_kategori))
+                                connection.commit()
+                            except Error as e:
+                                logger.error(f"❌ Alt kategori güncelleme hatası: {e}")
+                            finally:
+                                if connection.is_connected():
+                                    cursor.close()
+                                    connection.close()
+            
+            return imported_count
+            
+        except Exception as e:
+            logger.error(f"❌ JSON kategori içe aktarma hatası: {e}")
             return 0
 
     @handle_exception
