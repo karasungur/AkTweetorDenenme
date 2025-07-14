@@ -104,7 +104,55 @@ class AdvancedImportThread(QThread):
         categories_count = 0
         accounts_count = 0
 
-        # Kategoriler
+        # Profil kategorileri
+        if 'profil_kategorileri' in data:
+            for cat in data['profil_kategorileri']:
+                if mysql_manager.add_hierarchical_category(
+                    cat.get('kategori_turu', 'profil'),
+                    cat.get('ana_kategori', ''),
+                    None,
+                    cat.get('aciklama', '')
+                ):
+                    categories_count += 1
+
+        # İçerik kategorileri
+        if 'icerik_kategorileri' in data:
+            for cat in data['icerik_kategorileri']:
+                kategori_turu = cat.get('kategori_turu', 'icerik')
+                ana_kategori = cat.get('ana_kategori', '')
+                alt_kategoriler = cat.get('alt_kategoriler')
+                aciklama = cat.get('aciklama', '')
+                
+                # Ana kategoriyi ekle
+                if mysql_manager.add_hierarchical_category(
+                    kategori_turu,
+                    ana_kategori,
+                    None,
+                    aciklama
+                ):
+                    categories_count += 1
+                
+                # Alt kategorileri güncelle
+                if alt_kategoriler:
+                    connection = mysql_manager.get_connection()
+                    if connection:
+                        try:
+                            cursor = connection.cursor()
+                            update_query = """
+                            UPDATE kategoriler 
+                            SET alt_kategoriler = %s 
+                            WHERE kategori_turu = %s AND ana_kategori = %s
+                            """
+                            cursor.execute(update_query, (alt_kategoriler, kategori_turu, ana_kategori))
+                            connection.commit()
+                        except Exception as e:
+                            self.log.emit(f"❌ Alt kategori güncelleme hatası: {str(e)}")
+                        finally:
+                            if connection.is_connected():
+                                cursor.close()
+                                connection.close()
+
+        # Eski format kategoriler (geriye uyumluluk)
         if 'categories' in data:
             for cat in data['categories']:
                 if mysql_manager.add_hierarchical_category(
