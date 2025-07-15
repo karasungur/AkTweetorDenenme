@@ -20,6 +20,12 @@ def main():
             else:
                 os.environ['QT_QPA_PLATFORM'] = 'xcb'
         
+        # PyCharm için ek ayarlar
+        if 'PYCHARM_HOSTED' in os.environ:
+            print("🔧 PyCharm ortamı tespit edildi")
+            os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '1'
+            os.environ['QT_SCALE_FACTOR'] = '1'
+        
         from PyQt5.QtWidgets import QApplication, QMessageBox
         from PyQt5.QtCore import Qt
         

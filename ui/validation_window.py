@@ -21,103 +21,36 @@ class ValidationWindow(QWidget):
         self.colors = colors
         self.return_callback = return_callback
         self.profiles = []
+        self.filtered_profiles = []
         self.current_ip = "Kontrol ediliyor..."
-        self.worker_thread = None
-        
-        # Gerçek Android Cihaz User-Agent'ları (2024-2025 Güncel)
-        self.android_devices = [
-            {
-                "name": "Google Pixel 8",
-                "user_agent": "Mozilla/5.0 (Linux; Android 16; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2400,
-                "device_pixel_ratio": 2.625
-            },
-            {
-                "name": "Samsung Galaxy S25",
-                "user_agent": "Mozilla/5.0 (Linux; Android 16; SM-S925B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2340,
-                "device_pixel_ratio": 3.0
-            },
-            {
-                "name": "OnePlus 12",
-                "user_agent": "Mozilla/5.0 (Linux; Android 16; OnePlus 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
-                "screen_width": 1440,
-                "screen_height": 3168,
-                "device_pixel_ratio": 3.0
-            },
-            {
-                "name": "Xiaomi 13 Pro",
-                "user_agent": "Mozilla/5.0 (Linux; Android 15; Xiaomi 13 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
-                "screen_width": 1440,
-                "screen_height": 3200,
-                "device_pixel_ratio": 3.2
-            },
-            {
-                "name": "Samsung Galaxy Z Fold5",
-                "user_agent": "Mozilla/5.0 (Linux; Android 15; Samsung Galaxy Z Fold5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
-                "screen_width": 1812,
-                "screen_height": 2176,
-                "device_pixel_ratio": 3.0
-            },
-            {
-                "name": "ASUS ROG Phone 7",
-                "user_agent": "Mozilla/5.0 (Linux; Android 15; ASUS ROG Phone 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2448,
-                "device_pixel_ratio": 2.5
-            },
-            {
-                "name": "Google Pixel 7 Pro",
-                "user_agent": "Mozilla/5.0 (Linux; Android 15; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
-                "screen_width": 1440,
-                "screen_height": 3120,
-                "device_pixel_ratio": 3.5
-            },
-            {
-                "name": "Samsung Galaxy S22",
-                "user_agent": "Mozilla/5.0 (Linux; Android 14; SM-G901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2340,
-                "device_pixel_ratio": 3.0
-            },
-            {
-                "name": "OnePlus 11R",
-                "user_agent": "Mozilla/5.0 (Linux; Android 14; OnePlus 11R) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Mobile Safari/537.36",
-                "screen_width": 1240,
-                "screen_height": 2772,
-                "device_pixel_ratio": 2.5
-            },
-            {
-                "name": "Xiaomi 12T Pro",
-                "user_agent": "Mozilla/5.0 (Linux; Android 14; Xiaomi 12T Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Mobile Safari/537.36",
-                "screen_width": 1220,
-                "screen_height": 2712,
-                "device_pixel_ratio": 3.0
-            }
-        ]
-        
+        self.ip_thread_running = True
+        self.drivers = []
+
+        # IP monitoring timer
+        self.ip_timer = QTimer()
+        self.ip_timer.timeout.connect(self.update_ip)
+
         self.init_ui()
         self.setup_style()
         self.load_profiles()
-        
+        self.start_ip_monitoring()
+
     def create_driver(self, profile_name):
         """Android cihaz özellikleri ile Chrome driver oluştur"""
         try:
             options = Options()
-            
+
             # Profil yolu
             profile_path = os.path.abspath(f"./Profiller/{profile_name}")
             if not os.path.exists(profile_path):
                 return None
-                
+
             options.add_argument(f"--user-data-dir={profile_path}")
-            
+
             # Cihaz özelliklerini MySQL'den al
             device_specs = user_manager.get_device_specs(profile_name)
             user_agent = user_manager.get_user_agent(profile_name)
-            
+
             if device_specs and user_agent:
                 # Mevcut cihaz özelliklerini kullan
                 selected_device = {
@@ -132,13 +65,13 @@ class ValidationWindow(QWidget):
                 selected_device = random.choice(self.android_devices)
                 user_manager.update_user_agent(profile_name, selected_device['user_agent'])
                 user_manager.update_device_specs(profile_name, selected_device)
-                
+
             options.add_argument(f"--user-agent={selected_device['user_agent']}")
-            
+
             # 🔒 Anti-Bot Gelişmiş Ayarlar
             options.add_argument("--lang=tr-TR,tr")
             options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
-            
+
             # Mobil cihaz simülasyonu
             mobile_emulation = {
                 "deviceMetrics": {
@@ -153,18 +86,18 @@ class ValidationWindow(QWidget):
                 }
             }
             options.add_experimental_option("mobileEmulation", mobile_emulation)
-            
+
             # Zaman dilimi ayarı
             options.add_argument("--timezone=Europe/Istanbul")
-            
+
             # Canvas fingerprint koruması
             options.add_argument("--disable-canvas-aa")
             options.add_argument("--disable-2d-canvas-clip-aa")
-            
+
             # WebGL fingerprint koruması  
             options.add_argument("--disable-gl-drawing-for-tests")
             options.add_argument("--disable-accelerated-2d-canvas")
-            
+
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--disable-blink-features=AutomationControlled")
@@ -173,19 +106,19 @@ class ValidationWindow(QWidget):
             options.add_argument("--disable-images")
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
-            
+
             service = Service("chromedriver.exe")
             service.hide_command_prompt_window = True
-            
+
             driver = webdriver.Chrome(service=service, options=options)
-            
+
             # 🔒 Gelişmiş Anti-Bot Script'leri
             stealth_script = f"""
             // WebDriver izini gizle
             Object.defineProperty(navigator, 'webdriver', {{
                 get: () => false,
             }});
-            
+
             // Chrome automation extension'ı gizle
             Object.defineProperty(navigator, 'plugins', {{
                 get: () => [{{
@@ -194,63 +127,63 @@ class ValidationWindow(QWidget):
                     description: 'Portable Document Format'
                 }}],
             }});
-            
+
             // Gerçekçi dokunmatik özellikler
             Object.defineProperty(navigator, 'maxTouchPoints', {{
                 get: () => 5,
             }});
-            
+
             // Dil ayarları
             Object.defineProperty(navigator, 'language', {{
                 get: () => 'tr-TR',
             }});
-            
+
             Object.defineProperty(navigator, 'languages', {{
                 get: () => ['tr-TR', 'tr', 'en-US', 'en'],
             }});
-            
+
             // Zaman dilimi ayarı
             Date.prototype.getTimezoneOffset = function() {{
                 return -180; // UTC+3 (Istanbul)
             }};
-            
+
             // Platform bilgisi
             Object.defineProperty(navigator, 'platform', {{
                 get: () => 'Linux armv7l',
             }});
-            
+
             // Cihaz belleği simülasyonu
             Object.defineProperty(navigator, 'deviceMemory', {{
                 get: () => {random.choice([4, 6, 8, 12])},
             }});
-            
+
             // Donanım eşzamanlılığı
             Object.defineProperty(navigator, 'hardwareConcurrency', {{
                 get: () => {random.choice([4, 6, 8])},
             }});
-            
+
             // User-Agent doğrulama
             Object.defineProperty(navigator, 'userAgent', {{
                 get: () => '{selected_device['user_agent']}',
             }});
-            
+
             // Viewport boyutu
             Object.defineProperty(screen, 'width', {{
                 get: () => {selected_device['screen_width']},
             }});
-            
+
             Object.defineProperty(screen, 'height', {{
                 get: () => {selected_device['screen_height']},
             }});
-            
+
             Object.defineProperty(screen, 'availWidth', {{
                 get: () => {selected_device['screen_width']},
             }});
-            
+
             Object.defineProperty(screen, 'availHeight', {{
                 get: () => {selected_device['screen_height'] - 24},
             }});
-            
+
             // Chrome çalışma zamanı (sadece yoksa tanımla)
             if (!window.chrome) {{
                 Object.defineProperty(window, 'chrome', {{
@@ -262,124 +195,18 @@ class ValidationWindow(QWidget):
                     }}),
                 }});
             }}
-            
+
             // Console.log geçmişini temizle
             console.clear();
             """
-            
+
             driver.execute_script(stealth_script)
-            
+
             return driver
-            
+
         except Exception as e:
             print(f"❌ Driver oluşturma hatası: {str(e)}")
             return None
-    
-    def init_ui(self):
-        """UI'yi başlat"""
-        layout = QVBoxLayout()
-        
-        # Header
-        header_layout = QHBoxLayout()
-        
-        back_btn = QPushButton("← Ana Menüye Dön")
-        back_btn.clicked.connect(self.return_to_main)
-        
-        title_label = QLabel("✅ Hesap Doğrulayıcı")
-        title_label.setAlignment(Qt.AlignCenter)
-        
-        header_layout.addWidget(back_btn)
-        header_layout.addWidget(title_label)
-        
-        layout.addLayout(header_layout)
-        
-        # Profil listesi placeholder
-        self.profile_list = QListWidget()
-        layout.addWidget(self.profile_list)
-        
-        # Kontrol butonları
-        button_layout = QHBoxLayout()
-        
-        validate_btn = QPushButton("🔍 Doğrulama Başlat")
-        validate_btn.clicked.connect(self.start_validation)
-        
-        button_layout.addWidget(validate_btn)
-        
-        layout.addLayout(button_layout)
-        
-        self.setLayout(layout)
-    
-    def setup_style(self):
-        """Stilleri uygula"""
-        # Basit stil
-        pass
-    
-    def load_profiles(self):
-        """Profilleri yükle"""
-        self.profiles = []
-        profiles_dir = "./Profiller"
-        
-        if os.path.exists(profiles_dir):
-            for item in os.listdir(profiles_dir):
-                if os.path.isdir(os.path.join(profiles_dir, item)):
-                    self.profiles.append(item)
-                    self.profile_list.addItem(item)
-    
-    def start_validation(self):
-        """Doğrulama işlemini başlat"""
-        # Doğrulama işlemi için thread başlat
-        thread = threading.Thread(target=self.validation_thread, daemon=True)
-        thread.start()
-    
-    def validation_thread(self):
-        """Doğrulama thread'i"""
-        for profile in self.profiles:
-            try:
-                driver = self.create_driver(profile)
-                if driver:
-                    # X.com'a git ve doğrulama yap
-                    driver.get("https://x.com/")
-                    time.sleep(5)
-                    
-                    # Giriş kontrolü
-                    if "home" in driver.current_url.lower():
-                        print(f"✅ {profile} - Giriş başarılı")
-                    else:
-                        print(f"❌ {profile} - Giriş gerekli")
-                    
-                    driver.quit()
-                    
-                    # Profiller arası bekleme
-                    time.sleep(random.randint(3, 8))
-                    
-            except Exception as e:
-                print(f"❌ {profile} doğrulama hatası: {str(e)}")
-    
-    def return_to_main(self):
-        """Ana menüye dön"""
-        if self.worker_thread:
-            self.worker_thread.join()
-        self.return_callback()
-
-class ValidationWindow(QWidget):
-    def __init__(self, colors, return_callback):
-        super().__init__()
-        self.colors = colors
-        self.return_callback = return_callback
-        self.profiles = []
-        self.filtered_profiles = []
-        self.current_ip = "Kontrol ediliyor..."
-        self.ip_thread_running = True
-        self.drivers = []
-
-        # IP monitoring timer
-        self.ip_timer = QTimer()
-        self.ip_timer.timeout.connect(self.update_ip)
-
-        self.init_ui()
-        self.setup_style()
-        self.load_profiles()
-        self.start_ip_monitoring()
 
     def init_ui(self):
         """UI'yi başlat"""
@@ -1101,12 +928,12 @@ class ValidationWindow(QWidget):
             options.add_argument("--remote-debugging-port=9222")
             options.add_argument("--disable-extensions")
             options.add_argument("--disable-plugins")
-            
+
             # Chrome başlatma ayarları
             options.add_argument("--no-first-run")
             options.add_argument("--no-default-browser-check")
             options.add_argument("--disable-default-apps")
-            
+
             # Anti-bot ayarları
             options.add_argument("--disable-blink-features=AutomationControlled")
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -1241,9 +1068,54 @@ class ValidationWindow(QWidget):
         """Tarayıcı IP'sini set et"""
         self.browser_ip_display.setText(ip)
 
-    def check_browser_ip_initial(self, driver):
-        """İlk açılışta tarayıcının IP adresini kontrol et"""
+    def check_browser_ip_initial(self, self, driver):
+        """Tarayıcının IP adresini kontrol et (geçici sekme ile)"""
         try:
+            # Chrome options - PyCharm için optimize edilmiş
+            chrome_options = Options()
+
+            # Temel güvenlik ayarları
+            chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("--disable-dev-shm-usage")
+            chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--disable-web-security")
+            chrome_options.add_argument("--allow-running-insecure-content")
+            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+
+            # Profil ve boyut ayarları
+            chrome_options.add_argument(f"--window-size={selected_device['screen_width']},{selected_device['screen_height']}")
+            chrome_options.add_argument(f"--user-agent={selected_device['user_agent']}")
+            chrome_options.add_argument(f"--user-data-dir={profile_path}")
+
+            # Performans ayarları
+            chrome_options.add_argument("--disable-extensions")
+            chrome_options.add_argument("--disable-plugins")
+            chrome_options.add_argument("--disable-images")
+            chrome_options.add_argument("--disable-javascript")
+            chrome_options.add_argument("--disable-ipc-flooding-protection")
+
+            # Debugging port (farklı port kullan)
+            chrome_options.add_argument("--remote-debugging-port=9224")
+
+            # Experimental options
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            chrome_options.add_experimental_option('useAutomationExtension', False)
+            chrome_options.add_experimental_option("prefs", {
+                "profile.default_content_setting_values.notifications": 2,
+                "profile.default_content_settings.popups": 0,
+                "profile.managed_default_content_settings.images": 2,
+                "profile.default_content_settings.geolocation": 2
+            })
+
+            # Driver'ı oluştur - PyCharm'da chromedriver.exe PATH'de olmalı
+            try:
+                service = Service("chromedriver.exe")
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+            except Exception as e:
+                # Eğer chromedriver.exe bulunamazsa, PATH'den dene
+                print(f"⚠️ chromedriver.exe bulunamadı, PATH'den deneniyor...")
+                driver = webdriver.Chrome(options=chrome_options)
             print("🔍 Tarayıcı IP adresi kontrol ediliyor...")
 
             # IP kontrol sitesine git

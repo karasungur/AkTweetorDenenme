@@ -159,11 +159,11 @@ class CookieWorkerThread(QThread):
             from database.user_manager import user_manager
             device_specs = user_manager.get_device_specs(profile)
             user_agent = user_manager.get_user_agent(profile)
-            
+
             if device_specs and user_agent:
                 # Mevcut cihaz özelliklerini kullan
                 options.add_argument(f"--user-agent={user_agent}")
-                
+
                 # Mobil cihaz simülasyonu
                 mobile_emulation = {
                     "deviceMetrics": {
@@ -178,12 +178,12 @@ class CookieWorkerThread(QThread):
                     }
                 }
                 options.add_experimental_option("mobileEmulation", mobile_emulation)
-                
+
                 # Anti-bot ayarları
                 options.add_argument("--lang=tr-TR,tr")
                 options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
                 options.add_argument("--timezone=Europe/Istanbul")
-                
+
                 self.log_signal.emit(f"📱 {profile} için {device_specs['device_name']} cihaz özellikleri kullanılıyor")
                 self.log_signal.emit(f"🔧 Ekran: {device_specs['screen_width']}x{device_specs['screen_height']}")
             else:
@@ -198,7 +198,7 @@ class CookieWorkerThread(QThread):
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--disable-gpu")
             options.add_argument("--remote-debugging-port=9222")
-            
+
             # Görünürlük ayarı
             if not self.settings['browser_visible']:
                 options.add_argument("--headless=new")
@@ -547,7 +547,7 @@ class CookieWindow(QWidget):
         layout.addWidget(settings_group)
         layout.addWidget(ip_group)
         layout.addLayout(button_layout)
-        
+
         # JSON Çıkarıcı butonu
         self.json_btn = QPushButton("📤 JSON Çıkartıcı")
         self.json_btn.setObjectName("jsonButton")
@@ -846,7 +846,7 @@ class CookieWindow(QWidget):
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(74, 144, 226, 0.3);
         }}
-        
+
         #jsonButton {{
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 #6366F1, 
@@ -1070,7 +1070,7 @@ class CookieWindow(QWidget):
         """Tarayıcı IP'sini ayarla"""
         self.browser_ip = ip
         self.browser_ip_display.setText(self.browser_ip)
-        
+
     def open_json_extractor(self):
         """JSON Çıkarıcı penceresini aç"""
         self.json_window = JSONExtractorWindow(self.colors, self)

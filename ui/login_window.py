@@ -728,37 +728,52 @@ class LoginWindow(QWidget):
     def create_driver(self, user):
         """Chrome driver oluştur"""
         try:
-            options = Options()
+            # Chrome options - PyCharm için optimize edilmiş
+            chrome_options = Options()
 
-            unique_id = str(uuid.uuid4())[:8]
-            profile_path = os.path.abspath(f"./TempProfiller/{user['username']}_{unique_id}")
+            # Temel güvenlik ayarları
+            chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("--disable-dev-shm-usage")
+            chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--disable-web-security")
+            chrome_options.add_argument("--allow-running-insecure-content")
+            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 
-            os.makedirs(profile_path, exist_ok=True)
+            # Profil ve boyutayarları
+            chrome_options.add_argument(f"--window-size={selected_device['screen_width']},{selected_device['screen_height']}")
+            chrome_options.add_argument(f"--user-agent={selected_device['user_agent']}")
+            chrome_options.add_argument(f"--user-data-dir={profile_path}")
 
-            options.add_argument(f"--user-data-dir={profile_path}")
-            options.add_argument("--no-first-run")
-            options.add_argument("--no-default-browser-check")
-            options.add_argument("--disable-default-apps")
+            # Performans ayarları
+            chrome_options.add_argument("--disable-extensions")
+            chrome_options.add_argument("--disable-plugins")
+            chrome_options.add_argument("--disable-images")
+            chrome_options.add_argument("--disable-javascript")
+            chrome_options.add_argument("--disable-ipc-flooding-protection")
 
-            # Önce kullanıcıyı MySQL'e kaydet (eğer yoksa)
-            existing_user = usermanager.get_user(user['username'])
-            if not existing_user:
-                # Kullanıcı yoksa, temel bilgilerle kaydet
-                initial_save = user_manager.save_user(
-                    user['username'],
-                    user['password'],
-                    None,  # çerez yok henüz
-                    user.get('year'),
-                    user.get('month'),
-                    user.get('proxy'),
-                    user.get('proxy_port'),
-                    None  # user agent yok henüz
-                )
-                if initial_save:
-                    self.log_message(f"💾 {user['username']} MySQL'e temel kayıt yapıldı")
-                else:
-                    self.log_message(f"❌ {user['username']} MySQL temel kaydı başarısız")
-                    return None
+            # Debugging port (farklı port kullan)
+            chrome_options.add_argument("--remote-debugging-port=9223")
+
+            # Experimental options
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            chrome_options.add_experimental_option('useAutomationExtension', False)
+            chrome_options.add_experimental_option("prefs", {
+                "profile.default_content_setting_values.notifications": 2,
+                "profile.default_content_settings.popups": 0,
+                "profile.managed_default_content_settings.images": 2,
+                "profile.default_content_settings.geolocation": 2
+            })
+
+            # Driver'ı oluştur - PyCharm'da chromedriver.exe PATH'de olmalı
+            try:
+                service = Service("chromedriver.exe")
+                service.hide_command_prompt_window = True
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+            except Exception as e:
+                # Eğer chromedriver.exe bulunamazsa, PATH'den dene
+                print(f"⚠️ chromedriver.exe bulunamadı, PATH'den deneniyor...")
+                driver = webdriver.Chrome(options=chrome_options)
 
             # Mobil Cihaz User-Agent atama
             existing_user_agent = user_manager.get_user_agent(user['username'])
@@ -862,6 +877,16 @@ class LoginWindow(QWidget):
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
 
+            # Chrome başlatma ayarları
+            options.add_argument("--no-first-run")
+            options.add_argument("--no-default-browser-check")
+            options.add_argument("--disable-default-apps")
+
+            # Anti-bot ayarları
+            options.add_argument("--disable-blink-features=AutomationControlled")
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option('useAutomationExtension', False)
+
             service = Service("chromedriver.exe")
             service.hide_command_prompt_window = True
 
@@ -912,17 +937,17 @@ class LoginWindow(QWidget):
                 get: () => {random.choice([4, 6, 8, 12])},
             }});
 
-            // Donanım eşzamanlılığı
+            # Donanım eşzamanlılığı
             Object.defineProperty(navigator, 'hardwareConcurrency', {{
                 get: () => {random.choice([4, 6, 8])},
             }});
 
-            // User-Agent doğrulama
+            # User-Agent doğrulama
             Object.defineProperty(navigator, 'userAgent', {{
                 get: () => '{selected_device['user_agent']}',
             }});
 
-            // Viewport boyutu
+            # Viewport boyutu
             Object.defineProperty(screen, 'width', {{
                 get: () => {selected_device['screen_width']},
             }});
@@ -939,7 +964,7 @@ class LoginWindow(QWidget):
                 get: () => {selected_device['screen_height'] - 24},
             }});
 
-            // Chrome çalışma zamanı (sadece yoksa tanımla)
+            # Chrome çalışma zamanı (sadece yoksa tanımla)
             if (!window.chrome) {{
                 Object.defineProperty(window, 'chrome', {{
                     get: () => ({{
@@ -951,7 +976,7 @@ class LoginWindow(QWidget):
                 }});
             }}
 
-            // Console.log geçmişini temizle
+            # Console.log geçmişini temizle
             console.clear();
             """
 
