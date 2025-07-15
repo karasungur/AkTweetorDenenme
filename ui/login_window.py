@@ -822,6 +822,9 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--force-device-scale-factor=1")
             chrome_options.add_argument("--disable-web-security")
             chrome_options.add_argument("--allow-running-insecure-content")
+            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+            chrome_options.add_argument("--enable-features=NetworkService,NetworkServiceLogging")
+            chrome_options.add_argument("--aggressive-cache-discard")
 
             # Profil yolu - çalışma dizininden bağımsız hale getir
             profile_path = os.path.join(TEMP_PROFILES_DIR, user['username'])
@@ -862,7 +865,7 @@ class LoginWindow(QWidget):
             # Performans ve kararlılık ayarları
             chrome_options.add_argument("--disable-extensions")
             chrome_options.add_argument("--disable-plugins")
-            chrome_options.add_argument("--disable-images")
+            # Resimleri etkinleştir (X.com için gerekli)
             chrome_options.add_argument("--memory-pressure-off")
             chrome_options.add_argument("--max_old_space_size=4096")
             chrome_options.add_argument("--disable-logging")
@@ -929,8 +932,11 @@ class LoginWindow(QWidget):
             chrome_options.add_experimental_option("prefs", {
                 "profile.default_content_setting_values.notifications": 2,
                 "profile.default_content_settings.popups": 0,
-                "profile.managed_default_content_settings.images": 2,
-                "profile.default_content_settings.geolocation": 2
+                "profile.managed_default_content_settings.images": 1,  # Resimleri etkinleştir
+                "profile.default_content_settings.geolocation": 2,
+                "profile.default_content_settings.media_stream": 2,
+                "profile.default_content_settings.camera": 2,
+                "profile.default_content_settings.microphone": 2
             })
 
             # Driver'ı oluştur - Replit için optimize edilmiş
