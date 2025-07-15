@@ -1,6 +1,19 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-                             QLabel, QFrame, QFileDialog, QMessageBox, QListWidget,
-                             QTextEdit, QCheckBox, QLineEdit, QGroupBox, QSplitter)
+from PyQt5.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QLabel,
+    QFrame,
+    QFileDialog,
+    QMessageBox,
+    QListWidget,
+    QTextEdit,
+    QCheckBox,
+    QLineEdit,
+    QGroupBox,
+    QSplitter,
+)
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 import threading
@@ -18,6 +31,10 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from database.user_manager import user_manager
+from config.settings import settings
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TEMP_PROFILES_DIR = os.path.join(BASE_DIR, "temp_profiles")
 
 class LoginWindow(QWidget):
     def __init__(self, colors, return_callback):
@@ -776,11 +793,10 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--disable-background-timer-throttling")
             chrome_options.add_argument("--disable-backgrounding-occluded-windows")
             chrome_options.add_argument("--disable-renderer-backgrounding")
-            chrome_options.add_argument("--single-process")
-            chrome_options.add_argument("--no-zygote")
 
-            # Profil yolu - Replit uyumlu izinlerle
-            profile_path = os.path.abspath(f"./temp_profiles/{user['username']}")
+            # Profil yolu - çalışma dizininden bağımsız hale getir
+            profile_path = os.path.join(TEMP_PROFILES_DIR, user['username'])
+            profile_path = os.path.abspath(profile_path)
             try:
                 os.makedirs(profile_path, exist_ok=True)
                 # Dizin izinlerini ayarla (rwx for owner, rx for group and others)
@@ -808,8 +824,6 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--disable-javascript")
             chrome_options.add_argument("--disable-ipc-flooding-protection")
 
-            # Debugging port (farklı port kullan)
-            chrome_options.add_argument("--remote-debugging-port=9223")
 
             # 🔒 Anti-Bot Gelişmiş Ayarlar
             # Dil ve yerelleştirme ayarları
@@ -878,14 +892,24 @@ class LoginWindow(QWidget):
                 "profile.default_content_settings.geolocation": 2
             })
 
-            # Driver'ı oluştur - PyCharm'da chromedriver.exe PATH'de olmalı
+            # Driver'ı oluştur - config'teki path'i kullan
+            driver_path = settings.get('selenium.driver_path', 'chromedriver')
+            if not os.path.isabs(driver_path):
+                candidate_path = os.path.join(BASE_DIR, driver_path)
+                if os.path.exists(candidate_path):
+                    driver_path = candidate_path
+            if not os.path.exists(driver_path):
+                system_path = shutil.which(driver_path)
+                if system_path:
+                    driver_path = system_path
+
             try:
-                service = Service("chromedriver.exe")
-                service.hide_command_prompt_window = True
+                service = Service(driver_path) if os.path.exists(driver_path) else Service()
+                if hasattr(service, 'hide_command_prompt_window'):
+                    service.hide_command_prompt_window = True
                 driver = webdriver.Chrome(service=service, options=chrome_options)
             except Exception as e:
-                # Eğer chromedriver.exe bulunamazsa, PATH'den dene
-                print(f"⚠️ chromedriver.exe bulunamadı, PATH'den deneniyor...")
+                self.log_message(f"⚠️ Chromedriver başlangıç hatası: {e}. PATH'ten deneniyor...")
                 driver = webdriver.Chrome(options=chrome_options)
 
             # 🔒 Gelişmiş Anti-Bot Script'leri
