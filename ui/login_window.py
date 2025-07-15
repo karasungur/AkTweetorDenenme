@@ -728,54 +728,7 @@ class LoginWindow(QWidget):
     def create_driver(self, user):
         """Chrome driver oluştur"""
         try:
-            # Chrome options - PyCharm için optimize edilmiş
-            chrome_options = Options()
-
-            # Temel güvenlik ayarları
-            chrome_options.add_argument("--no-sandbox")
-            chrome_options.add_argument("--disable-dev-shm-usage")
-            chrome_options.add_argument("--disable-gpu")
-            chrome_options.add_argument("--disable-web-security")
-            chrome_options.add_argument("--allow-running-insecure-content")
-            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
-            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-
-            # Profil ve boyutayarları
-            chrome_options.add_argument(f"--window-size={selected_device['screen_width']},{selected_device['screen_height']}")
-            chrome_options.add_argument(f"--user-agent={selected_device['user_agent']}")
-            chrome_options.add_argument(f"--user-data-dir={profile_path}")
-
-            # Performans ayarları
-            chrome_options.add_argument("--disable-extensions")
-            chrome_options.add_argument("--disable-plugins")
-            chrome_options.add_argument("--disable-images")
-            chrome_options.add_argument("--disable-javascript")
-            chrome_options.add_argument("--disable-ipc-flooding-protection")
-
-            # Debugging port (farklı port kullan)
-            chrome_options.add_argument("--remote-debugging-port=9223")
-
-            # Experimental options
-            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            chrome_options.add_experimental_option('useAutomationExtension', False)
-            chrome_options.add_experimental_option("prefs", {
-                "profile.default_content_setting_values.notifications": 2,
-                "profile.default_content_settings.popups": 0,
-                "profile.managed_default_content_settings.images": 2,
-                "profile.default_content_settings.geolocation": 2
-            })
-
-            # Driver'ı oluştur - PyCharm'da chromedriver.exe PATH'de olmalı
-            try:
-                service = Service("chromedriver.exe")
-                service.hide_command_prompt_window = True
-                driver = webdriver.Chrome(service=service, options=chrome_options)
-            except Exception as e:
-                # Eğer chromedriver.exe bulunamazsa, PATH'den dene
-                print(f"⚠️ chromedriver.exe bulunamadı, PATH'den deneniyor...")
-                driver = webdriver.Chrome(options=chrome_options)
-
-            # Mobil Cihaz User-Agent atama
+            # Mobil Cihaz User-Agent atama (önce selected_device'i belirle)
             existing_user_agent = user_manager.get_user_agent(user['username'])
             selected_device = None
 
@@ -808,12 +761,41 @@ class LoginWindow(QWidget):
                 else:
                     self.log_message(f"⚠️ {user['username']} user-agent kaydedilemedi")
 
-            options.add_argument(f"--user-agent={selected_device['user_agent']}")
+            # Chrome options - PyCharm için optimize edilmiş
+            chrome_options = Options()
+
+            # Temel güvenlik ayarları
+            chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("--disable-dev-shm-usage")
+            chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--disable-web-security")
+            chrome_options.add_argument("--allow-running-insecure-content")
+            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+
+            # Profil yolu
+            profile_path = f"./temp_profiles/{user['username']}"
+            os.makedirs(profile_path, exist_ok=True)
+
+            # Profil ve boyut ayarları
+            chrome_options.add_argument(f"--window-size={selected_device['screen_width']},{selected_device['screen_height']}")
+            chrome_options.add_argument(f"--user-agent={selected_device['user_agent']}")
+            chrome_options.add_argument(f"--user-data-dir={profile_path}")
+
+            # Performans ayarları
+            chrome_options.add_argument("--disable-extensions")
+            chrome_options.add_argument("--disable-plugins")
+            chrome_options.add_argument("--disable-images")
+            chrome_options.add_argument("--disable-javascript")
+            chrome_options.add_argument("--disable-ipc-flooding-protection")
+
+            # Debugging port (farklı port kullan)
+            chrome_options.add_argument("--remote-debugging-port=9223")
 
             # 🔒 Anti-Bot Gelişmiş Ayarlar
             # Dil ve yerelleştirme ayarları
-            options.add_argument("--lang=tr-TR,tr")
-            options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
+            chrome_options.add_argument("--lang=tr-TR,tr")
+            chrome_options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
 
             # Mobil cihaz simülasyonu
             mobile_emulation = {
@@ -828,21 +810,21 @@ class LoginWindow(QWidget):
                     "mobile": True
                 }
             }
-            options.add_experimental_option("mobileEmulation", mobile_emulation)
+            chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
 
             # Zaman dilimi ayarı
-            options.add_argument("--timezone=Europe/Istanbul")
+            chrome_options.add_argument("--timezone=Europe/Istanbul")
 
             # Canvas fingerprint koruması
-            options.add_argument("--disable-canvas-aa")
-            options.add_argument("--disable-2d-canvas-clip-aa")
+            chrome_options.add_argument("--disable-canvas-aa")
+            chrome_options.add_argument("--disable-2d-canvas-clip-aa")
 
             # WebGL fingerprint koruması  
-            options.add_argument("--disable-gl-drawing-for-tests")
-            options.add_argument("--disable-accelerated-2d-canvas")
+            chrome_options.add_argument("--disable-gl-drawing-for-tests")
+            chrome_options.add_argument("--disable-accelerated-2d-canvas")
 
             if not self.browser_visible.isChecked():
-                options.add_argument("--headless=new")
+                chrome_options.add_argument("--headless=new")
 
             # Proxy ayarı
             proxy_to_use = None
@@ -857,40 +839,35 @@ class LoginWindow(QWidget):
                 if proxy_to_use.count(':') >= 3:
                     self.log_message(f"⚠️ Kimlik doğrulamalı proxy tespit edildi, atlanıyor.")
                     return None
-                options.add_argument(f"--proxy-server={proxy_to_use}")
+                chrome_options.add_argument(f"--proxy-server={proxy_to_use}")
 
             # Display ve GPU ayarları
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
-            options.add_argument("--disable-gpu")
-            options.add_argument("--remote-debugging-port=9222")
-            options.add_argument("--disable-extensions")
-            options.add_argument("--disable-plugins")
+            chrome_options.add_argument("--remote-debugging-port=9222")
 
             # Chrome başlatma ayarları
-            options.add_argument("--no-first-run")
-            options.add_argument("--no-default-browser-check")
-            options.add_argument("--disable-default-apps")
+            chrome_options.add_argument("--no-first-run")
+            chrome_options.add_argument("--no-default-browser-check")
+            chrome_options.add_argument("--disable-default-apps")
 
             # Anti-bot ayarları
-            options.add_argument("--disable-blink-features=AutomationControlled")
-            options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            options.add_experimental_option('useAutomationExtension', False)
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            chrome_options.add_experimental_option('useAutomationExtension', False)
+            chrome_options.add_experimental_option("prefs", {
+                "profile.default_content_setting_values.notifications": 2,
+                "profile.default_content_settings.popups": 0,
+                "profile.managed_default_content_settings.images": 2,
+                "profile.default_content_settings.geolocation": 2
+            })
 
-            # Chrome başlatma ayarları
-            options.add_argument("--no-first-run")
-            options.add_argument("--no-default-browser-check")
-            options.add_argument("--disable-default-apps")
-
-            # Anti-bot ayarları
-            options.add_argument("--disable-blink-features=AutomationControlled")
-            options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            options.add_experimental_option('useAutomationExtension', False)
-
-            service = Service("chromedriver.exe")
-            service.hide_command_prompt_window = True
-
-            driver = webdriver.Chrome(service=service, options=options)
+            # Driver'ı oluştur - PyCharm'da chromedriver.exe PATH'de olmalı
+            try:
+                service = Service("chromedriver.exe")
+                service.hide_command_prompt_window = True
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+            except Exception as e:
+                # Eğer chromedriver.exe bulunamazsa, PATH'den dene
+                print(f"⚠️ chromedriver.exe bulunamadı, PATH'den deneniyor...")
+                driver = webdriver.Chrome(options=chrome_options)
 
             # 🔒 Gelişmiş Anti-Bot Script'leri
             stealth_script = f"""
@@ -937,17 +914,17 @@ class LoginWindow(QWidget):
                 get: () => {random.choice([4, 6, 8, 12])},
             }});
 
-            # Donanım eşzamanlılığı
+            // Donanım eşzamanlılığı
             Object.defineProperty(navigator, 'hardwareConcurrency', {{
                 get: () => {random.choice([4, 6, 8])},
             }});
 
-            # User-Agent doğrulama
+            // User-Agent doğrulama
             Object.defineProperty(navigator, 'userAgent', {{
                 get: () => '{selected_device['user_agent']}',
             }});
 
-            # Viewport boyutu
+            // Viewport boyutu
             Object.defineProperty(screen, 'width', {{
                 get: () => {selected_device['screen_width']},
             }});
@@ -964,7 +941,7 @@ class LoginWindow(QWidget):
                 get: () => {selected_device['screen_height'] - 24},
             }});
 
-            # Chrome çalışma zamanı (sadece yoksa tanımla)
+            // Chrome çalışma zamanı (sadece yoksa tanımla)
             if (!window.chrome) {{
                 Object.defineProperty(window, 'chrome', {{
                     get: () => ({{
@@ -976,7 +953,7 @@ class LoginWindow(QWidget):
                 }});
             }}
 
-            # Console.log geçmişini temizle
+            // Console.log geçmişini temizle
             console.clear();
             """
 
