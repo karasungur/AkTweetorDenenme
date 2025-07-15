@@ -3,6 +3,12 @@ import os
 import json
 from typing import Dict, Any
 
+# Proje kök dizini
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# İşletim sistemine göre chromedriver varsayılan adı
+DEFAULT_DRIVER = "chromedriver.exe" if os.name == "nt" else "chromedriver"
+
 class Settings:
     def __init__(self):
         self.config_file = "config/app_config.json"
@@ -16,7 +22,7 @@ class Settings:
                 "pool_size": 5
             },
             "selenium": {
-                "driver_path": "chromedriver.exe",
+                "driver_path": DEFAULT_DRIVER,
                 "timeout": 10,
                 "headless": False,
                 "page_load_timeout": 30,
@@ -41,6 +47,12 @@ class Settings:
             }
         }
         self.config = self.load_config()
+
+    def resolve_path(self, path: str) -> str:
+        """Verilen yolu proje köküne göre çözümler"""
+        if os.path.isabs(path):
+            return path
+        return os.path.join(BASE_DIR, path)
     
     def load_config(self) -> Dict[str, Any]:
         """Konfigürasyonu yükle"""

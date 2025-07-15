@@ -174,6 +174,9 @@ class TargetWindow(QWidget):
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
 
+        # Hücre değişikliklerini dinle
+        self.table.cellChanged.connect(self.on_cell_changed)
+
         layout.addWidget(self.table)
         panel.setLayout(layout)
         return panel
@@ -215,8 +218,6 @@ class TargetWindow(QWidget):
             date_item.setFlags(date_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, 4, date_item)
 
-        # Tablo güncelleme sinyali
-        self.table.cellChanged.connect(self.on_cell_changed)
 
     def update_stats(self):
         """İstatistikleri güncelle"""

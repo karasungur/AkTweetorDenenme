@@ -14,6 +14,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from database.user_manager import user_manager
+from config.settings import settings, DEFAULT_DRIVER
 
 class ValidationWindow(QWidget):
     def __init__(self, colors, return_callback):
@@ -146,8 +147,12 @@ class ValidationWindow(QWidget):
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
 
-            service = Service("chromedriver.exe")
-            service.hide_command_prompt_window = True
+            driver_path = settings.resolve_path(
+                settings.get('selenium.driver_path', DEFAULT_DRIVER)
+            )
+            service = Service(driver_path) if os.path.exists(driver_path) else Service()
+            if hasattr(service, 'hide_command_prompt_window'):
+                service.hide_command_prompt_window = True
 
             driver = webdriver.Chrome(service=service, options=options)
 
@@ -978,8 +983,12 @@ class ValidationWindow(QWidget):
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
 
-            service = Service("chromedriver.exe")
-            service.hide_command_prompt_window = True
+            driver_path = settings.resolve_path(
+                settings.get('selenium.driver_path', DEFAULT_DRIVER)
+            )
+            service = Service(driver_path) if os.path.exists(driver_path) else Service()
+            if hasattr(service, 'hide_command_prompt_window'):
+                service.hide_command_prompt_window = True
 
             driver = webdriver.Chrome(service=service, options=options)
             driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")

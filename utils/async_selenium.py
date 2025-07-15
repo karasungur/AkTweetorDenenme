@@ -3,6 +3,7 @@ import asyncio
 import aiohttp
 import time
 import random
+import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, List, Dict, Any
 from selenium import webdriver
@@ -12,7 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
-from config.settings import settings
+from config.settings import settings, DEFAULT_DRIVER
 from utils.logger import logger
 from database.user_manager import user_manager
 
@@ -118,9 +119,12 @@ class AsyncSeleniumWrapper:
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
             
-            driver_path = settings.get('selenium.driver_path', 'chromedriver.exe')
-            service = Service(driver_path)
-            service.hide_command_prompt_window = True
+            driver_path = settings.resolve_path(
+                settings.get('selenium.driver_path', DEFAULT_DRIVER)
+            )
+            service = Service(driver_path) if os.path.exists(driver_path) else Service()
+            if hasattr(service, 'hide_command_prompt_window'):
+                service.hide_command_prompt_window = True
             
             driver = webdriver.Chrome(service=service, options=options)
             
