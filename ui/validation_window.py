@@ -143,6 +143,9 @@ class ValidationWindow(QWidget):
             options.add_argument("--disable-extensions")
             options.add_argument("--disable-plugins")
             # Resimleri etkinleştir (X.com için gerekli)
+            options.add_argument("--enable-javascript")
+            options.add_argument("--enable-features=NetworkService")
+            options.add_argument("--disable-site-isolation-trials")
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
 

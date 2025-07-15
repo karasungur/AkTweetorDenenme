@@ -870,6 +870,9 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--disable-logging")
             chrome_options.add_argument("--disable-login-animations")
             chrome_options.add_argument("--disable-component-extensions-with-background-pages")
+            chrome_options.add_argument("--enable-javascript")
+            chrome_options.add_argument("--enable-features=NetworkService")
+            chrome_options.add_argument("--disable-site-isolation-trials")
 
             # 🔒 Anti-Bot Gelişmiş Ayarlar
             # Dil ve yerelleştirme ayarları
@@ -972,17 +975,17 @@ class LoginWindow(QWidget):
                     self.log_message(f"❌ Chrome driver ikinci deneme başarısız: {str(e2)}")
                     return None
 
-            # 🔒 Minimal Anti-Bot (Sayfa yüklenmesini engellemeyecek)
+            # 🔒 Minimal Anti-Bot (X.com sayfa yüklenmesini engellemeyecek)
             try:
-                # Sadece en temel webdriver gizleme
-                minimal_script = """
+                # Sayfa tamamen yüklendikten sonra anti-bot script'i çalıştır
+                basic_script = """
                 Object.defineProperty(navigator, 'webdriver', {
                     get: () => undefined,
                 });
                 """
                 
-                driver.execute_script(minimal_script)
-                self.log_message(f"🛡️ {user['username']} için minimal anti-bot koruması aktif ({selected_device['name']})")
+                driver.execute_script(basic_script)
+                self.log_message(f"🛡️ {user['username']} için temel anti-bot koruması aktif")
                     
             except Exception as script_error:
                 self.log_message(f"⚠️ Anti-bot script hatası: {script_error}, devam ediliyor...")
@@ -996,16 +999,28 @@ class LoginWindow(QWidget):
     def perform_login(self, driver, user):
         """Giriş işlemini gerçekleştir"""
         try:
+            self.log_message(f"🌐 {user['username']} için X.com'a gidiliyor...")
             driver.get("https://x.com/i/flow/login?lang=tr")
+            
+            # Sayfa yüklenmesini bekle
+            self.log_message(f"⏳ Sayfa yüklenmesi bekleniyor...")
+            time.sleep(8)  # Daha uzun bekleme
+            
+            # Sayfa durumunu kontrol et
+            if "gri" in driver.page_source.lower() or len(driver.page_source) < 1000:
+                self.log_message(f"⚠️ Sayfa düzgün yüklenmedi, yeniden deneniyor...")
+                driver.refresh()
+                time.sleep(10)
 
             self.wait_and_type(driver, "//*[@autocomplete='username']", user['username'])
             self.wait_and_click(driver, "//button[.//span[text()='İleri']]")
             self.wait_and_type(driver, "//*[@autocomplete='current-password']", user['password'])
             self.wait_and_click(driver, "//button[.//span[text()='Giriş yap']]")
 
-            time.sleep(5)
+            # Giriş sonrası bekleme
+            time.sleep(8)
             if "home" in driver.current_url.lower() or "x.com" in driver.current_url:
-                # Çerezleri almak için driver'ı geçici olarak sakla
+                self.log_message(f"✅ {user['username']} başarıyla giriş yaptı")
                 return True
 
             return False
