@@ -781,23 +781,28 @@ class LoginWindow(QWidget):
                 else:
                     self.log_message(f"⚠️ {user['username']} user-agent kaydedilemedi")
 
-            # Chrome options - PyCharm için optimize edilmiş
+            # Chrome options - Replit ortamı için optimize edilmiş
             chrome_options = Options()
 
-            # Replit uyumlu güvenlik ayarları
+            # Replit uyumlu temel güvenlik ayarları
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
             chrome_options.add_argument("--disable-gpu")
-            chrome_options.add_argument("--disable-web-security")
-            chrome_options.add_argument("--allow-running-insecure-content")
-            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
-            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-            chrome_options.add_argument("--disable-setuid-sandbox")
+            chrome_options.add_argument("--disable-software-rasterizer")
             chrome_options.add_argument("--disable-background-timer-throttling")
             chrome_options.add_argument("--disable-backgrounding-occluded-windows")
             chrome_options.add_argument("--disable-renderer-backgrounding")
-            chrome_options.add_argument("--single-process")
-            chrome_options.add_argument("--no-zygote")
+            chrome_options.add_argument("--disable-features=TranslateUI")
+            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+            chrome_options.add_argument("--disable-ipc-flooding-protection")
+            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+            chrome_options.add_argument("--no-first-run")
+            chrome_options.add_argument("--no-default-browser-check")
+            chrome_options.add_argument("--disable-default-apps")
+            chrome_options.add_argument("--remote-debugging-port=9222")
+            chrome_options.add_argument("--force-device-scale-factor=1")
+            chrome_options.add_argument("--disable-web-security")
+            chrome_options.add_argument("--allow-running-insecure-content")
 
             # Profil yolu - çalışma dizininden bağımsız hale getir
             profile_path = os.path.join(TEMP_PROFILES_DIR, user['username'])
@@ -822,12 +827,15 @@ class LoginWindow(QWidget):
             chrome_options.add_argument(f"--user-agent={selected_device['user_agent']}")
             chrome_options.add_argument(f"--user-data-dir={profile_path}")
 
-            # Performans ayarları
+            # Performans ve kararlılık ayarları
             chrome_options.add_argument("--disable-extensions")
             chrome_options.add_argument("--disable-plugins")
             chrome_options.add_argument("--disable-images")
-            chrome_options.add_argument("--disable-javascript")
-            chrome_options.add_argument("--disable-ipc-flooding-protection")
+            chrome_options.add_argument("--memory-pressure-off")
+            chrome_options.add_argument("--max_old_space_size=4096")
+            chrome_options.add_argument("--disable-logging")
+            chrome_options.add_argument("--disable-login-animations")
+            chrome_options.add_argument("--disable-component-extensions-with-background-pages")
 
 
             # 🔒 Anti-Bot Gelişmiş Ayarlar
@@ -897,110 +905,78 @@ class LoginWindow(QWidget):
                 "profile.default_content_settings.geolocation": 2
             })
 
-            # Driver'ı oluştur - config'teki path'i kullan
-            driver_path = settings.get('selenium.driver_path', 'chromedriver')
-            if not os.path.isabs(driver_path):
-                driver_path = os.path.join(BASE_DIR, driver_path)
-
+            # Driver'ı oluştur - Replit için optimize edilmiş
             try:
-                service = Service(driver_path) if os.path.exists(driver_path) else Service()
-                if hasattr(service, 'hide_command_prompt_window'):
-                    service.hide_command_prompt_window = True
+                # İlk olarak sistem PATH'inden dene
+                service = Service()
+                service.start_error_message = ""
+                
+                # Timeout ayarları
+                chrome_options.add_argument("--crash-dumps-dir=/tmp")
+                chrome_options.add_argument("--disable-crash-reporter")
+                
                 driver = webdriver.Chrome(service=service, options=chrome_options)
+                
+                # Driver'ın başlatıldığını doğrula
+                driver.set_page_load_timeout(30)
+                driver.implicitly_wait(10)
+                
+                # Basit bir test sayfasına git
+                driver.get("data:text/html,<html><body><h1>Test</h1></body></html>")
+                time.sleep(2)  # Driver'ın stabilize olması için
+                
+                self.log_message(f"✅ Chrome driver başarıyla başlatıldı")
+                
             except Exception as e:
-                self.log_message(f"⚠️ Chromedriver başlangıç hatası: {e}. PATH'ten deneniyor...")
-                driver = webdriver.Chrome(options=chrome_options)
+                self.log_message(f"❌ Chrome driver başlatma hatası: {str(e)}")
+                # İkinci deneme - farklı ayarlarla
+                try:
+                    chrome_options.add_argument("--headless")  # Headless moda geç
+                    driver = webdriver.Chrome(options=chrome_options)
+                    driver.set_page_load_timeout(30)
+                    driver.implicitly_wait(10)
+                    self.log_message(f"✅ Chrome driver headless modda başlatıldı")
+                except Exception as e2:
+                    self.log_message(f"❌ Chrome driver ikinci deneme başarısız: {str(e2)}")
+                    return None
 
-            # 🔒 Gelişmiş Anti-Bot Script'leri
-            stealth_script = f"""
-            // WebDriver izini gizle
-            Object.defineProperty(navigator, 'webdriver', {{
-                get: () => false,
-            }});
-
-            // Chrome automation extension'ı gizle
-            Object.defineProperty(navigator, 'plugins', {{
-                get: () => [{{
-                    name: 'Chrome PDF Plugin',
-                    filename: 'internal-pdf-viewer',
-                    description: 'Portable Document Format'
-                }}],
-            }});
-
-            // Gerçekçi dokunmatik özellikler
-            Object.defineProperty(navigator, 'maxTouchPoints', {{
-                get: () => 5,
-            }});
-
-            // Dil ayarları
-            Object.defineProperty(navigator, 'language', {{
-                get: () => 'tr-TR',
-            }});
-
-            Object.defineProperty(navigator, 'languages', {{
-                get: () => ['tr-TR', 'tr', 'en-US', 'en'],
-            }});
-
-            // Zaman dilimi ayarı
-            Date.prototype.getTimezoneOffset = function() {{
-                return -180; // UTC+3 (Istanbul)
-            }};
-
-            // Platform bilgisi
-            Object.defineProperty(navigator, 'platform', {{
-                get: () => 'Linux armv7l',
-            }});
-
-            // Cihaz belleği simülasyonu
-            Object.defineProperty(navigator, 'deviceMemory', {{
-                get: () => {random.choice([4, 6, 8, 12])},
-            }});
-
-            // Donanım eşzamanlılığı
-            Object.defineProperty(navigator, 'hardwareConcurrency', {{
-                get: () => {random.choice([4, 6, 8])},
-            }});
-
-            // User-Agent doğrulama
-            Object.defineProperty(navigator, 'userAgent', {{
-                get: () => '{selected_device['user_agent']}',
-            }});
-
-            // Viewport boyutu
-            Object.defineProperty(screen, 'width', {{
-                get: () => {selected_device['screen_width']},
-            }});
-
-            Object.defineProperty(screen, 'height', {{
-                get: () => {selected_device['screen_height']},
-            }});
-
-            Object.defineProperty(screen, 'availWidth', {{
-                get: () => {selected_device['screen_width']},
-            }});
-
-            Object.defineProperty(screen, 'availHeight', {{
-                get: () => {selected_device['screen_height'] - 24},
-            }});
-
-            // Chrome çalışma zamanı (sadece yoksa tanımla)
-            if (!window.chrome) {{
-                Object.defineProperty(window, 'chrome', {{
-                    get: () => ({{
-                        runtime: {{
-                            onConnect: null,
-                            onMessage: null
-                        }}
-                    }}),
-                }});
-            }}
-
-            // Console.log geçmişini temizle
-            console.clear();
-            """
-
-            driver.execute_script(stealth_script)
-            self.log_message(f"🛡️ {user['username']} için anti-bot korumaları aktif ({selected_device['name']})")
+            # 🔒 Temel Anti-Bot Script'leri (Replit uyumlu)
+            try:
+                stealth_script = """
+                // WebDriver izini gizle
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined,
+                });
+                
+                // Console.log geçmişini temizle
+                console.clear();
+                """
+                
+                driver.execute_script(stealth_script)
+                self.log_message(f"🛡️ {user['username']} için temel anti-bot korumaları aktif ({selected_device['name']})")
+                
+                # Daha gelişmiş script'leri dene (hata olursa atla)
+                try:
+                    advanced_script = f"""
+                    Object.defineProperty(navigator, 'userAgent', {{
+                        get: () => '{selected_device['user_agent']}',
+                    }});
+                    
+                    Object.defineProperty(screen, 'width', {{
+                        get: () => {selected_device['screen_width']},
+                    }});
+                    
+                    Object.defineProperty(screen, 'height', {{
+                        get: () => {selected_device['screen_height']},
+                    }});
+                    """
+                    driver.execute_script(advanced_script)
+                    self.log_message(f"✅ Gelişmiş anti-bot korumaları da uygulandı")
+                except:
+                    self.log_message(f"⚠️ Gelişmiş anti-bot script'i uygulanamadı, temel koruma devam ediyor")
+                    
+            except Exception as script_error:
+                self.log_message(f"⚠️ Anti-bot script hatası: {script_error}, devam ediliyor...")
 
             return driver
 
