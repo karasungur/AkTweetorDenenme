@@ -31,6 +31,10 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from database.user_manager import user_manager
+from config.settings import settings
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TEMP_PROFILES_DIR = os.path.join(BASE_DIR, "temp_profiles")
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMP_PROFILES_DIR = os.path.join(BASE_DIR, "temp_profiles")
@@ -825,8 +829,6 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--disable-javascript")
             chrome_options.add_argument("--disable-ipc-flooding-protection")
 
-            # Debugging port (farklı port kullan)
-            chrome_options.add_argument("--remote-debugging-port=9223")
 
             # 🔒 Anti-Bot Gelişmiş Ayarlar
             # Dil ve yerelleştirme ayarları
@@ -895,14 +897,18 @@ class LoginWindow(QWidget):
                 "profile.default_content_settings.geolocation": 2
             })
 
-            # Driver'ı oluştur - PyCharm'da chromedriver.exe PATH'de olmalı
+            # Driver'ı oluştur - config'teki path'i kullan
+            driver_path = settings.get('selenium.driver_path', 'chromedriver')
+            if not os.path.isabs(driver_path):
+                driver_path = os.path.join(BASE_DIR, driver_path)
+
             try:
-                service = Service("chromedriver.exe")
-                service.hide_command_prompt_window = True
+                service = Service(driver_path) if os.path.exists(driver_path) else Service()
+                if hasattr(service, 'hide_command_prompt_window'):
+                    service.hide_command_prompt_window = True
                 driver = webdriver.Chrome(service=service, options=chrome_options)
             except Exception as e:
-                # Eğer chromedriver.exe bulunamazsa, PATH'den dene
-                print(f"⚠️ chromedriver.exe bulunamadı, PATH'den deneniyor...")
+                self.log_message(f"⚠️ Chromedriver başlangıç hatası: {e}. PATH'ten deneniyor...")
                 driver = webdriver.Chrome(options=chrome_options)
 
             # 🔒 Gelişmiş Anti-Bot Script'leri
