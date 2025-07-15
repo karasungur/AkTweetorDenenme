@@ -764,7 +764,7 @@ class LoginWindow(QWidget):
             # Chrome options - PyCharm için optimize edilmiş
             chrome_options = Options()
 
-            # Temel güvenlik ayarları
+            # Replit uyumlu güvenlik ayarları
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
             chrome_options.add_argument("--disable-gpu")
@@ -772,10 +772,29 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--allow-running-insecure-content")
             chrome_options.add_argument("--disable-features=VizDisplayCompositor")
             chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+            chrome_options.add_argument("--disable-setuid-sandbox")
+            chrome_options.add_argument("--disable-background-timer-throttling")
+            chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+            chrome_options.add_argument("--disable-renderer-backgrounding")
+            chrome_options.add_argument("--single-process")
+            chrome_options.add_argument("--no-zygote")
 
-            # Profil yolu
-            profile_path = f"./temp_profiles/{user['username']}"
-            os.makedirs(profile_path, exist_ok=True)
+            # Profil yolu - Replit uyumlu izinlerle
+            profile_path = os.path.abspath(f"./temp_profiles/{user['username']}")
+            try:
+                os.makedirs(profile_path, exist_ok=True)
+                # Dizin izinlerini ayarla (rwx for owner, rx for group and others)
+                os.chmod(profile_path, 0o755)
+                # Parent dizin izinlerini de kontrol et
+                parent_dir = os.path.dirname(profile_path)
+                if os.path.exists(parent_dir):
+                    os.chmod(parent_dir, 0o755)
+            except Exception as perm_error:
+                self.log_message(f"⚠️ Profil dizini izin hatası: {perm_error}")
+                # Alternatif profil yolu dene
+                profile_path = os.path.abspath(f"/tmp/chrome_profiles/{user['username']}")
+                os.makedirs(profile_path, exist_ok=True)
+                os.chmod(profile_path, 0o755)
 
             # Profil ve boyut ayarları
             chrome_options.add_argument(f"--window-size={selected_device['screen_width']},{selected_device['screen_height']}")

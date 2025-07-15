@@ -65,10 +65,24 @@ class ValidationWindow(QWidget):
         try:
             options = Options()
 
-            # Profil yolu
+            # Profil yolu - Replit uyumlu izinlerle
             profile_path = os.path.abspath(f"./Profiller/{profile_name}")
             if not os.path.exists(profile_path):
                 return None
+
+            # Profil dizini izinlerini kontrol et ve ayarla
+            try:
+                os.chmod(profile_path, 0o755)
+                # Alt dizinlerin izinlerini de ayarla
+                for root, dirs, files in os.walk(profile_path):
+                    for dir_name in dirs:
+                        dir_path = os.path.join(root, dir_name)
+                        os.chmod(dir_path, 0o755)
+                    for file_name in files:
+                        file_path = os.path.join(root, file_name)
+                        os.chmod(file_path, 0o644)
+            except Exception as perm_error:
+                print(f"⚠️ Profil dizini izin ayarlama hatası: {perm_error}")
 
             options.add_argument(f"--user-data-dir={profile_path}")
 
