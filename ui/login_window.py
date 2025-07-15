@@ -1,6 +1,19 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-                             QLabel, QFrame, QFileDialog, QMessageBox, QListWidget,
-                             QTextEdit, QCheckBox, QLineEdit, QGroupBox, QSplitter)
+from PyQt5.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QLabel,
+    QFrame,
+    QFileDialog,
+    QMessageBox,
+    QListWidget,
+    QTextEdit,
+    QCheckBox,
+    QLineEdit,
+    QGroupBox,
+    QSplitter,
+)
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 import threading
@@ -18,6 +31,9 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from database.user_manager import user_manager
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TEMP_PROFILES_DIR = os.path.join(BASE_DIR, "temp_profiles")
 
 class LoginWindow(QWidget):
     def __init__(self, colors, return_callback):
@@ -779,8 +795,9 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--single-process")
             chrome_options.add_argument("--no-zygote")
 
-            # Profil yolu - Replit uyumlu izinlerle
-            profile_path = os.path.abspath(f"./temp_profiles/{user['username']}")
+            # Profil yolu - çalışma dizininden bağımsız hale getir
+            profile_path = os.path.join(TEMP_PROFILES_DIR, user['username'])
+            profile_path = os.path.abspath(profile_path)
             try:
                 os.makedirs(profile_path, exist_ok=True)
                 # Dizin izinlerini ayarla (rwx for owner, rx for group and others)
