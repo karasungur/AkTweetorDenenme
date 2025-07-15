@@ -295,7 +295,11 @@ class LoginWindow(QWidget):
         self.browser_visible.setObjectName("settingsCheckbox")
         self.browser_visible.setChecked(True)
 
+        self.keep_browser_open = QCheckBox("İşlem Sonunda Tarayıcı Açık Kalsın")
+        self.keep_browser_open.setObjectName("settingsCheckbox")
+
         browser_layout.addWidget(self.browser_visible)
+        browser_layout.addWidget(self.keep_browser_open)
         browser_group.setLayout(browser_layout)
 
         # Başlat butonu
@@ -703,13 +707,15 @@ class LoginWindow(QWidget):
                 browser_ip = self.check_browser_ip(driver)
                 if not browser_ip:
                     self.log_message(f"❌ {user['username']} için tarayıcı IP'si alınamadı.")
-                    driver.quit()
+                    if not self.keep_browser_open.isChecked():
+                        driver.quit()
                     continue
 
                 # Proxy kontrolü yap
                 if not self.validate_proxy(browser_ip):
                     self.log_message(f"❌ {user['username']} için IP değişmemiş, işlem durduruldu.")
-                    driver.quit()
+                    if not self.keep_browser_open.isChecked():
+                        driver.quit()
                     continue
 
                 # Giriş işlemi
@@ -732,7 +738,8 @@ class LoginWindow(QWidget):
                         self.reset_ip()
                 else:
                     self.log_message(f"❌ {user['username']} giriş başarısız.")
-                    driver.quit()
+                    if not self.keep_browser_open.isChecked():
+                        driver.quit()
 
                 # Kullanıcılar arası bekleme
                 if i < len(self.users):
@@ -826,7 +833,6 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--disable-extensions")
             chrome_options.add_argument("--disable-plugins")
             chrome_options.add_argument("--disable-images")
-            chrome_options.add_argument("--disable-javascript")
             chrome_options.add_argument("--disable-ipc-flooding-protection")
 
 
@@ -1208,22 +1214,25 @@ class LoginWindow(QWidget):
             temp_profile = driver.capabilities['chrome']['userDataDir']
             permanent_profile = f"./Profiller/{username}"
 
-            driver.quit()
-            time.sleep(3)
+            if not self.keep_browser_open.isChecked():
+                driver.quit()
+                time.sleep(3)
 
-            if os.path.exists(temp_profile) and not os.path.exists(permanent_profile):
-                try:
-                    shutil.copytree(temp_profile, permanent_profile, ignore_dangling_symlinks=True)
-                    self.log_message(f"💾 {username} profili kalıcı olarak kaydedildi.")
-
+                if os.path.exists(temp_profile) and not os.path.exists(permanent_profile):
                     try:
-                        shutil.rmtree(temp_profile)
-                        self.log_message(f"🧹 {username} geçici profili temizlendi.")
-                    except:
-                        pass
+                        shutil.copytree(temp_profile, permanent_profile, ignore_dangling_symlinks=True)
+                        self.log_message(f"💾 {username} profili kalıcı olarak kaydedildi.")
 
-                except Exception as copy_error:
-                    self.log_message(f"⚠️ Profil kopyalama hatası: {str(copy_error)}")
+                        try:
+                            shutil.rmtree(temp_profile)
+                            self.log_message(f"🧹 {username} geçici profili temizlendi.")
+                        except:
+                            pass
+
+                    except Exception as copy_error:
+                        self.log_message(f"⚠️ Profil kopyalama hatası: {str(copy_error)}")
+            else:
+                self.log_message("ℹ️ Tarayıcı açık kaldığı için profil kopyalanmadı.")
 
         except Exception as e:
             self.log_message(f"⚠️ Profil kaydetme hatası: {str(e)}")
