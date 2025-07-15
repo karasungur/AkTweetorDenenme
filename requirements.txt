@@ -12,3 +12,12 @@ openpyxl==3.1.2
 Flask==2.3.3
 Werkzeug==2.3.7
 Jinja2==3.1.2
+psutil==5.9.6
+matplotlib==3.8.2
+numpy==1.24.3
+pandas==2.1.4
+Pillow==10.1.0
+cryptography==41.0.7
+urllib3==2.1.0
+setuptools==69.0.3
+wheel==0.42.0
