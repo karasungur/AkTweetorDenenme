@@ -26,6 +26,31 @@ class ValidationWindow(QWidget):
         self.ip_thread_running = True
         self.drivers = []
 
+        # Android cihaz listesi
+        self.android_devices = [
+            {
+                'name': 'Google Pixel 8',
+                'user_agent': 'Mozilla/5.0 (Linux; Android 16; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36',
+                'screen_width': 1080,
+                'screen_height': 2400,
+                'device_pixel_ratio': 2.625
+            },
+            {
+                'name': 'Samsung Galaxy S24',
+                'user_agent': 'Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36',
+                'screen_width': 1080,
+                'screen_height': 2340,
+                'device_pixel_ratio': 3.0
+            },
+            {
+                'name': 'Vivo X90 Pro',
+                'user_agent': 'Mozilla/5.0 (Linux; Android 13; V2254A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36',
+                'screen_width': 1260,
+                'screen_height': 2800,
+                'device_pixel_ratio': 3.0
+            }
+        ]
+
         # IP monitoring timer
         self.ip_timer = QTimer()
         self.ip_timer.timeout.connect(self.update_ip)
@@ -1071,52 +1096,11 @@ class ValidationWindow(QWidget):
     def check_browser_ip_initial(self, driver):
         """Tarayıcının IP adresini kontrol et (geçici sekme ile)"""
         try:
-            # Chrome options - PyCharm için optimize edilmiş
-            chrome_options = Options()
-
-            # Temel güvenlik ayarları
-            chrome_options.add_argument("--no-sandbox")
-            chrome_options.add_argument("--disable-dev-shm-usage")
-            chrome_options.add_argument("--disable-gpu")
-            chrome_options.add_argument("--disable-web-security")
-            chrome_options.add_argument("--allow-running-insecure-content")
-            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
-            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-
-            # Profil ve boyut ayarları
-            chrome_options.add_argument(f"--window-size={selected_device['screen_width']},{selected_device['screen_height']}")
-            chrome_options.add_argument(f"--user-agent={selected_device['user_agent']}")
-            chrome_options.add_argument(f"--user-data-dir={profile_path}")
-
-            # Performans ayarları
-            chrome_options.add_argument("--disable-extensions")
-            chrome_options.add_argument("--disable-plugins")
-            chrome_options.add_argument("--disable-images")
-            chrome_options.add_argument("--disable-javascript")
-            chrome_options.add_argument("--disable-ipc-flooding-protection")
-
-            # Debugging port (farklı port kullan)
-            chrome_options.add_argument("--remote-debugging-port=9224")
-
-            # Experimental options
-            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            chrome_options.add_experimental_option('useAutomationExtension', False)
-            chrome_options.add_experimental_option("prefs", {
-                "profile.default_content_setting_values.notifications": 2,
-                "profile.default_content_settings.popups": 0,
-                "profile.managed_default_content_settings.images": 2,
-                "profile.default_content_settings.geolocation": 2
-            })
-
-            # Driver'ı oluştur - PyCharm'da chromedriver.exe PATH'de olmalı
-            try:
-                service = Service("chromedriver.exe")
-                driver = webdriver.Chrome(service=service, options=chrome_options)
-            except Exception as e:
-                # Eğer chromedriver.exe bulunamazsa, PATH'den dene
-                print(f"⚠️ chromedriver.exe bulunamadı, PATH'den deneniyor...")
-                driver = webdriver.Chrome(options=chrome_options)
             print("🔍 Tarayıcı IP adresi kontrol ediliyor...")
+
+            # Yeni sekme aç
+            driver.execute_script("window.open('');")
+            driver.switch_to.window(driver.window_handles[-1])
 
             # IP kontrol sitesine git
             driver.get("https://api.ipify.org")
@@ -1127,6 +1111,10 @@ class ValidationWindow(QWidget):
 
             print(f"🌐 Tarayıcı IP adresi: {browser_ip}")
             self.set_browser_ip(browser_ip)
+
+            # Sekmeyi kapat ve ana sekmeye dön
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
 
             return browser_ip
 
