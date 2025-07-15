@@ -31,10 +31,12 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from database.user_manager import user_manager
-from config.settings import settings
+from config.settings import settings, DEFAULT_DRIVER
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TEMP_PROFILES_DIR = os.path.join(BASE_DIR, "temp_profiles")
+TEMP_PROFILES_DIR = settings.resolve_path(
+    settings.get('directories.temp_profiles', 'temp_profiles')
+)
 
 class LoginWindow(QWidget):
     def __init__(self, colors, return_callback):
@@ -895,9 +897,9 @@ class LoginWindow(QWidget):
             })
 
             # Driver'ı oluştur - config'teki path'i kullan
-            driver_path = settings.get('selenium.driver_path', 'chromedriver')
-            if not os.path.isabs(driver_path):
-                driver_path = os.path.join(BASE_DIR, driver_path)
+            driver_path = settings.resolve_path(
+                settings.get('selenium.driver_path', DEFAULT_DRIVER)
+            )
 
             try:
                 service = Service(driver_path) if os.path.exists(driver_path) else Service()

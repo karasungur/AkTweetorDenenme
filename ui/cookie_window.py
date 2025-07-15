@@ -9,10 +9,12 @@ import time
 import requests
 import os
 import random
+import shutil
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from database.user_manager import user_manager
+from config.settings import settings, DEFAULT_DRIVER
 
 class CookieWorkerThread(QThread):
     """Çerez toplama işlemlerini yapan thread"""
@@ -214,8 +216,12 @@ class CookieWorkerThread(QThread):
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
 
-            service = Service("chromedriver.exe")
-            service.hide_command_prompt_window = True
+            driver_path = settings.resolve_path(
+                settings.get('selenium.driver_path', DEFAULT_DRIVER)
+            )
+            service = Service(driver_path) if os.path.exists(driver_path) else Service()
+            if hasattr(service, 'hide_command_prompt_window'):
+                service.hide_command_prompt_window = True
 
             driver = webdriver.Chrome(service=service, options=options)
             driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
@@ -943,8 +949,13 @@ class CookieWindow(QWidget):
             return
 
         # ChromeDriver kontrol
-        if not os.path.exists("chromedriver.exe"):
-            self.show_error("chromedriver.exe bulunamadı!\nLütfen chromedriver.exe dosyasını ana dizine koyun.")
+        driver_path = settings.resolve_path(
+            settings.get('selenium.driver_path', DEFAULT_DRIVER)
+        )
+        if not os.path.exists(driver_path) and not shutil.which(driver_path):
+            self.show_error(
+                "ChromeDriver bulunamadı!\nLütfen config'te doğru yolu belirtin."
+            )
             return
 
         # Ayarları hazırla
