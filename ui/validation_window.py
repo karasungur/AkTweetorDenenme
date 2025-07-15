@@ -1068,7 +1068,7 @@ class ValidationWindow(QWidget):
         """Tarayıcı IP'sini set et"""
         self.browser_ip_display.setText(ip)
 
-    def check_browser_ip_initial(self, self, driver):
+    def check_browser_ip_initial(self, driver):
         """Tarayıcının IP adresini kontrol et (geçici sekme ile)"""
         try:
             # Chrome options - PyCharm için optimize edilmiş
