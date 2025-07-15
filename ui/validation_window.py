@@ -1094,13 +1094,21 @@ class ValidationWindow(QWidget):
                 proxy = self.proxy_entry.text()
                 options.add_argument(f"--proxy-server={proxy}")
 
-            # Diğer ayarlar
+            # Display ve GPU ayarları
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
-            options.add_argument("--disable-blink-features=AutomationControlled")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--remote-debugging-port=9222")
+            options.add_argument("--disable-extensions")
+            options.add_argument("--disable-plugins")
+            
+            # Chrome başlatma ayarları
             options.add_argument("--no-first-run")
             options.add_argument("--no-default-browser-check")
             options.add_argument("--disable-default-apps")
+            
+            # Anti-bot ayarları
+            options.add_argument("--disable-blink-features=AutomationControlled")
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
 

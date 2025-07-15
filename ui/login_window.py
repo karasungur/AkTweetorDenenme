@@ -741,7 +741,7 @@ class LoginWindow(QWidget):
             options.add_argument("--disable-default-apps")
 
             # Önce kullanıcıyı MySQL'e kaydet (eğer yoksa)
-            existing_user = user_manager.get_user(user['username'])
+            existing_user = usermanager.get_user(user['username'])
             if not existing_user:
                 # Kullanıcı yoksa, temel bilgilerle kaydet
                 initial_save = user_manager.save_user(
@@ -763,14 +763,14 @@ class LoginWindow(QWidget):
             # Mobil Cihaz User-Agent atama
             existing_user_agent = user_manager.get_user_agent(user['username'])
             selected_device = None
-            
+
             if existing_user_agent:
                 # Mevcut user-agent'ı kullan ve cihazı bul
                 for device in self.android_devices:
                     if device['user_agent'] == existing_user_agent:
                         selected_device = device
                         break
-                
+
                 if selected_device:
                     self.log_message(f"📱 {user['username']} için mevcut cihaz kullanılıyor: {selected_device['name']}")
                 else:
@@ -781,7 +781,7 @@ class LoginWindow(QWidget):
                 # Rastgele cihaz seç ve kaydet
                 selected_device = random.choice(self.android_devices)
                 self.log_message(f"📱 {user['username']} için yeni cihaz atandı: {selected_device['name']}")
-            
+
             # User-agent'ı güncelle/kaydet
             if not existing_user_agent or existing_user_agent != selected_device['user_agent']:
                 user_agent_updated = user_manager.update_user_agent(user['username'], selected_device['user_agent'])
@@ -799,7 +799,7 @@ class LoginWindow(QWidget):
             # Dil ve yerelleştirme ayarları
             options.add_argument("--lang=tr-TR,tr")
             options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
-            
+
             # Mobil cihaz simülasyonu
             mobile_emulation = {
                 "deviceMetrics": {
@@ -814,14 +814,14 @@ class LoginWindow(QWidget):
                 }
             }
             options.add_experimental_option("mobileEmulation", mobile_emulation)
-            
+
             # Zaman dilimi ayarı
             options.add_argument("--timezone=Europe/Istanbul")
-            
+
             # Canvas fingerprint koruması
             options.add_argument("--disable-canvas-aa")
             options.add_argument("--disable-2d-canvas-clip-aa")
-            
+
             # WebGL fingerprint koruması  
             options.add_argument("--disable-gl-drawing-for-tests")
             options.add_argument("--disable-accelerated-2d-canvas")
@@ -844,12 +844,21 @@ class LoginWindow(QWidget):
                     return None
                 options.add_argument(f"--proxy-server={proxy_to_use}")
 
+            # Display ve GPU ayarları
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
-            options.add_argument("--disable-blink-features=AutomationControlled")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--remote-debugging-port=9222")
             options.add_argument("--disable-extensions")
             options.add_argument("--disable-plugins")
-            options.add_argument("--disable-images")
+
+            # Chrome başlatma ayarları
+            options.add_argument("--no-first-run")
+            options.add_argument("--no-default-browser-check")
+            options.add_argument("--disable-default-apps")
+
+            # Anti-bot ayarları
+            options.add_argument("--disable-blink-features=AutomationControlled")
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
 
@@ -857,14 +866,14 @@ class LoginWindow(QWidget):
             service.hide_command_prompt_window = True
 
             driver = webdriver.Chrome(service=service, options=options)
-            
+
             # 🔒 Gelişmiş Anti-Bot Script'leri
             stealth_script = f"""
             // WebDriver izini gizle
             Object.defineProperty(navigator, 'webdriver', {{
                 get: () => false,
             }});
-            
+
             // Chrome automation extension'ı gizle
             Object.defineProperty(navigator, 'plugins', {{
                 get: () => [{{
@@ -873,63 +882,63 @@ class LoginWindow(QWidget):
                     description: 'Portable Document Format'
                 }}],
             }});
-            
+
             // Gerçekçi dokunmatik özellikler
             Object.defineProperty(navigator, 'maxTouchPoints', {{
                 get: () => 5,
             }});
-            
+
             // Dil ayarları
             Object.defineProperty(navigator, 'language', {{
                 get: () => 'tr-TR',
             }});
-            
+
             Object.defineProperty(navigator, 'languages', {{
                 get: () => ['tr-TR', 'tr', 'en-US', 'en'],
             }});
-            
+
             // Zaman dilimi ayarı
             Date.prototype.getTimezoneOffset = function() {{
                 return -180; // UTC+3 (Istanbul)
             }};
-            
+
             // Platform bilgisi
             Object.defineProperty(navigator, 'platform', {{
                 get: () => 'Linux armv7l',
             }});
-            
+
             // Cihaz belleği simülasyonu
             Object.defineProperty(navigator, 'deviceMemory', {{
                 get: () => {random.choice([4, 6, 8, 12])},
             }});
-            
+
             // Donanım eşzamanlılığı
             Object.defineProperty(navigator, 'hardwareConcurrency', {{
                 get: () => {random.choice([4, 6, 8])},
             }});
-            
+
             // User-Agent doğrulama
             Object.defineProperty(navigator, 'userAgent', {{
                 get: () => '{selected_device['user_agent']}',
             }});
-            
+
             // Viewport boyutu
             Object.defineProperty(screen, 'width', {{
                 get: () => {selected_device['screen_width']},
             }});
-            
+
             Object.defineProperty(screen, 'height', {{
                 get: () => {selected_device['screen_height']},
             }});
-            
+
             Object.defineProperty(screen, 'availWidth', {{
                 get: () => {selected_device['screen_width']},
             }});
-            
+
             Object.defineProperty(screen, 'availHeight', {{
                 get: () => {selected_device['screen_height'] - 24},
             }});
-            
+
             // Chrome çalışma zamanı (sadece yoksa tanımla)
             if (!window.chrome) {{
                 Object.defineProperty(window, 'chrome', {{
@@ -941,11 +950,11 @@ class LoginWindow(QWidget):
                     }}),
                 }});
             }}
-            
+
             // Console.log geçmişini temizle
             console.clear();
             """
-            
+
             driver.execute_script(stealth_script)
             self.log_message(f"🛡️ {user['username']} için anti-bot korumaları aktif ({selected_device['name']})")
 
@@ -1094,14 +1103,14 @@ class LoginWindow(QWidget):
             # MySQL'e kaydet
             if cookie_dict:
                 self.log_message(f"🔍 {user['username']} için {len(cookie_dict)} çerez bulundu: {list(cookie_dict.keys())}")
-                
+
                 # Çerezleri ayrı bir fonksiyon ile kaydet
                 cookie_success = user_manager.update_user_cookies(user['username'], cookie_dict)
                 if cookie_success:
                     self.log_message(f"✅ {user['username']} çerezleri MySQL'e kaydedildi ({len(cookie_dict)} çerez)")
                 else:
                     self.log_message(f"⚠️ {user['username']} çerezleri MySQL'e kaydedilemedi")
-                    
+
                     # Alternatif olarak save_user fonksiyonunu dene
                     try:
                         alternative_success = user_manager.save_user(

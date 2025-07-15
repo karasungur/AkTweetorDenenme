@@ -193,13 +193,23 @@ class CookieWorkerThread(QThread):
             if self.settings['proxy_enabled'] and self.settings['proxy_address']:
                 options.add_argument(f"--proxy-server={self.settings['proxy_address']}")
 
+            # Display ayarları (Replit için gerekli)
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--remote-debugging-port=9222")
+            
             # Görünürlük ayarı
             if not self.settings['browser_visible']:
                 options.add_argument("--headless=new")
+                options.add_argument("--virtual-time-budget=5000")
+            else:
+                # Görünür mod için display ayarları
+                options.add_argument("--disable-extensions-except")
+                options.add_argument("--disable-extensions")
+                options.add_argument("--disable-plugins")
 
-            # Diğer ayarlar
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
+            # Anti-bot ayarları
             options.add_argument("--disable-blink-features=AutomationControlled")
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
