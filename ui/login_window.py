@@ -822,9 +822,8 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--force-device-scale-factor=1")
             chrome_options.add_argument("--disable-web-security")
             chrome_options.add_argument("--allow-running-insecure-content")
-            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
-            chrome_options.add_argument("--enable-features=NetworkService,NetworkServiceLogging")
-            chrome_options.add_argument("--aggressive-cache-discard")
+            # Sayfa yüklenmesi için daha uyumlu ayarlar
+            chrome_options.add_argument("--enable-features=NetworkService")
 
             # Profil yolu - çalışma dizininden bağımsız hale getir
             profile_path = os.path.join(TEMP_PROFILES_DIR, user['username'])
@@ -877,9 +876,8 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--lang=tr-TR,tr")
             chrome_options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
 
-            # Viewport ve görünüm ayarları - mobil için optimize
-            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
-            chrome_options.add_argument(f"--force-device-scale-factor={selected_device['device_pixel_ratio']}")
+            # Basit viewport ayarları
+            chrome_options.add_argument(f"--force-device-scale-factor=1.0")
             
             # Tarayıcı boyutu - mobil emülasyon ile uyumlu
             if not self.browser_visible.isChecked():
@@ -974,60 +972,17 @@ class LoginWindow(QWidget):
                     self.log_message(f"❌ Chrome driver ikinci deneme başarısız: {str(e2)}")
                     return None
 
-            # 🔒 Temel Anti-Bot Script'leri (Replit uyumlu)
+            # 🔒 Minimal Anti-Bot (Sayfa yüklenmesini engellemeyecek)
             try:
-                stealth_script = """
-                // WebDriver izini gizle
+                # Sadece en temel webdriver gizleme
+                minimal_script = """
                 Object.defineProperty(navigator, 'webdriver', {
                     get: () => undefined,
                 });
-                
-                // Console.log geçmişini temizle
-                console.clear();
                 """
                 
-                driver.execute_script(stealth_script)
-                self.log_message(f"🛡️ {user['username']} için temel anti-bot korumaları aktif ({selected_device['name']})")
-                
-                # Daha gelişmiş script'leri dene (hata olursa atla)
-                try:
-                    advanced_script = f"""
-                    // User-Agent override
-                    Object.defineProperty(navigator, 'userAgent', {{
-                        get: () => '{selected_device['user_agent']}',
-                    }});
-                    
-                    // Screen dimensions override
-                    Object.defineProperty(screen, 'width', {{
-                        get: () => {selected_device['screen_width']},
-                    }});
-                    
-                    Object.defineProperty(screen, 'height', {{
-                        get: () => {selected_device['screen_height']},
-                    }});
-                    
-                    // Device pixel ratio
-                    Object.defineProperty(window, 'devicePixelRatio', {{
-                        get: () => {selected_device['device_pixel_ratio']},
-                    }});
-                    
-                    // Viewport meta tag ekleme
-                    if (!document.querySelector('meta[name="viewport"]')) {{
-                        var viewport = document.createElement('meta');
-                        viewport.name = 'viewport';
-                        viewport.content = 'width=device-width, initial-scale=1.0, user-scalable=no';
-                        document.head.appendChild(viewport);
-                    }}
-                    
-                    // Mobile specific properties
-                    Object.defineProperty(navigator, 'platform', {{
-                        get: () => 'Android',
-                    }});
-                    """
-                    driver.execute_script(advanced_script)
-                    self.log_message(f"✅ Gelişmiş anti-bot korumaları ve viewport ayarları uygulandı")
-                except:
-                    self.log_message(f"⚠️ Gelişmiş anti-bot script'i uygulanamadı, temel koruma devam ediyor")
+                driver.execute_script(minimal_script)
+                self.log_message(f"🛡️ {user['username']} için minimal anti-bot koruması aktif ({selected_device['name']})")
                     
             except Exception as script_error:
                 self.log_message(f"⚠️ Anti-bot script hatası: {script_error}, devam ediliyor...")

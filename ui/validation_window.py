@@ -151,95 +151,14 @@ class ValidationWindow(QWidget):
 
             driver = webdriver.Chrome(service=service, options=options)
 
-            # 🔒 Gelişmiş Anti-Bot Script'leri
-            stealth_script = f"""
-            // WebDriver izini gizle
-            Object.defineProperty(navigator, 'webdriver', {{
-                get: () => false,
-            }});
-
-            // Chrome automation extension'ı gizle
-            Object.defineProperty(navigator, 'plugins', {{
-                get: () => [{{
-                    name: 'Chrome PDF Plugin',
-                    filename: 'internal-pdf-viewer',
-                    description: 'Portable Document Format'
-                }}],
-            }});
-
-            // Gerçekçi dokunmatik özellikler
-            Object.defineProperty(navigator, 'maxTouchPoints', {{
-                get: () => 5,
-            }});
-
-            // Dil ayarları
-            Object.defineProperty(navigator, 'language', {{
-                get: () => 'tr-TR',
-            }});
-
-            Object.defineProperty(navigator, 'languages', {{
-                get: () => ['tr-TR', 'tr', 'en-US', 'en'],
-            }});
-
-            // Zaman dilimi ayarı
-            Date.prototype.getTimezoneOffset = function() {{
-                return -180; // UTC+3 (Istanbul)
-            }};
-
-            // Platform bilgisi
-            Object.defineProperty(navigator, 'platform', {{
-                get: () => 'Linux armv7l',
-            }});
-
-            // Cihaz belleği simülasyonu
-            Object.defineProperty(navigator, 'deviceMemory', {{
-                get: () => {random.choice([4, 6, 8, 12])},
-            }});
-
-            // Donanım eşzamanlılığı
-            Object.defineProperty(navigator, 'hardwareConcurrency', {{
-                get: () => {random.choice([4, 6, 8])},
-            }});
-
-            // User-Agent doğrulama
-            Object.defineProperty(navigator, 'userAgent', {{
-                get: () => '{selected_device['user_agent']}',
-            }});
-
-            // Viewport boyutu
-            Object.defineProperty(screen, 'width', {{
-                get: () => {selected_device['screen_width']},
-            }});
-
-            Object.defineProperty(screen, 'height', {{
-                get: () => {selected_device['screen_height']},
-            }});
-
-            Object.defineProperty(screen, 'availWidth', {{
-                get: () => {selected_device['screen_width']},
-            }});
-
-            Object.defineProperty(screen, 'availHeight', {{
-                get: () => {selected_device['screen_height'] - 24},
-            }});
-
-            // Chrome çalışma zamanı (sadece yoksa tanımla)
-            if (!window.chrome) {{
-                Object.defineProperty(window, 'chrome', {{
-                    get: () => ({{
-                        runtime: {{
-                            onConnect: null,
-                            onMessage: null
-                        }}
-                    }}),
-                }});
-            }}
-
-            // Console.log geçmişini temizle
-            console.clear();
+            # 🔒 Minimal Anti-Bot (Sayfa yüklenmesini engellemeyecek)
+            minimal_script = """
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined,
+            });
             """
 
-            driver.execute_script(stealth_script)
+            driver.execute_script(minimal_script)
 
             return driver
 
