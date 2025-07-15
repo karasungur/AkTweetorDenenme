@@ -770,6 +770,25 @@ class LoginWindow(QWidget):
                 selected_device = random.choice(self.android_devices)
                 self.log_message(f"📱 {user['username']} için yeni cihaz atandı: {selected_device['name']}")
 
+            # Önce kullanıcıyı MySQL'e kaydet (eğer yoksa)
+            user_data = user_manager.get_user(user['username'])
+            if not user_data:
+                # Kullanıcı yok, önce temel bilgileri kaydet
+                basic_save_success = user_manager.save_user(
+                    user['username'],
+                    user['password'],
+                    None,  # cookie_dict
+                    user.get('year'),
+                    user.get('month'),
+                    user.get('proxy'),
+                    user.get('proxy_port'),
+                    selected_device['user_agent']  # user_agent
+                )
+                if basic_save_success:
+                    self.log_message(f"✅ {user['username']} temel bilgileri MySQL'e kaydedildi")
+                else:
+                    self.log_message(f"⚠️ {user['username']} temel bilgileri kaydedilemedi")
+
             # User-agent'ı güncelle/kaydet
             if not existing_user_agent or existing_user_agent != selected_device['user_agent']:
                 user_agent_updated = user_manager.update_user_agent(user['username'], selected_device['user_agent'])
@@ -822,28 +841,7 @@ class LoginWindow(QWidget):
                 os.makedirs(profile_path, exist_ok=True)
                 os.chmod(profile_path, 0o755)
 
-            # Profil ve boyut ayarları
-            chrome_options.add_argument(f"--window-size={selected_device['screen_width']},{selected_device['screen_height']}")
-            chrome_options.add_argument(f"--user-agent={selected_device['user_agent']}")
-            chrome_options.add_argument(f"--user-data-dir={profile_path}")
-
-            # Performans ve kararlılık ayarları
-            chrome_options.add_argument("--disable-extensions")
-            chrome_options.add_argument("--disable-plugins")
-            chrome_options.add_argument("--disable-images")
-            chrome_options.add_argument("--memory-pressure-off")
-            chrome_options.add_argument("--max_old_space_size=4096")
-            chrome_options.add_argument("--disable-logging")
-            chrome_options.add_argument("--disable-login-animations")
-            chrome_options.add_argument("--disable-component-extensions-with-background-pages")
-
-
-            # 🔒 Anti-Bot Gelişmiş Ayarlar
-            # Dil ve yerelleştirme ayarları
-            chrome_options.add_argument("--lang=tr-TR,tr")
-            chrome_options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
-
-            # Mobil cihaz simülasyonu
+            # Mobil cihaz simülasyonu - düzgün çalışan ayarlar
             mobile_emulation = {
                 "deviceMetrics": {
                     "width": selected_device['screen_width'],
@@ -857,6 +855,36 @@ class LoginWindow(QWidget):
                 }
             }
             chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
+
+            # Profil yolu
+            chrome_options.add_argument(f"--user-data-dir={profile_path}")
+
+            # Performans ve kararlılık ayarları
+            chrome_options.add_argument("--disable-extensions")
+            chrome_options.add_argument("--disable-plugins")
+            chrome_options.add_argument("--disable-images")
+            chrome_options.add_argument("--memory-pressure-off")
+            chrome_options.add_argument("--max_old_space_size=4096")
+            chrome_options.add_argument("--disable-logging")
+            chrome_options.add_argument("--disable-login-animations")
+            chrome_options.add_argument("--disable-component-extensions-with-background-pages")
+
+            # 🔒 Anti-Bot Gelişmiş Ayarlar
+            # Dil ve yerelleştirme ayarları
+            chrome_options.add_argument("--lang=tr-TR,tr")
+            chrome_options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
+
+            # Viewport ve görünüm ayarları - mobil için optimize
+            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+            chrome_options.add_argument(f"--force-device-scale-factor={selected_device['device_pixel_ratio']}")
+            
+            # Tarayıcı boyutu - mobil emülasyon ile uyumlu
+            if not self.browser_visible.isChecked():
+                # Headless modda boyut ayarı
+                chrome_options.add_argument(f"--window-size={selected_device['screen_width']},{selected_device['screen_height']}")
+            else:
+                # Görünür modda biraz daha büyük boyut (debug için)
+                chrome_options.add_argument(f"--window-size={min(1200, selected_device['screen_width'] + 100)},{min(800, selected_device['screen_height'] + 100)}")
 
             # Zaman dilimi ayarı
             chrome_options.add_argument("--timezone=Europe/Istanbul")
@@ -958,10 +986,12 @@ class LoginWindow(QWidget):
                 # Daha gelişmiş script'leri dene (hata olursa atla)
                 try:
                     advanced_script = f"""
+                    // User-Agent override
                     Object.defineProperty(navigator, 'userAgent', {{
                         get: () => '{selected_device['user_agent']}',
                     }});
                     
+                    // Screen dimensions override
                     Object.defineProperty(screen, 'width', {{
                         get: () => {selected_device['screen_width']},
                     }});
@@ -969,9 +999,27 @@ class LoginWindow(QWidget):
                     Object.defineProperty(screen, 'height', {{
                         get: () => {selected_device['screen_height']},
                     }});
+                    
+                    // Device pixel ratio
+                    Object.defineProperty(window, 'devicePixelRatio', {{
+                        get: () => {selected_device['device_pixel_ratio']},
+                    }});
+                    
+                    // Viewport meta tag ekleme
+                    if (!document.querySelector('meta[name="viewport"]')) {{
+                        var viewport = document.createElement('meta');
+                        viewport.name = 'viewport';
+                        viewport.content = 'width=device-width, initial-scale=1.0, user-scalable=no';
+                        document.head.appendChild(viewport);
+                    }}
+                    
+                    // Mobile specific properties
+                    Object.defineProperty(navigator, 'platform', {{
+                        get: () => 'Android',
+                    }});
                     """
                     driver.execute_script(advanced_script)
-                    self.log_message(f"✅ Gelişmiş anti-bot korumaları da uygulandı")
+                    self.log_message(f"✅ Gelişmiş anti-bot korumaları ve viewport ayarları uygulandı")
                 except:
                     self.log_message(f"⚠️ Gelişmiş anti-bot script'i uygulanamadı, temel koruma devam ediyor")
                     
