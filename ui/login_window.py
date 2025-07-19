@@ -721,14 +721,19 @@ class LoginWindow(QWidget):
             profile_path = os.path.join(TEMP_PROFILES_DIR, user['username'])
             os.makedirs(profile_path, exist_ok=True)
 
-            # Mobil emülasyon - cihaz özelliklerini doğrudan tanımla
+            # Mobil emülasyon - Chrome'un güncel API'sini kullan
             mobile_emulation = {
                 "deviceMetrics": {
                     "width": selected_device['screen_width'],
                     "height": selected_device['screen_height'],
-                    "pixelRatio": selected_device['device_pixel_ratio']
+                    "deviceScaleFactor": selected_device['device_pixel_ratio'],
+                    "mobile": True
                 },
-                "userAgent": selected_device['user_agent']
+                "userAgent": selected_device['user_agent'],
+                "clientHints": {
+                    "platform": "Android",
+                    "mobile": True
+                }
             }
             
             chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
