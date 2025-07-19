@@ -23,6 +23,7 @@ import requests
 import os
 import uuid
 import shutil
+import json
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -45,8 +46,23 @@ class LoginWindow(QWidget):
         self.current_ip = "Kontrol ediliyor..."
         self.ip_thread_running = True
 
-        # Gerçek Android Cihaz User-Agent'ları (2024-2025 Güncel)
-        self.android_devices = [
+        # Cihaz listesini JSON dosyasından yükle
+        self.android_devices = self.load_devices_from_file()
+
+        # IP monitoring timer
+        self.ip_timer = QTimer()
+        self.ip_timer.timeout.connect(self.update_ip)
+
+        self.init_ui()
+        self.setup_style()
+        self.start_ip_monitoring()
+
+    def load_devices_from_file(self):
+        """JSON dosyasından cihaz listesini yükle"""
+        devices_file = os.path.join(BASE_DIR, "config", "android_devices.json")
+        
+        # Varsayılan cihaz listesi (dosya yoksa)
+        default_devices = [
             {
                 "name": "Google Pixel 8",
                 "user_agent": "Mozilla/5.0 (Linux; Android 16; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
@@ -67,135 +83,27 @@ class LoginWindow(QWidget):
                 "screen_width": 1440,
                 "screen_height": 3168,
                 "device_pixel_ratio": 3.0
-            },
-            {
-                "name": "Xiaomi 13 Pro",
-                "user_agent": "Mozilla/5.0 (Linux; Android 15; Xiaomi 13 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
-                "screen_width": 1440,
-                "screen_height": 3200,
-                "device_pixel_ratio": 3.2
-            },
-            {
-                "name": "Samsung Galaxy Z Fold5",
-                "user_agent": "Mozilla/5.0 (Linux; Android 15; Samsung Galaxy Z Fold5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
-                "screen_width": 1812,
-                "screen_height": 2176,
-                "device_pixel_ratio": 3.0
-            },
-            {
-                "name": "ASUS ROG Phone 7",
-                "user_agent": "Mozilla/5.0 (Linux; Android 15; ASUS ROG Phone 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2448,
-                "device_pixel_ratio": 2.5
-            },
-            {
-                "name": "Google Pixel 7 Pro",
-                "user_agent": "Mozilla/5.0 (Linux; Android 15; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
-                "screen_width": 1440,
-                "screen_height": 3120,
-                "device_pixel_ratio": 3.5
-            },
-            {
-                "name": "Samsung Galaxy S22",
-                "user_agent": "Mozilla/5.0 (Linux; Android 14; SM-G901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2340,
-                "device_pixel_ratio": 3.0
-            },
-            {
-                "name": "OnePlus 11R",
-                "user_agent": "Mozilla/5.0 (Linux; Android 14; OnePlus 11R) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Mobile Safari/537.36",
-                "screen_width": 1240,
-                "screen_height": 2772,
-                "device_pixel_ratio": 2.5
-            },
-            {
-                "name": "Xiaomi 12T Pro",
-                "user_agent": "Mozilla/5.0 (Linux; Android 14; Xiaomi 12T Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Mobile Safari/537.36",
-                "screen_width": 1220,
-                "screen_height": 2712,
-                "device_pixel_ratio": 3.0
-            },
-            {
-                "name": "Google Pixel 6a",
-                "user_agent": "Mozilla/5.0 (Linux; Android 14; Pixel 6a) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2400,
-                "device_pixel_ratio": 2.2
-            },
-            {
-                "name": "Google Pixel 7",
-                "user_agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.133 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2400,
-                "device_pixel_ratio": 2.625
-            },
-            {
-                "name": "Samsung Galaxy A73",
-                "user_agent": "Mozilla/5.0 (Linux; Android 13; Samsung Galaxy A73) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.133 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2400,
-                "device_pixel_ratio": 2.2
-            },
-            {
-                "name": "Redmi Note 12 Pro",
-                "user_agent": "Mozilla/5.0 (Linux; Android 13; Redmi Note 12 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.133 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2400,
-                "device_pixel_ratio": 2.76
-            },
-            {
-                "name": "Motorola Edge 40",
-                "user_agent": "Mozilla/5.0 (Linux; Android 13; Motorola Edge 40) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.133 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2400,
-                "device_pixel_ratio": 2.5
-            },
-            {
-                "name": "Realme GT Neo 3T",
-                "user_agent": "Mozilla/5.0 (Linux; Android 13; Realme GT Neo 3T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.133 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2412,
-                "device_pixel_ratio": 2.4
-            },
-            {
-                "name": "Tecno Phantom V Fold",
-                "user_agent": "Mozilla/5.0 (Linux; Android 14; Tecno Phantom V Fold) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.224 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2296,
-                "device_pixel_ratio": 2.4
-            },
-            {
-                "name": "Vivo X90 Pro",
-                "user_agent": "Mozilla/5.0 (Linux; Android 15; Vivo X90 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.134 Mobile Safari/537.36",
-                "screen_width": 1260,
-                "screen_height": 2800,
-                "device_pixel_ratio": 3.0
-            },
-            {
-                "name": "Honor Magic 6 Pro",
-                "user_agent": "Mozilla/5.0 (Linux; Android 16; Honor Magic 6 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
-                "screen_width": 1280,
-                "screen_height": 2800,
-                "device_pixel_ratio": 2.92
-            },
-            {
-                "name": "Nothing Phone 3",
-                "user_agent": "Mozilla/5.0 (Linux; Android 16; Nothing Phone 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2400,
-                "device_pixel_ratio": 2.55
             }
         ]
-
-        # IP monitoring timer
-        self.ip_timer = QTimer()
-        self.ip_timer.timeout.connect(self.update_ip)
-
-        self.init_ui()
-        self.setup_style()
-        self.start_ip_monitoring()
+        
+        try:
+            if os.path.exists(devices_file):
+                with open(devices_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    devices = data.get('devices', default_devices)
+                    self.log_message(f"✅ {len(devices)} cihaz JSON dosyasından yüklendi")
+                    return devices
+            else:
+                # Dosya yoksa oluştur
+                os.makedirs(os.path.dirname(devices_file), exist_ok=True)
+                with open(devices_file, 'w', encoding='utf-8') as f:
+                    json.dump({"devices": default_devices}, f, indent=2, ensure_ascii=False)
+                self.log_message(f"ℹ️ Cihaz dosyası oluşturuldu: {devices_file}")
+                return default_devices
+                
+        except Exception as e:
+            self.log_message(f"⚠️ Cihaz dosyası okuma hatası: {e}, varsayılan liste kullanılıyor")
+            return default_devices
 
     def init_ui(self):
         """UI'yi başlat"""
