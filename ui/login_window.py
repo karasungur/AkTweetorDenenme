@@ -64,25 +64,46 @@ class LoginWindow(QWidget):
         # Varsayılan cihaz listesi (dosya yoksa)
         default_devices = [
             {
-                "name": "Google Pixel 8",
-                "user_agent": "Mozilla/5.0 (Linux; Android 16; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2400,
-                "device_pixel_ratio": 2.625
+                "name": "Apple iPhone 15 Pro Max",
+                "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+                "device_metrics": {
+                    "width": 430,
+                    "height": 932,
+                    "device_scale_factor": 3,
+                    "mobile": true
+                },
+                "client_hints": {
+                    "platform": "iOS",
+                    "mobile": true
+                }
             },
             {
-                "name": "Samsung Galaxy S25",
-                "user_agent": "Mozilla/5.0 (Linux; Android 16; SM-S925B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
-                "screen_width": 1080,
-                "screen_height": 2340,
-                "device_pixel_ratio": 3.0
+                "name": "Samsung Galaxy S24 Ultra",
+                "user_agent": "Mozilla/5.0 (Linux; Android 14; SM-S928U Build/QL1A.230918.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+                "device_metrics": {
+                    "width": 384,
+                    "height": 824,
+                    "device_scale_factor": 3.75,
+                    "mobile": true
+                },
+                "client_hints": {
+                    "platform": "Android",
+                    "mobile": true
+                }
             },
             {
-                "name": "OnePlus 12",
-                "user_agent": "Mozilla/5.0 (Linux; Android 16; OnePlus 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.46 Mobile Safari/537.36",
-                "screen_width": 1440,
-                "screen_height": 3168,
-                "device_pixel_ratio": 3.0
+                "name": "Xiaomi 15 Ultra",
+                "user_agent": "Mozilla/5.0 (Linux; Android 14; Mi 13 Pro Build/TKQ1.220716.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+                "device_metrics": {
+                    "width": 393,
+                    "height": 852,
+                    "device_scale_factor": 3,
+                    "mobile": true
+                },
+                "client_hints": {
+                    "platform": "Android",
+                    "mobile": true
+                }
             }
         ]
         
@@ -721,24 +742,21 @@ class LoginWindow(QWidget):
             profile_path = os.path.join(TEMP_PROFILES_DIR, user['username'])
             os.makedirs(profile_path, exist_ok=True)
 
-            # Mobil emülasyon - Chrome'un güncel API'sini kullan
+            # Mobil emülasyon - Yeni cihaz formatına uygun
             mobile_emulation = {
                 "deviceMetrics": {
-                    "width": selected_device['screen_width'],
-                    "height": selected_device['screen_height'],
-                    "deviceScaleFactor": selected_device['device_pixel_ratio'],
-                    "mobile": True
+                    "width": selected_device['device_metrics']['width'],
+                    "height": selected_device['device_metrics']['height'],
+                    "deviceScaleFactor": selected_device['device_metrics']['device_scale_factor'],
+                    "mobile": selected_device['device_metrics']['mobile']
                 },
                 "userAgent": selected_device['user_agent'],
-                "clientHints": {
-                    "platform": "Android",
-                    "mobile": True
-                }
+                "clientHints": selected_device['client_hints']
             }
             
             chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
             
-            self.log_message(f"📱 {user['username']} için mobil emülasyon: {selected_device['screen_width']}x{selected_device['screen_height']}")
+            self.log_message(f"📱 {user['username']} için mobil emülasyon: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}")
 
             # Profil yolu
             chrome_options.add_argument(f"--user-data-dir={profile_path}")
