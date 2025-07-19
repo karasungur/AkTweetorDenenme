@@ -36,9 +36,6 @@ from config.settings import settings
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMP_PROFILES_DIR = os.path.join(BASE_DIR, "temp_profiles")
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TEMP_PROFILES_DIR = os.path.join(BASE_DIR, "temp_profiles")
-
 class LoginWindow(QWidget):
     def __init__(self, colors, return_callback):
         super().__init__()
@@ -803,115 +800,47 @@ class LoginWindow(QWidget):
             # Chrome options - Replit ortamı için optimize edilmiş
             chrome_options = Options()
 
-            # Replit uyumlu temel güvenlik ayarları
+            # Temel güvenlik ayarları (Replit uyumlu)
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
             chrome_options.add_argument("--disable-gpu")
-            chrome_options.add_argument("--disable-software-rasterizer")
-            chrome_options.add_argument("--disable-background-timer-throttling")
-            chrome_options.add_argument("--disable-backgrounding-occluded-windows")
-            chrome_options.add_argument("--disable-renderer-backgrounding")
-            chrome_options.add_argument("--disable-features=TranslateUI")
-            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
-            chrome_options.add_argument("--disable-ipc-flooding-protection")
-            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
             chrome_options.add_argument("--no-first-run")
             chrome_options.add_argument("--no-default-browser-check")
             chrome_options.add_argument("--disable-default-apps")
-            chrome_options.add_argument("--remote-debugging-port=9222")
-            chrome_options.add_argument("--force-device-scale-factor=1")
-            
-            # X.com uyumluluğu için kritik ayarlar
-            chrome_options.add_argument("--disable-web-security")
-            chrome_options.add_argument("--allow-running-insecure-content")
-            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
-            chrome_options.add_argument("--enable-unsafe-swiftshader")
-            chrome_options.add_argument("--ignore-certificate-errors")
-            chrome_options.add_argument("--ignore-ssl-errors")
-            chrome_options.add_argument("--ignore-certificate-errors-spki-list")
-            chrome_options.add_argument("--disable-features=VizServiceDisplayCompositor")
-            chrome_options.add_argument("--enable-features=NetworkService,NetworkServiceLogging")
-            chrome_options.add_argument("--disable-logging")
-            chrome_options.add_argument("--disable-gpu-sandbox")
+            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 
-            # Profil yolu - çalışma dizininden bağımsız hale getir
+            # Basit profil yolu ayarı
             profile_path = os.path.join(TEMP_PROFILES_DIR, user['username'])
-            profile_path = os.path.abspath(profile_path)
-            try:
-                os.makedirs(profile_path, exist_ok=True)
-                # Dizin izinlerini ayarla (rwx for owner, rx for group and others)
-                os.chmod(profile_path, 0o755)
-                # Parent dizin izinlerini de kontrol et
-                parent_dir = os.path.dirname(profile_path)
-                if os.path.exists(parent_dir):
-                    os.chmod(parent_dir, 0o755)
-            except Exception as perm_error:
-                self.log_message(f"⚠️ Profil dizini izin hatası: {perm_error}")
-                # Alternatif profil yolu dene
-                profile_path = os.path.abspath(f"/tmp/chrome_profiles/{user['username']}")
-                os.makedirs(profile_path, exist_ok=True)
-                os.chmod(profile_path, 0o755)
+            os.makedirs(profile_path, exist_ok=True)
 
-            # Mobil cihaz simülasyonu - düzgün çalışan ayarlar
-            mobile_emulation = {
-                "deviceMetrics": {
-                    "width": selected_device['screen_width'],
-                    "height": selected_device['screen_height'],
-                    "pixelRatio": selected_device['device_pixel_ratio']
-                },
-                "userAgent": selected_device['user_agent'],
-                "clientHints": {
-                    "platform": "Android",
-                    "mobile": True
-                }
-            }
-            chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
+            # Gerçek mobil emülasyon - Chrome'un gömülü cihaz adlarını kullan
+            mobile_devices = [
+                "Pixel 5", "Pixel 4", "iPhone 12 Pro", "iPhone 13", 
+                "Galaxy S21", "Galaxy S20", "iPhone 14", "Pixel 7"
+            ]
+            device_name = random.choice(mobile_devices)
+            
+            chrome_options.add_experimental_option(
+                "mobileEmulation",
+                {"deviceName": device_name}
+            )
+            
+            self.log_message(f"📱 {user['username']} için mobil cihaz: {device_name}")
 
             # Profil yolu
             chrome_options.add_argument(f"--user-data-dir={profile_path}")
 
-            # Performans ve kararlılık ayarları
+            # Basit performans ayarları
             chrome_options.add_argument("--disable-extensions")
             chrome_options.add_argument("--disable-plugins")
-            # Resimleri etkinleştir (X.com için gerekli)
-            chrome_options.add_argument("--memory-pressure-off")
-            chrome_options.add_argument("--max_old_space_size=4096")
-            chrome_options.add_argument("--disable-logging")
-            chrome_options.add_argument("--disable-login-animations")
-            chrome_options.add_argument("--disable-component-extensions-with-background-pages")
-            chrome_options.add_argument("--enable-javascript")
-            chrome_options.add_argument("--enable-features=NetworkService")
-            chrome_options.add_argument("--disable-site-isolation-trials")
-
-            # 🔒 Anti-Bot Gelişmiş Ayarlar
-            # Dil ve yerelleştirme ayarları
-            chrome_options.add_argument("--lang=tr-TR,tr")
-            chrome_options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
-
-            # Basit viewport ayarları
-            chrome_options.add_argument(f"--force-device-scale-factor=1.0")
+            chrome_options.add_argument("--lang=tr-TR")
             
-            # Tarayıcı boyutu - mobil emülasyon ile uyumlu
-            if not self.browser_visible.isChecked():
-                # Headless modda boyut ayarı
-                chrome_options.add_argument(f"--window-size={selected_device['screen_width']},{selected_device['screen_height']}")
-            else:
-                # Görünür modda biraz daha büyük boyut (debug için)
-                chrome_options.add_argument(f"--window-size={min(1200, selected_device['screen_width'] + 100)},{min(800, selected_device['screen_height'] + 100)}")
-
-            # Zaman dilimi ayarı
-            chrome_options.add_argument("--timezone=Europe/Istanbul")
-
-            # Canvas fingerprint koruması
-            chrome_options.add_argument("--disable-canvas-aa")
-            chrome_options.add_argument("--disable-2d-canvas-clip-aa")
-
-            # WebGL fingerprint koruması  
-            chrome_options.add_argument("--disable-gl-drawing-for-tests")
-            chrome_options.add_argument("--disable-accelerated-2d-canvas")
-
-            if not self.browser_visible.isChecked():
-                chrome_options.add_argument("--headless=new")
+            # Tarayıcı boyutu
+            chrome_options.add_argument("--window-size=1280,800")
+            
+            # Headless modu test için kapalı (GUI modda çalıştır)
+            # if not self.browser_visible.isChecked():
+            #     chrome_options.add_argument("--headless=new")
 
             # Proxy ayarı
             proxy_to_use = None
@@ -936,81 +865,33 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--no-default-browser-check")
             chrome_options.add_argument("--disable-default-apps")
 
-            # Anti-bot ayarları
+            # Sadece temel anti-bot ayarları
             chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
             chrome_options.add_experimental_option('useAutomationExtension', False)
             chrome_options.add_experimental_option("prefs", {
                 "profile.default_content_setting_values.notifications": 2,
-                "profile.default_content_settings.popups": 0,
-                "profile.managed_default_content_settings.images": 1,  # Resimleri etkinleştir
-                "profile.default_content_settings.geolocation": 2,
-                "profile.default_content_settings.media_stream": 2,
-                "profile.default_content_settings.camera": 2,
-                "profile.default_content_settings.microphone": 2,
-                # JavaScript ve CSS için özel ayarlar
-                "profile.default_content_settings.javascript": 1,
-                "profile.default_content_settings.stylesheets": 1,
-                # Güvenlik ayarları
-                "profile.default_content_settings.mixed_script": 1,
-                "profile.default_content_settings.ssl_cert_decisions": 1,
-                # Performans ayarları
-                "profile.default_content_settings.automatic_downloads": 2,
-                "profile.default_content_settings.background_sync": 2,
-                # Site izinleri
-                "profile.content_settings.exceptions.clipboard": {
-                    "https://x.com:443,*": {"setting": 1}
-                }
+                "profile.default_content_settings.popups": 0
             })
 
-            # Driver'ı oluştur - Replit için optimize edilmiş
+            # Basit Chrome driver başlatma
             try:
-                # İlk olarak sistem PATH'inden dene
-                service = Service()
-                service.start_error_message = ""
-                
-                # Timeout ayarları
-                chrome_options.add_argument("--crash-dumps-dir=/tmp")
-                chrome_options.add_argument("--disable-crash-reporter")
-                
-                driver = webdriver.Chrome(service=service, options=chrome_options)
-                
-                # Driver'ın başlatıldığını doğrula
-                driver.set_page_load_timeout(30)
-                driver.implicitly_wait(10)
-                
-                # Basit bir test sayfasına git
-                driver.get("data:text/html,<html><body><h1>Test</h1></body></html>")
-                time.sleep(2)  # Driver'ın stabilize olması için
+                driver = webdriver.Chrome(options=chrome_options)
+                driver.set_page_load_timeout(60)
+                driver.implicitly_wait(15)
                 
                 self.log_message(f"✅ Chrome driver başarıyla başlatıldı")
                 
             except Exception as e:
                 self.log_message(f"❌ Chrome driver başlatma hatası: {str(e)}")
-                # İkinci deneme - farklı ayarlarla
-                try:
-                    chrome_options.add_argument("--headless")  # Headless moda geç
-                    driver = webdriver.Chrome(options=chrome_options)
-                    driver.set_page_load_timeout(30)
-                    driver.implicitly_wait(10)
-                    self.log_message(f"✅ Chrome driver headless modda başlatıldı")
-                except Exception as e2:
-                    self.log_message(f"❌ Chrome driver ikinci deneme başarısız: {str(e2)}")
-                    return None
+                return None
 
-            # 🔒 Minimal Anti-Bot (X.com sayfa yüklenmesini engellemeyecek)
+            # Minimal anti-bot koruması (sayfa yüklenmesinden sonra)
             try:
-                # Sayfa tamamen yüklendikten sonra anti-bot script'i çalıştır
-                basic_script = """
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined,
-                });
-                """
-                
-                driver.execute_script(basic_script)
-                self.log_message(f"🛡️ {user['username']} için temel anti-bot koruması aktif")
-                    
+                script = "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
+                driver.execute_script(script)
+                self.log_message(f"🛡️ Anti-bot koruması aktif")
             except Exception as script_error:
-                self.log_message(f"⚠️ Anti-bot script hatası: {script_error}, devam ediliyor...")
+                self.log_message(f"⚠️ Anti-bot script hatası: {script_error}")
 
             return driver
 
@@ -1023,75 +904,54 @@ class LoginWindow(QWidget):
         try:
             self.log_message(f"🌐 {user['username']} için X.com'a gidiliyor...")
             
-            # İlk önce ana sayfaya git (daha kararlı)
+            # Ana sayfaya git
             driver.get("https://x.com/")
-            time.sleep(5)
             
-            # Sayfa kaynağını kontrol et
+            # Sayfa yüklenmesini bekle (WebDriverWait kullan)
+            from selenium.webdriver.support.ui import WebDriverWait
+            from selenium.webdriver.support import expected_conditions as EC
+            from selenium.webdriver.common.by import By
+            
+            wait = WebDriverWait(driver, 30)
+            
+            # Sayfa tamamen yüklenene kadar bekle
+            wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
+            self.log_message(f"✅ Ana sayfa yüklendi")
+            
+            # Sayfa içeriğini kontrol et (gri ekran tespiti)
             page_source = driver.page_source
-            self.log_message(f"📄 Sayfa kaynak uzunluğu: {len(page_source)}")
-            
-            if len(page_source) < 1000:
-                self.log_message(f"⚠️ Ana sayfa düzgün yüklenmedi, farklı yaklaşım deneniyor...")
-                
-                # JavaScript ile sayfa yüklenmesini bekle
-                driver.execute_script("window.stop();")
-                time.sleep(2)
-                
-                # Sayfayı yenile ve bekle
-                driver.refresh()
+            if len(page_source) < 1000 or "loading" in page_source.lower():
+                self.log_message(f"⚠️ Sayfa içeriği yetersiz, 10 saniye daha bekleniyor...")
                 time.sleep(10)
-                
-                # Tekrar kontrol et
                 page_source = driver.page_source
-                if len(page_source) < 1000:
-                    self.log_message(f"❌ Sayfa hala yüklenmiyor, IP veya bağlantı problemi olabilir")
-                    return False
-
+                
+            if len(page_source) < 1000:
+                self.log_message(f"❌ Sayfa yüklenemedi - kaynak uzunluğu: {len(page_source)}")
+                return False
+            
             # Login sayfasına git
             self.log_message(f"🔐 Login sayfasına yönlendiriliyor...")
             driver.get("https://x.com/i/flow/login?lang=tr")
             
-            # Login sayfası yüklenmesini bekle
-            time.sleep(8)
+            # Login formu yüklenmesini bekle
+            wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
             
-            # Login form elementlerinin varlığını kontrol et
             try:
-                from selenium.webdriver.support.ui import WebDriverWait
-                from selenium.webdriver.support import expected_conditions as EC
-                from selenium.webdriver.common.by import By
-                
-                # Username input'un yüklenmesini bekle
-                wait = WebDriverWait(driver, 15)
                 username_input = wait.until(EC.presence_of_element_located((By.XPATH, "//*[@autocomplete='username']")))
                 self.log_message(f"✅ Login formu bulundu")
-                
-            except Exception as form_error:
-                self.log_message(f"⚠️ Login formu bulunamadı: {form_error}")
-                
-                # Manuel element arama
-                try:
-                    username_input = driver.find_element(By.CSS_SELECTOR, "input[name='text']")
-                    self.log_message(f"✅ Alternatif yöntemle username input bulundu")
-                except:
-                    self.log_message(f"❌ Username input hiçbir yöntemle bulunamadı")
-                    return False
+            except:
+                self.log_message(f"❌ Login formu bulunamadı")
+                return False
 
             # Giriş işlemleri
             self.wait_and_type(driver, "//*[@autocomplete='username']", user['username'])
-            time.sleep(2)
-            
             self.wait_and_click(driver, "//button[.//span[text()='İleri']]")
-            time.sleep(3)
-            
             self.wait_and_type(driver, "//*[@autocomplete='current-password']", user['password'])
-            time.sleep(2)
-            
             self.wait_and_click(driver, "//button[.//span[text()='Giriş yap']]")
 
-            # Giriş sonrası bekleme ve kontrol
+            # Giriş sonrası bekleme
             self.log_message(f"⏳ Giriş işlemi tamamlanması bekleniyor...")
-            time.sleep(10)
+            wait.until(lambda d: "home" in d.current_url.lower() or "login" not in d.current_url.lower())
             
             current_url = driver.current_url
             self.log_message(f"🌐 Mevcut URL: {current_url}")
@@ -1100,7 +960,7 @@ class LoginWindow(QWidget):
                 self.log_message(f"✅ {user['username']} başarıyla giriş yaptı")
                 return True
             else:
-                self.log_message(f"❌ {user['username']} giriş başarısız - URL: {current_url}")
+                self.log_message(f"❌ {user['username']} giriş başarısız")
                 return False
 
         except Exception as e:
@@ -1109,37 +969,28 @@ class LoginWindow(QWidget):
 
     def wait_and_type(self, driver, xpath, text):
         """Element bekle ve yazı yaz"""
-        wait_time = random.randint(800, 3000) / 1000
-        time.sleep(wait_time)
-
         try:
-            element = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, xpath))
-            )
+            wait = WebDriverWait(driver, 15)
+            element = wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
             element.clear()
-
-            for char in text:
-                element.send_keys(char)
-                time.sleep(random.randint(50, 150) / 1000)
-
-        except TimeoutException:
-            element = driver.find_element(By.CSS_SELECTOR, "input")
-            element.clear()
+            time.sleep(0.5)
             element.send_keys(text)
+            time.sleep(1)
+        except TimeoutException:
+            self.log_message(f"❌ Element bulunamadı: {xpath}")
+            raise
 
     def wait_and_click(self, driver, xpath):
         """Element bekle ve tıkla"""
-        wait_time = random.randint(1000, 3000) / 1000
-        time.sleep(wait_time)
-
         try:
-            element = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, xpath))
-            )
+            wait = WebDriverWait(driver, 15)
+            element = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
+            time.sleep(0.5)
             element.click()
+            time.sleep(1)
         except TimeoutException:
-            element = driver.find_element(By.CSS_SELECTOR, "button[type='button']")
-            element.click()
+            self.log_message(f"❌ Tıklanabilir element bulunamadı: {xpath}")
+            raise
 
     def simulate_scroll(self, driver):
         """Organik scroll simülasyonu"""
