@@ -813,19 +813,19 @@ class LoginWindow(QWidget):
             profile_path = os.path.join(TEMP_PROFILES_DIR, user['username'])
             os.makedirs(profile_path, exist_ok=True)
 
-            # Gerçek mobil emülasyon - Chrome'un gömülü cihaz adlarını kullan
-            mobile_devices = [
-                "Pixel 5", "Pixel 4", "iPhone 12 Pro", "iPhone 13", 
-                "Galaxy S21", "Galaxy S20", "iPhone 14", "Pixel 7"
-            ]
-            device_name = random.choice(mobile_devices)
+            # Mobil emülasyon - cihaz özelliklerini doğrudan tanımla
+            mobile_emulation = {
+                "deviceMetrics": {
+                    "width": selected_device['screen_width'],
+                    "height": selected_device['screen_height'],
+                    "pixelRatio": selected_device['device_pixel_ratio']
+                },
+                "userAgent": selected_device['user_agent']
+            }
             
-            chrome_options.add_experimental_option(
-                "mobileEmulation",
-                {"deviceName": device_name}
-            )
+            chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
             
-            self.log_message(f"📱 {user['username']} için mobil cihaz: {device_name}")
+            self.log_message(f"📱 {user['username']} için mobil emülasyon: {selected_device['screen_width']}x{selected_device['screen_height']}")
 
             # Profil yolu
             chrome_options.add_argument(f"--user-data-dir={profile_path}")
