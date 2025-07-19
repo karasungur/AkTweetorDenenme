@@ -820,10 +820,19 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--disable-default-apps")
             chrome_options.add_argument("--remote-debugging-port=9222")
             chrome_options.add_argument("--force-device-scale-factor=1")
+            
+            # X.com uyumluluğu için kritik ayarlar
             chrome_options.add_argument("--disable-web-security")
             chrome_options.add_argument("--allow-running-insecure-content")
-            # Sayfa yüklenmesi için daha uyumlu ayarlar
-            chrome_options.add_argument("--enable-features=NetworkService")
+            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+            chrome_options.add_argument("--enable-unsafe-swiftshader")
+            chrome_options.add_argument("--ignore-certificate-errors")
+            chrome_options.add_argument("--ignore-ssl-errors")
+            chrome_options.add_argument("--ignore-certificate-errors-spki-list")
+            chrome_options.add_argument("--disable-features=VizServiceDisplayCompositor")
+            chrome_options.add_argument("--enable-features=NetworkService,NetworkServiceLogging")
+            chrome_options.add_argument("--disable-logging")
+            chrome_options.add_argument("--disable-gpu-sandbox")
 
             # Profil yolu - çalışma dizininden bağımsız hale getir
             profile_path = os.path.join(TEMP_PROFILES_DIR, user['username'])
@@ -937,7 +946,20 @@ class LoginWindow(QWidget):
                 "profile.default_content_settings.geolocation": 2,
                 "profile.default_content_settings.media_stream": 2,
                 "profile.default_content_settings.camera": 2,
-                "profile.default_content_settings.microphone": 2
+                "profile.default_content_settings.microphone": 2,
+                # JavaScript ve CSS için özel ayarlar
+                "profile.default_content_settings.javascript": 1,
+                "profile.default_content_settings.stylesheets": 1,
+                # Güvenlik ayarları
+                "profile.default_content_settings.mixed_script": 1,
+                "profile.default_content_settings.ssl_cert_decisions": 1,
+                # Performans ayarları
+                "profile.default_content_settings.automatic_downloads": 2,
+                "profile.default_content_settings.background_sync": 2,
+                # Site izinleri
+                "profile.content_settings.exceptions.clipboard": {
+                    "https://x.com:443,*": {"setting": 1}
+                }
             })
 
             # Driver'ı oluştur - Replit için optimize edilmiş
@@ -1000,30 +1022,86 @@ class LoginWindow(QWidget):
         """Giriş işlemini gerçekleştir"""
         try:
             self.log_message(f"🌐 {user['username']} için X.com'a gidiliyor...")
-            driver.get("https://x.com/i/flow/login?lang=tr")
             
-            # Sayfa yüklenmesini bekle
-            self.log_message(f"⏳ Sayfa yüklenmesi bekleniyor...")
-            time.sleep(8)  # Daha uzun bekleme
+            # İlk önce ana sayfaya git (daha kararlı)
+            driver.get("https://x.com/")
+            time.sleep(5)
             
-            # Sayfa durumunu kontrol et
-            if "gri" in driver.page_source.lower() or len(driver.page_source) < 1000:
-                self.log_message(f"⚠️ Sayfa düzgün yüklenmedi, yeniden deneniyor...")
+            # Sayfa kaynağını kontrol et
+            page_source = driver.page_source
+            self.log_message(f"📄 Sayfa kaynak uzunluğu: {len(page_source)}")
+            
+            if len(page_source) < 1000:
+                self.log_message(f"⚠️ Ana sayfa düzgün yüklenmedi, farklı yaklaşım deneniyor...")
+                
+                # JavaScript ile sayfa yüklenmesini bekle
+                driver.execute_script("window.stop();")
+                time.sleep(2)
+                
+                # Sayfayı yenile ve bekle
                 driver.refresh()
                 time.sleep(10)
+                
+                # Tekrar kontrol et
+                page_source = driver.page_source
+                if len(page_source) < 1000:
+                    self.log_message(f"❌ Sayfa hala yüklenmiyor, IP veya bağlantı problemi olabilir")
+                    return False
 
+            # Login sayfasına git
+            self.log_message(f"🔐 Login sayfasına yönlendiriliyor...")
+            driver.get("https://x.com/i/flow/login?lang=tr")
+            
+            # Login sayfası yüklenmesini bekle
+            time.sleep(8)
+            
+            # Login form elementlerinin varlığını kontrol et
+            try:
+                from selenium.webdriver.support.ui import WebDriverWait
+                from selenium.webdriver.support import expected_conditions as EC
+                from selenium.webdriver.common.by import By
+                
+                # Username input'un yüklenmesini bekle
+                wait = WebDriverWait(driver, 15)
+                username_input = wait.until(EC.presence_of_element_located((By.XPATH, "//*[@autocomplete='username']")))
+                self.log_message(f"✅ Login formu bulundu")
+                
+            except Exception as form_error:
+                self.log_message(f"⚠️ Login formu bulunamadı: {form_error}")
+                
+                # Manuel element arama
+                try:
+                    username_input = driver.find_element(By.CSS_SELECTOR, "input[name='text']")
+                    self.log_message(f"✅ Alternatif yöntemle username input bulundu")
+                except:
+                    self.log_message(f"❌ Username input hiçbir yöntemle bulunamadı")
+                    return False
+
+            # Giriş işlemleri
             self.wait_and_type(driver, "//*[@autocomplete='username']", user['username'])
+            time.sleep(2)
+            
             self.wait_and_click(driver, "//button[.//span[text()='İleri']]")
+            time.sleep(3)
+            
             self.wait_and_type(driver, "//*[@autocomplete='current-password']", user['password'])
+            time.sleep(2)
+            
             self.wait_and_click(driver, "//button[.//span[text()='Giriş yap']]")
 
-            # Giriş sonrası bekleme
-            time.sleep(8)
-            if "home" in driver.current_url.lower() or "x.com" in driver.current_url:
+            # Giriş sonrası bekleme ve kontrol
+            self.log_message(f"⏳ Giriş işlemi tamamlanması bekleniyor...")
+            time.sleep(10)
+            
+            current_url = driver.current_url
+            self.log_message(f"🌐 Mevcut URL: {current_url}")
+            
+            if "home" in current_url.lower() or ("x.com" in current_url and "login" not in current_url):
                 self.log_message(f"✅ {user['username']} başarıyla giriş yaptı")
                 return True
-
-            return False
+            else:
+                self.log_message(f"❌ {user['username']} giriş başarısız - URL: {current_url}")
+                return False
 
         except Exception as e:
             self.log_message(f"❌ Giriş hatası: {str(e)}")
