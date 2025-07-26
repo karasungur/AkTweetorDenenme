@@ -70,11 +70,11 @@ class LoginWindow(QWidget):
                     "width": 430,
                     "height": 932,
                     "device_scale_factor": 3,
-                    "mobile": true
+                    "mobile": True
                 },
                 "client_hints": {
                     "platform": "iOS",
-                    "mobile": true
+                    "mobile": True
                 }
             },
             {
@@ -84,11 +84,11 @@ class LoginWindow(QWidget):
                     "width": 384,
                     "height": 824,
                     "device_scale_factor": 3.75,
-                    "mobile": true
+                    "mobile": True
                 },
                 "client_hints": {
                     "platform": "Android",
-                    "mobile": true
+                    "mobile": True
                 }
             },
             {
@@ -98,11 +98,11 @@ class LoginWindow(QWidget):
                     "width": 393,
                     "height": 852,
                     "device_scale_factor": 3,
-                    "mobile": true
+                    "mobile": True
                 },
                 "client_hints": {
                     "platform": "Android",
-                    "mobile": true
+                    "mobile": True
                 }
             }
         ]
@@ -748,10 +748,13 @@ class LoginWindow(QWidget):
                     "width": selected_device['device_metrics']['width'],
                     "height": selected_device['device_metrics']['height'],
                     "deviceScaleFactor": selected_device['device_metrics']['device_scale_factor'],
-                    "mobile": selected_device['device_metrics']['mobile']
+                    "mobile": bool(selected_device['device_metrics']['mobile'])
                 },
                 "userAgent": selected_device['user_agent'],
-                "clientHints": selected_device['client_hints']
+                "clientHints": {
+                    "platform": selected_device['client_hints']['platform'],
+                    "mobile": bool(selected_device['client_hints']['mobile'])
+                }
             }
             
             chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)

@@ -7,11 +7,11 @@
         "width": 430,
         "height": 932,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "iOS",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -21,11 +21,11 @@
         "width": 430,
         "height": 932,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "iOS",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -35,11 +35,11 @@
         "width": 393,
         "height": 852,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "iOS",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -49,11 +49,11 @@
         "width": 393,
         "height": 852,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "iOS",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -63,11 +63,11 @@
         "width": 430,
         "height": 932,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "iOS",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -77,11 +77,11 @@
         "width": 393,
         "height": 852,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "iOS",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -91,11 +91,11 @@
         "width": 390,
         "height": 844,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "iOS",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -105,11 +105,11 @@
         "width": 390,
         "height": 844,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "iOS",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -119,11 +119,11 @@
         "width": 390,
         "height": 844,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "iOS",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -133,11 +133,11 @@
         "width": 384,
         "height": 824,
         "device_scale_factor": 3.75,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -147,11 +147,11 @@
         "width": 360,
         "height": 780,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -161,11 +161,11 @@
         "width": 384,
         "height": 824,
         "device_scale_factor": 3.75,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -175,11 +175,11 @@
         "width": 360,
         "height": 780,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -189,11 +189,11 @@
         "width": 360,
         "height": 780,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -203,11 +203,11 @@
         "width": 360,
         "height": 780,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -217,11 +217,11 @@
         "width": 360,
         "height": 780,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -231,11 +231,11 @@
         "width": 360,
         "height": 780,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -245,11 +245,11 @@
         "width": 412,
         "height": 915,
         "device_scale_factor": 2.625,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -259,11 +259,11 @@
         "width": 360,
         "height": 780,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -273,11 +273,11 @@
         "width": 384,
         "height": 824,
         "device_scale_factor": 3.75,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -287,11 +287,11 @@
         "width": 412,
         "height": 915,
         "device_scale_factor": 2.625,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -301,11 +301,11 @@
         "width": 393,
         "height": 852,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -315,11 +315,11 @@
         "width": 393,
         "height": 852,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -329,11 +329,11 @@
         "width": 393,
         "height": 852,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -343,11 +343,11 @@
         "width": 393,
         "height": 852,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -357,11 +357,11 @@
         "width": 393,
         "height": 852,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -371,11 +371,11 @@
         "width": 360,
         "height": 800,
         "device_scale_factor": 2.625,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -385,11 +385,11 @@
         "width": 360,
         "height": 780,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -399,11 +399,11 @@
         "width": 412,
         "height": 915,
         "device_scale_factor": 2.625,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     },
     {
@@ -413,11 +413,11 @@
         "width": 360,
         "height": 780,
         "device_scale_factor": 3,
-        "mobile": True
+        "mobile": true
       },
       "client_hints": {
         "platform": "Android",
-        "mobile": True
+        "mobile": true
       }
     }
   ]
