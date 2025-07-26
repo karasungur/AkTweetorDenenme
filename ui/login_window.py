@@ -195,39 +195,49 @@ class LoginWindow(QWidget):
         format_info_label.setObjectName("settingsLabel")
         format_layout.addWidget(format_info_label)
 
-        # Format alanları için scrollable widget
-        from PyQt5.QtWidgets import QScrollArea, QListWidget, QListWidgetItem
-        
-        # Format sıralama listesi
-        order_label = QLabel("Alan Sıralaması (sürükle-bırak):")
+        # Format alanları için checkbox listesi
+        order_label = QLabel("Alan Sıralaması (tıklama sırasına göre):")
         order_label.setObjectName("settingsLabel")
         format_layout.addWidget(order_label)
         
-        self.format_order_list = QListWidget()
-        self.format_order_list.setObjectName("formatOrderList")
-        self.format_order_list.setDragDropMode(QListWidget.InternalMove)
-        self.format_order_list.setMaximumHeight(120)
-        self.format_order_list.itemChanged.connect(self.update_format_preview)
+        # Checkboxlar için container widget
+        checkbox_container = QFrame()
+        checkbox_container.setObjectName("checkboxContainer")
+        checkbox_layout = QVBoxLayout()
+        checkbox_layout.setSpacing(4)
         
         # Varsayılan format sırası
         self.format_fields = [
-            {"key": "auth_token", "name": "auth_token (Twitter çerezi)", "enabled": False},
-            {"key": "ct0", "name": "ct0 (Twitter çerezi)", "enabled": False},
-            {"key": "proxy_ip", "name": "Proxy IP", "enabled": False},
-            {"key": "proxy_port", "name": "Proxy Port", "enabled": False},
-            {"key": "phone", "name": "Telefon Numarası", "enabled": False},
-            {"key": "email", "name": "E-mail Adresi", "enabled": False}
+            {"key": "auth_token", "name": "auth_token (Twitter çerezi)", "enabled": False, "order": 0},
+            {"key": "ct0", "name": "ct0 (Twitter çerezi)", "enabled": False, "order": 0},
+            {"key": "proxy_ip", "name": "Proxy IP", "enabled": False, "order": 0},
+            {"key": "proxy_port", "name": "Proxy Port", "enabled": False, "order": 0},
+            {"key": "phone", "name": "Telefon Numarası", "enabled": False, "order": 0},
+            {"key": "email", "name": "E-mail Adresi", "enabled": False, "order": 0}
         ]
         
-        # List widget'a öğeleri ekle
-        for field in self.format_fields:
-            item = QListWidgetItem(field["name"])
-            item.setData(Qt.UserRole, field["key"])
-            item.setCheckState(Qt.Unchecked)
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            self.format_order_list.addItem(item)
+        self.format_checkboxes = {}
+        self.format_order_counter = 0
         
-        format_layout.addWidget(self.format_order_list)
+        # Checkbox'ları oluştur
+        for field in self.format_fields:
+            checkbox = QCheckBox(field["name"])
+            checkbox.setObjectName("formatCheckbox")
+            checkbox.stateChanged.connect(lambda state, key=field["key"]: self.on_format_checkbox_changed(key, state))
+            self.format_checkboxes[field["key"]] = checkbox
+            checkbox_layout.addWidget(checkbox)
+        
+        checkbox_container.setLayout(checkbox_layout)
+        
+        # Scrollable area ekle
+        scroll_area = QScrollArea()
+        scroll_area.setWidget(checkbox_container)
+        scroll_area.setMaximumHeight(130)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarNever)
+        
+        format_layout.addWidget(scroll_area)
 
         # Format önizleme
         self.format_preview = QLabel("Önizleme: kullaniciadi:sifre")
@@ -612,6 +622,43 @@ class LoginWindow(QWidget):
         #formatOrderList::item:hover {{
             background-color: {self.colors['card_bg']};
         }}
+
+        #checkboxContainer {{
+            background-color: {self.colors['card_bg']};
+            border: 1px solid {self.colors['border']};
+            border-radius: 6px;
+            padding: 8px;
+        }}
+
+        #formatCheckbox {{
+            font-size: 12px;
+            color: {self.colors['text_primary']};
+            padding: 4px;
+            border-radius: 4px;
+        }}
+
+        #formatCheckbox:hover {{
+            background-color: {self.colors['background_alt']};
+        }}
+
+        #formatCheckbox::indicator {{
+            width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            border: 2px solid {self.colors['border']};
+            background: white;
+        }}
+
+        #formatCheckbox::indicator:checked {{
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 {self.colors['primary']}, 
+                stop:1 {self.colors['primary_end']});
+            border-color: {self.colors['primary']};
+        }}
+
+        #formatCheckbox::indicator:hover {{
+            border-color: {self.colors['primary_hover']};
+        }}
         """
 
         self.setStyleSheet(style)
@@ -622,16 +669,60 @@ class LoginWindow(QWidget):
         self.proxy_entry.setEnabled(enabled)
         self.reset_url_entry.setEnabled(enabled)
 
+    def on_format_checkbox_changed(self, field_key, state):
+        """Format checkbox değiştiğinde çağrılır"""
+        field = next((f for f in self.format_fields if f["key"] == field_key), None)
+        if not field:
+            return
+            
+        if state == Qt.Checked:
+            # Aktif edildi - sıra numarası ver
+            self.format_order_counter += 1
+            field["order"] = self.format_order_counter
+            field["enabled"] = True
+            
+            # Checkbox text'ine sıra numarasını ekle
+            checkbox = self.format_checkboxes[field_key]
+            checkbox.setText(f"{field['order']}. {field['name']}")
+        else:
+            # Pasif edildi - sıra numarasını kaldır
+            field["order"] = 0
+            field["enabled"] = False
+            
+            # Checkbox text'ini normale döndür
+            checkbox = self.format_checkboxes[field_key]
+            checkbox.setText(field["name"])
+            
+            # Diğer elementlerin sıra numaralarını güncelle
+            self.reorder_format_fields()
+        
+        self.update_format_preview()
+    
+    def reorder_format_fields(self):
+        """Aktif alanların sıra numaralarını yeniden düzenle"""
+        # Aktif alanları sıraya göre sırala
+        active_fields = [f for f in self.format_fields if f["enabled"]]
+        active_fields.sort(key=lambda x: x["order"])
+        
+        # Sıra numaralarını yeniden ata
+        for i, field in enumerate(active_fields, 1):
+            field["order"] = i
+            checkbox = self.format_checkboxes[field["key"]]
+            checkbox.setText(f"{i}. {field['name']}")
+        
+        # Counter'ı güncelle
+        self.format_order_counter = len(active_fields)
+
     def update_format_preview(self):
         """Format önizlemesini güncelle"""
         format_parts = ["kullaniciadi", "sifre"]
         
-        # Liste sırasına göre aktif alanları ekle
-        for i in range(self.format_order_list.count()):
-            item = self.format_order_list.item(i)
-            if item.checkState() == Qt.Checked:
-                field_key = item.data(Qt.UserRole)
-                format_parts.append(field_key)
+        # Aktif alanları sıraya göre ekle
+        active_fields = [f for f in self.format_fields if f["enabled"]]
+        active_fields.sort(key=lambda x: x["order"])
+        
+        for field in active_fields:
+            format_parts.append(field["key"])
             
         preview_text = f"Önizleme: {':'.join(format_parts)}"
         self.format_preview.setText(preview_text)
@@ -653,13 +744,15 @@ class LoginWindow(QWidget):
                 self.users = []
                 self.user_list.clear()
 
-                # Format sırasını liste widget'tan al
+                # Format sırasını checkbox'lardan al
                 format_order = ['username', 'password']
-                for i in range(self.format_order_list.count()):
-                    item = self.format_order_list.item(i)
-                    if item.checkState() == Qt.Checked:
-                        field_key = item.data(Qt.UserRole)
-                        format_order.append(field_key)
+                
+                # Aktif alanları sıraya göre ekle
+                active_fields = [f for f in self.format_fields if f["enabled"]]
+                active_fields.sort(key=lambda x: x["order"])
+                
+                for field in active_fields:
+                    format_order.append(field["key"])
 
                 for line in lines:
                     line = line.strip()
