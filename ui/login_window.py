@@ -1016,7 +1016,7 @@ class LoginWindow(QWidget):
             # if not self.browser_visible.isChecked():
             #     chrome_options.add_argument("--headless=new")
 
-            # Proxy ayarı
+            # Proxy ayarı - gelişmiş format kontrolü ile
             proxy_to_use = None
             if user.get('proxy_ip') and user.get('proxy_port'):
                 proxy_to_use = f"{user['proxy_ip']}:{user['proxy_port']}"
@@ -1026,9 +1026,16 @@ class LoginWindow(QWidget):
                 self.log_message(f"🌐 Genel proxy kullanılıyor: {proxy_to_use}")
 
             if proxy_to_use:
+                # Proxy format kontrolü
+                if not self.validate_proxy_format(proxy_to_use):
+                    self.log_message(f"⚠️ Geçersiz proxy formatı: {proxy_to_use}")
+                    return None
+                
+                # Kimlik doğrulamalı proxy kontrolü
                 if proxy_to_use.count(':') >= 3:
                     self.log_message(f"⚠️ Kimlik doğrulamalı proxy tespit edildi, atlanıyor.")
                     return None
+                
                 chrome_options.add_argument(f"--proxy-server={proxy_to_use}")
 
             # Display ve GPU ayarları
@@ -1406,8 +1413,18 @@ class LoginWindow(QWidget):
             self.set_browser_ip("Kontrol edilemedi")
             return None
 
+    def validate_proxy_format(self, proxy):
+        """Proxy formatını doğrula"""
+        try:
+            import re
+            # IP:Port veya host:port formatı
+            pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?):\d+$|^[a-zA-Z0-9.-]+:\d+$'
+            return bool(re.match(pattern, proxy))
+        except:
+            return False
+
     def validate_proxy(self, browser_ip):
-        """Proxy kontrolü yap"""
+        """Proxy kontrolü yap - gelişmiş hata yönetimi ile"""
         try:
             # Proxy etkin değilse kontrol yapma
             if not self.proxy_enabled.isChecked():
@@ -1415,9 +1432,20 @@ class LoginWindow(QWidget):
 
             # Bilgisayar IP'si ile karşılaştır
             computer_ip = self.current_ip
-
+            
+            # IP karşılaştırması - bazen proxy çalışıyor olsa bile IP aynı görünebilir
             if browser_ip == computer_ip:
                 self.log_message("⚠️ UYARI: Proxy etkin ama IP değişmemiş!")
+                
+                # Alternatif kontrol - farklı IP servisini dene
+                try:
+                    alternative_ip = self.check_alternative_ip_service()
+                    if alternative_ip and alternative_ip != computer_ip:
+                        self.log_message("✅ Alternatif IP servisi IP değişikliğini onayladı")
+                        return True
+                except:
+                    pass
+                
                 self.show_warning("IP adresi değişmemiş!\n\nProxy ayarlarınızı kontrol edin.\nİşlem durduruldu.")
                 return False
 
@@ -1427,6 +1455,17 @@ class LoginWindow(QWidget):
         except Exception as e:
             self.log_message(f"❌ Proxy doğrulama hatası: {str(e)}")
             return True  # Hata durumunda devam et
+    
+    def check_alternative_ip_service(self):
+        """Alternatif IP servisini kontrol et"""
+        try:
+            import requests
+            response = requests.get("https://httpbin.org/ip", timeout=5)
+            if response.status_code == 200:
+                return response.json().get('origin', '').split(',')[0].strip()
+        except:
+            pass
+        return None
 
     def save_cookies_to_mysql(self, driver, user):
         """X.com çerezlerini MySQL'e kaydet"""

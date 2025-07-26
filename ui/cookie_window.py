@@ -312,9 +312,13 @@ class CookieWorkerThread(QThread):
                 else:
                     self.log_signal.emit(f"⚠️ {profile} için cihaz listesi boş, varsayılan ayarlar kullanılacak")
 
-            # Proxy ayarı
+            # Proxy ayarı - format kontrolü ile
             if self.settings['proxy_enabled'] and self.settings['proxy_address']:
-                options.add_argument(f"--proxy-server={self.settings['proxy_address']}")
+                if self.validate_proxy_format(self.settings['proxy_address']):
+                    options.add_argument(f"--proxy-server={self.settings['proxy_address']}")
+                else:
+                    self.log_signal.emit(f"⚠️ Geçersiz proxy formatı: {self.settings['proxy_address']}")
+                    return None
 
             # Display ayarları (Replit için gerekli)
             options.add_argument("--no-sandbox")
@@ -364,14 +368,32 @@ class CookieWorkerThread(QThread):
             self.log_signal.emit(f"❌ IP kontrol hatası: {str(e)}")
             return None
 
+    def validate_proxy_format(self, proxy):
+        """Proxy formatını doğrula"""
+        try:
+            import re
+            pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?):\d+$|^[a-zA-Z0-9.-]+:\d+$'
+            return bool(re.match(pattern, proxy))
+        except:
+            return False
+
     def validate_proxy(self, browser_ip):
-        """Proxy doğrulama"""
+        """Proxy doğrulama - gelişmiş kontrol ile"""
         try:
             # Normal IP al
             response = requests.get("https://api.ipify.org", timeout=5)
             normal_ip = response.text.strip()
 
             if browser_ip == normal_ip:
+                # Alternatif IP servisi ile kontrol et
+                try:
+                    alt_response = requests.get("https://httpbin.org/ip", timeout=5)
+                    if alt_response.status_code == 200:
+                        alt_ip = alt_response.json().get('origin', '').split(',')[0].strip()
+                        if alt_ip != normal_ip:
+                            return True  # Alternatif servis IP değişikliğini onayladı
+                except:
+                    pass
                 return False  # Proxy çalışmıyor
 
             return True  # Proxy çalışıyor

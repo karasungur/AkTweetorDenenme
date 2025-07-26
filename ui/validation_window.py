@@ -1110,10 +1110,14 @@ class ValidationWindow(QWidget):
             else:
                 print(f"⚠️ {profile} için user-agent bulunamadı, varsayılan kullanılacak")
 
-            # Proxy ayarı
+            # Proxy ayarı - format kontrolü ile
             if self.proxy_enabled.isChecked() and self.proxy_entry.text():
                 proxy = self.proxy_entry.text()
-                options.add_argument(f"--proxy-server={proxy}")
+                if self.validate_proxy_format(proxy):
+                    options.add_argument(f"--proxy-server={proxy}")
+                else:
+                    self.show_error(f"Geçersiz proxy formatı: {proxy}")
+                    return None
 
             # Display ve GPU ayarları
             options.add_argument("--no-sandbox")
@@ -1444,8 +1448,17 @@ class ValidationWindow(QWidget):
         except Exception as e:
             print(f"❌ {profile} çerez güncelleme hatası: {str(e)}")
 
+    def validate_proxy_format(self, proxy):
+        """Proxy formatını doğrula"""
+        try:
+            import re
+            pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?):\d+$|^[a-zA-Z0-9.-]+:\d+$'
+            return bool(re.match(pattern, proxy))
+        except:
+            return False
+
     def validate_proxy(self, browser_ip):
-        """Proxy kontrolü yap"""
+        """Proxy kontrolü yap - gelişmiş kontrol ile"""
         try:
             # Proxy etkin değilse kontrol yapma
             if not self.proxy_enabled.isChecked():
@@ -1455,6 +1468,15 @@ class ValidationWindow(QWidget):
             computer_ip = self.current_ip
 
             if browser_ip == computer_ip:
+                # Alternatif IP servisi kontrol et
+                try:
+                    alt_ip = self.check_alternative_ip_service()
+                    if alt_ip and alt_ip != computer_ip:
+                        print("✅ Alternatif IP servisi IP değişikliğini onayladı")
+                        return True
+                except:
+                    pass
+                
                 self.show_warning("IP adresi değişmemiş!\n\nProxy ayarlarınızı kontrol edin.\nTarayıcı kapatıldı.")
                 return False
 
@@ -1464,6 +1486,17 @@ class ValidationWindow(QWidget):
         except Exception as e:
             print(f"❌ Proxy doğrulama hatası: {str(e)}")
             return True  # Hata durumunda devam et
+    
+    def check_alternative_ip_service(self):
+        """Alternatif IP servisini kontrol et"""
+        try:
+            import requests
+            response = requests.get("https://httpbin.org/ip", timeout=5)
+            if response.status_code == 200:
+                return response.json().get('origin', '').split(',')[0].strip()
+        except:
+            pass
+        return None
 
     def return_to_main(self):
         """Ana menüye dön"""

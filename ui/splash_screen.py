@@ -305,11 +305,15 @@ class SplashScreen(QWidget):
     def setup_style(self):
         """Modern stil ayarlarını uygula"""
         style = f"""
+        QWidget {{
+            border-radius: 25px;
+        }}
+        
         #splashContainer {{
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                 stop:0 {self.colors['background']}, 
                 stop:1 {self.colors['background_alt']});
-            border-radius: 20px;
+            border-radius: 25px;
             border: 2px solid rgba(102, 126, 234, 0.1);
         }}
         
@@ -412,9 +416,13 @@ class SplashScreen(QWidget):
             QTimer.singleShot(3000, self.close)
     
     def paintEvent(self, event):
-        """Özel çizim olayı - modern gradient arka plan"""
+        """Özel çizim olayı - modern gradient arka plan ve yuvarlak köşeler"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Yuvarlak köşeli rectangle oluştur
+        from PyQt5.QtCore import QRectF
+        rect = QRectF(self.rect())
         
         # Ana gradient
         gradient = QLinearGradient(0, 0, self.width(), self.height())
@@ -422,7 +430,10 @@ class SplashScreen(QWidget):
         gradient.setColorAt(0.5, QColor('#F0F4FF'))
         gradient.setColorAt(1, QColor(self.colors['background_alt']))
         
-        painter.fillRect(self.rect(), gradient)
+        # Yuvarlak köşeli arka plan çiz
+        painter.setBrush(QBrush(gradient))
+        painter.setPen(QPen(QColor(102, 126, 234, 30), 2))
+        painter.drawRoundedRect(rect, 25, 25)
         
         # Dekoratif daireler
         painter.setPen(QPen(QColor(102, 126, 234, 30), 2))
