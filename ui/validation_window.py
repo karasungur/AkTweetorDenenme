@@ -26,30 +26,8 @@ class ValidationWindow(QWidget):
         self.ip_thread_running = True
         self.drivers = []
 
-        # Android cihaz listesi
-        self.android_devices = [
-            {
-                'name': 'Google Pixel 8',
-                'user_agent': 'Mozilla/5.0 (Linux; Android 16; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36',
-                'screen_width': 1080,
-                'screen_height': 2400,
-                'device_pixel_ratio': 2.625
-            },
-            {
-                'name': 'Samsung Galaxy S24',
-                'user_agent': 'Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36',
-                'screen_width': 1080,
-                'screen_height': 2340,
-                'device_pixel_ratio': 3.0
-            },
-            {
-                'name': 'Vivo X90 Pro',
-                'user_agent': 'Mozilla/5.0 (Linux; Android 13; V2254A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36',
-                'screen_width': 1260,
-                'screen_height': 2800,
-                'device_pixel_ratio': 3.0
-            }
-        ]
+        # Android cihaz listesini JSON dosyasından yükle
+        self.android_devices = self.load_devices_from_file()
 
         # IP monitoring timer
         self.ip_timer = QTimer()
@@ -59,6 +37,65 @@ class ValidationWindow(QWidget):
         self.setup_style()
         self.load_profiles()
         self.start_ip_monitoring()
+
+    def load_devices_from_file(self):
+        """JSON dosyasından cihaz listesini yükle"""
+        import os
+        import json
+        
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        devices_file = os.path.join(BASE_DIR, "config", "android_devices.json")
+        
+        # Varsayılan cihaz listesi (JSON dosyası yoksa)
+        default_devices = [
+            {
+                'name': 'Samsung Galaxy S24',
+                'user_agent': 'Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36',
+                'device_metrics': {
+                    'width': 360,
+                    'height': 780,
+                    'device_scale_factor': 3,
+                    'mobile': True
+                },
+                'client_hints': {
+                    'platform': 'Android',
+                    'mobile': True
+                }
+            },
+            {
+                'name': 'Oppo Reno11 FS',
+                'user_agent': 'Mozilla/5.0 (Linux; Android 13; CPH2363) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+                'device_metrics': {
+                    'width': 412,
+                    'height': 915,
+                    'device_scale_factor': 2.625,
+                    'mobile': True
+                },
+                'client_hints': {
+                    'platform': 'Android',
+                    'mobile': True
+                }
+            }
+        ]
+        
+        try:
+            if os.path.exists(devices_file):
+                with open(devices_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    devices = data.get('devices', default_devices)
+                    print(f"✅ {len(devices)} cihaz JSON dosyasından yüklendi")
+                    return devices
+            else:
+                # Dosya yoksa config klasörünü oluştur ve dosyayı kaydet
+                os.makedirs(os.path.dirname(devices_file), exist_ok=True)
+                with open(devices_file, 'w', encoding='utf-8') as f:
+                    json.dump({"devices": default_devices}, f, indent=2, ensure_ascii=False)
+                print(f"ℹ️ Cihaz dosyası oluşturuldu: {devices_file}")
+                return default_devices
+                
+        except Exception as e:
+            print(f"⚠️ Cihaz dosyası okuma hatası: {e}, varsayılan liste kullanılıyor")
+            return default_devices
 
     def create_driver(self, profile_name):
         """Android cihaz özellikleri ile Chrome driver oluştur"""
@@ -70,19 +107,34 @@ class ValidationWindow(QWidget):
             if not os.path.exists(profile_path):
                 return None
 
-            # Profil dizini izinlerini kontrol et ve ayarla
+            # Profil dizini izinlerini en üst düzeye çıkar
             try:
-                os.chmod(profile_path, 0o755)
-                # Alt dizinlerin izinlerini de ayarla
+                os.chmod(profile_path, 0o777)
+                # Alt dizinlerin izinlerini de en üst düzeye çıkar
                 for root, dirs, files in os.walk(profile_path):
                     for dir_name in dirs:
                         dir_path = os.path.join(root, dir_name)
-                        os.chmod(dir_path, 0o755)
+                        try:
+                            os.chmod(dir_path, 0o777)
+                        except Exception:
+                            pass
                     for file_name in files:
                         file_path = os.path.join(root, file_name)
-                        os.chmod(file_path, 0o644)
+                        try:
+                            os.chmod(file_path, 0o666)
+                        except Exception:
+                            pass
             except Exception as perm_error:
                 print(f"⚠️ Profil dizini izin ayarlama hatası: {perm_error}")
+                
+            # Temp dosyaları için de izin ayarları
+            temp_dirs = ['/tmp', './temp', './Profiller/.temp']
+            for temp_dir in temp_dirs:
+                if os.path.exists(temp_dir):
+                    try:
+                        os.chmod(temp_dir, 0o777)
+                    except Exception:
+                        pass
 
             options.add_argument(f"--user-data-dir={profile_path}")
 
@@ -119,6 +171,12 @@ class ValidationWindow(QWidget):
                 
                 self.log_message(f"📱 {profile_name} için mevcut cihaz kullanılıyor: {device_specs['device_name']}")
                 self.log_message(f"🔧 Ekran: {device_specs['screen_width']}x{device_specs['screen_height']}, DPR: {device_specs['device_pixel_ratio']}")
+                
+                selected_device = {
+                    'user_agent': user_agent,
+                    'screen_width': device_specs['screen_width'],
+                    'screen_height': device_specs['screen_height']
+                }
             else:
                 # Yeni cihaz seç ve kaydet
                 selected_device = random.choice(self.android_devices)
@@ -150,21 +208,6 @@ class ValidationWindow(QWidget):
             # 🔒 Anti-Bot Gelişmiş Ayarlar
             options.add_argument("--lang=tr-TR,tr")
             options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
-
-            # Mobil cihaz simülasyonu
-            mobile_emulation = {
-                "deviceMetrics": {
-                    "width": selected_device['screen_width'],
-                    "height": selected_device['screen_height'],
-                    "pixelRatio": selected_device['device_pixel_ratio']
-                },
-                "userAgent": selected_device['user_agent'],
-                "clientHints": {
-                    "platform": "Android",
-                    "mobile": True
-                }
-            }
-            options.add_experimental_option("mobileEmulation", mobile_emulation)
 
             # Chrome pencere boyutunu mobil emülasyonla eşitle
             options.add_argument(f"--window-size={selected_device['screen_width']},{selected_device['screen_height']}")
@@ -717,12 +760,30 @@ class ValidationWindow(QWidget):
         self.profiles = []
         profiles_dir = "./Profiller"
 
+        # Profiller klasörü yoksa oluştur
+        if not os.path.exists(profiles_dir):
+            try:
+                os.makedirs(profiles_dir, exist_ok=True)
+                os.chmod(profiles_dir, 0o777)
+                print(f"✅ Profiller klasörü oluşturuldu: {profiles_dir}")
+            except Exception as e:
+                self.show_error(f"Profiller klasörü oluşturulamadı: {str(e)}")
+                return
+
         if os.path.exists(profiles_dir):
             try:
+                # Klasör izinlerini ayarla
+                os.chmod(profiles_dir, 0o777)
+                
                 for item in os.listdir(profiles_dir):
                     item_path = os.path.join(profiles_dir, item)
                     if os.path.isdir(item_path):
                         self.profiles.append(item)
+                        # Her profil klasörünün izinlerini ayarla
+                        try:
+                            os.chmod(item_path, 0o777)
+                        except Exception:
+                            pass
             except Exception as e:
                 self.show_error(f"Profiller yüklenirken hata: {str(e)}")
 
