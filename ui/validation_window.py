@@ -917,12 +917,20 @@ class ValidationWindow(QWidget):
                 driver.quit()
                 return
 
+            # MySQL'den kaydedilmiş çerezleri önce uygula
+            self.apply_saved_cookies_to_browser(driver, profile)
+
             # Twitter'a git
             driver.get("https://x.com/")
 
             # Sayfanın tam yüklenmesini bekle
             self.wait_for_page_load(driver)
 
+            # Giriş durumunu kontrol et
+            current_url = driver.current_url
+            if "logout" in current_url or "login" in current_url:
+                self.show_warning(f"{profile} profilinde oturum kaybı tespit edildi!\nÇerezler geçersiz olabilir.")
+            
             # Çerezleri güncelle (x.com tam yüklendikten sonra)
             self.update_cookies_in_mysql(driver, profile)
 

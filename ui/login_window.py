@@ -933,21 +933,20 @@ class LoginWindow(QWidget):
                     self.log_message(f"⚠️ {user['username']} temel bilgileri kaydedilemedi")
 
             # User-agent'ı güncelle/kaydet
-            if not existing_user_agent or existing_user_agent != selected_device['user_agent']:
-                try:
-                    user_agent_updated = user_manager.update_user_agent(user['username'], selected_device['user_agent'])
-                    device_specs_updated = user_manager.update_device_specs(user['username'], selected_device)
+            try:
+                user_agent_updated = user_manager.update_user_agent(user['username'], selected_device['user_agent'])
+                device_specs_updated = user_manager.update_device_specs(user['username'], selected_device)
 
-                    if user_agent_updated and device_specs_updated:
-                        self.log_message(f"✅ {user['username']} - {selected_device['name']} user-agent ve cihaz özellikleri kaydedildi")
-                        self.log_message(f"🔧 Ekran: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}, DPR: {selected_device['device_metrics']['device_scale_factor']}")
-                    elif user_agent_updated:
-                        self.log_message(f"✅ {user['username']} user-agent kaydedildi")
-                        self.log_message(f"⚠️ {user['username']} cihaz özellikleri kaydedilemedi")
-                    else:
-                        self.log_message(f"⚠️ {user['username']} user-agent kaydedilemedi")
-                except Exception as ua_error:
-                    self.log_message(f"❌ {user['username']} user-agent kaydetme hatası: {str(ua_error)}")
+                if user_agent_updated and device_specs_updated:
+                    self.log_message(f"✅ {user['username']} - {selected_device['name']} user-agent ve cihaz özellikleri kaydedildi")
+                    self.log_message(f"🔧 Ekran: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}, DPR: {selected_device['device_metrics']['device_scale_factor']}")
+                elif user_agent_updated:
+                    self.log_message(f"✅ {user['username']} user-agent kaydedildi")
+                    self.log_message(f"⚠️ {user['username']} cihaz özellikleri kaydedilemedi")
+                else:
+                    self.log_message(f"⚠️ {user['username']} user-agent kaydedilemedi")
+            except Exception as ua_error:
+                self.log_message(f"❌ {user['username']} user-agent kaydetme hatası: {str(ua_error)}")
 
             # Chrome options - Replit ortamı için optimize edilmiş
             chrome_options = Options()
@@ -1504,26 +1503,35 @@ class LoginWindow(QWidget):
                         self.log_message(f"✅ {username} final çerezleri kaydedildi ({len(final_cookie_dict)} çerez)")
                     else:
                         # Alternatif kaydetme yöntemi dene
-                        alt_success = user_manager.save_user(
-                            username,
-                            user_manager.get_user(username)['sifre'],
-                            final_cookie_dict,
-                            None,
-                            None,
-                            user_manager.get_user_agent(username),
-                            None,
-                            None
-                        )
-                        if alt_success:
-                            self.log_message(f"✅ {username} final çerezleri alternatif yöntemle kaydedildi")
-                        else:
-                            self.log_message(f"⚠️ {username} final çerezleri kaydedilemedi")
+                        user_data = user_manager.get_user(username)
+                        if user_data:
+                            alt_success = user_manager.save_user(
+                                username,
+                                user_data['sifre'],
+                                final_cookie_dict,
+                                user_data.get('proxy_ip'),
+                                user_data.get('proxy_port'),
+                                user_data.get('user_agent'),
+                                user_data.get('telefon'),
+                                user_data.get('email')
+                            )
+                            if alt_success:
+                                self.log_message(f"✅ {username} final çerezleri alternatif yöntemle kaydedildi")
+                            else:
+                                self.log_message(f"⚠️ {username} final çerezleri kaydedilemedi")
                 except Exception as cookie_error:
                     self.log_message(f"❌ {username} final çerez kaydetme hatası: {str(cookie_error)}")
             
             # Tarayıcı kapanmadan önce profil yolunu al
             temp_profile = driver.capabilities['chrome']['userDataDir']
             permanent_profile = f"./Profiller/{username}"
+
+            # Chrome'un dosyaları temiz kapatması için ek işlemler
+            try:
+                # Sync işlemini zorla
+                driver.execute_script("window.chrome && window.chrome.runtime && window.chrome.runtime.reload();")
+            except:
+                pass
 
             # Tarayıcıyı nazikçe kapat
             try:
@@ -1535,7 +1543,7 @@ class LoginWindow(QWidget):
                 pass
             
             driver.quit()
-            time.sleep(5)  # Daha uzun bekleme
+            time.sleep(8)  # Chrome'un dosyaları kapatması için daha uzun bekleme
 
             # Profil kopyalama işlemi
             if os.path.exists(temp_profile):
@@ -1545,26 +1553,73 @@ class LoginWindow(QWidget):
                         shutil.rmtree(permanent_profile)
                         self.log_message(f"🗑️ {username} eski profili silindi")
 
-                    # Yeni profili kopyala - tüm dosyaları dahil et
-                    def copy_with_permissions(src, dst):
-                        shutil.copytree(src, dst, ignore_dangling_symlinks=True)
-                        # Özel dosyaları kontrol et ve kopyala
-                        important_files = [
-                            'Default/Cookies',
-                            'Default/Local Storage',
-                            'Default/Preferences',
-                            'Default/History',
-                            'Default/Web Data'
-                        ]
-                        for file_path in important_files:
-                            src_file = os.path.join(src, file_path)
-                            dst_file = os.path.join(dst, file_path)
-                            if os.path.exists(src_file) and not os.path.exists(dst_file):
-                                os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-                                shutil.copy2(src_file, dst_file)
+                    # Yeni profili kopyala - gelişmiş kopyalama
+                    def copy_chrome_profile(src, dst):
+                        """Chrome profili için özel kopyalama fonksiyonu"""
+                        try:
+                            # Ana klasörü kopyala
+                            shutil.copytree(src, dst, ignore_dangling_symlinks=True)
+                            
+                            # Kritik dosyaları tekrar kontrol et ve kopyala
+                            critical_files = [
+                                'Default/Cookies',
+                                'Default/Local Storage',
+                                'Default/Preferences', 
+                                'Default/History',
+                                'Default/Web Data',
+                                'Default/Current Session',
+                                'Default/Current Tabs',
+                                'Default/Last Session',
+                                'Default/Last Tabs',
+                                'Default/Login Data',
+                                'Default/Sessions'
+                            ]
+                            
+                            copied_files = []
+                            for file_path in critical_files:
+                                src_file = os.path.join(src, file_path)
+                                dst_file = os.path.join(dst, file_path)
+                                
+                                if os.path.exists(src_file):
+                                    try:
+                                        os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+                                        shutil.copy2(src_file, dst_file)
+                                        copied_files.append(file_path)
+                                    except Exception as copy_err:
+                                        self.log_message(f"⚠️ {file_path} kopyalanamadı: {copy_err}")
+                                        
+                            # Dizin içindeki tüm LocalStorage klasörlerini kopyala
+                            local_storage_dir = os.path.join(src, 'Default', 'Local Storage')
+                            if os.path.exists(local_storage_dir):
+                                dst_local_storage = os.path.join(dst, 'Default', 'Local Storage')
+                                try:
+                                    if os.path.exists(dst_local_storage):
+                                        shutil.rmtree(dst_local_storage)
+                                    shutil.copytree(local_storage_dir, dst_local_storage)
+                                    copied_files.append('Default/Local Storage/*')
+                                except Exception as ls_err:
+                                    self.log_message(f"⚠️ Local Storage kopyalanamadı: {ls_err}")
+                                    
+                            self.log_message(f"📁 Kopyalanan dosyalar: {copied_files}")
+                            return True
+                            
+                        except Exception as e:
+                            self.log_message(f"❌ Profil kopyalama hatası: {str(e)}")
+                            return False
                     
-                    copy_with_permissions(temp_profile, permanent_profile)
-                    self.log_message(f"💾 {username} profili kalıcı olarak kaydedildi")
+                    # Kopyalama işlemini gerçekleştir
+                    if copy_chrome_profile(temp_profile, permanent_profile):
+                        self.log_message(f"💾 {username} profili kalıcı olarak kaydedildi")
+                        
+                        # Dosya izinlerini ayarla
+                        try:
+                            for root, dirs, files in os.walk(permanent_profile):
+                                for d in dirs:
+                                    os.chmod(os.path.join(root, d), 0o755)
+                                for f in files:
+                                    os.chmod(os.path.join(root, f), 0o644)
+                        except Exception as perm_error:
+                            self.log_message(f"⚠️ İzin ayarlama hatası: {perm_error}")
 
                     # Geçici profili temizle
                     try:
@@ -1576,15 +1631,19 @@ class LoginWindow(QWidget):
                     # Profil içindeki önemli dosyaları kontrol et
                     important_files = ['Default/Cookies', 'Default/Local Storage', 'Default/Preferences']
                     missing_files = []
+                    existing_files = []
+                    
                     for file_path in important_files:
                         full_path = os.path.join(permanent_profile, file_path)
                         if not os.path.exists(full_path):
                             missing_files.append(file_path)
+                        else:
+                            existing_files.append(file_path)
                     
                     if missing_files:
                         self.log_message(f"⚠️ {username} profilinde eksik dosyalar: {missing_files}")
-                    else:
-                        self.log_message(f"✅ {username} profil dosyaları tam")
+                    if existing_files:
+                        self.log_message(f"✅ {username} mevcut dosyalar: {existing_files}")
 
                 except Exception as copy_error:
                     self.log_message(f"❌ Profil kopyalama hatası: {str(copy_error)}")
