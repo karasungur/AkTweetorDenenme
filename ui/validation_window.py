@@ -42,7 +42,7 @@ class ValidationWindow(QWidget):
         """JSON dosyasından cihaz listesini yükle - Güvenli hata yönetimi ile"""
         import os
         import json
-        
+
         # Varsayılan cihaz listesi (JSON dosyası yoksa veya hatalıysa)
         default_devices = [
             {
@@ -88,11 +88,11 @@ class ValidationWindow(QWidget):
                 }
             }
         ]
-        
+
         try:
             BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             devices_file = os.path.join(BASE_DIR, "config", "android_devices.json")
-            
+
             # Config klasörünün izinlerini ayarla
             config_dir = os.path.dirname(devices_file)
             try:
@@ -100,15 +100,15 @@ class ValidationWindow(QWidget):
                 os.chmod(config_dir, 0o777)
             except Exception as perm_error:
                 print(f"⚠️ Config klasör izin hatası: {perm_error}")
-            
+
             if os.path.exists(devices_file):
                 try:
                     # Dosya izinlerini ayarla
                     os.chmod(devices_file, 0o666)
-                    
+
                     with open(devices_file, 'r', encoding='utf-8') as f:
                         data = json.load(f)
-                        
+
                     # JSON yapısını kontrol et
                     if isinstance(data, dict) and 'devices' in data:
                         devices = data['devices']
@@ -121,18 +121,18 @@ class ValidationWindow(QWidget):
                                     'user_agent' in device and 
                                     'device_metrics' in device):
                                     valid_devices.append(device)
-                            
+
                             if valid_devices:
                                 print(f"✅ {len(valid_devices)} geçerli cihaz JSON dosyasından yüklendi")
                                 return valid_devices
-                    
+
                     print("⚠️ JSON dosyası geçersiz format içeriyor, varsayılan liste kullanılacak")
-                    
+
                 except (json.JSONDecodeError, UnicodeDecodeError) as json_error:
                     print(f"⚠️ JSON okuma hatası: {json_error}, varsayılan liste kullanılacak")
                 except Exception as file_error:
                     print(f"⚠️ Dosya okuma hatası: {file_error}, varsayılan liste kullanılacak")
-            
+
             # Dosya yoksa veya hatalıysa yeni dosya oluştur
             try:
                 device_data = {"devices": default_devices}
@@ -142,9 +142,9 @@ class ValidationWindow(QWidget):
                 print(f"ℹ️ Yeni cihaz dosyası oluşturuldu: {devices_file}")
             except Exception as create_error:
                 print(f"⚠️ Dosya oluşturma hatası: {create_error}")
-                
+
             return default_devices
-                
+
         except Exception as e:
             print(f"❌ Kritik cihaz dosyası hatası: {e}, varsayılan liste kullanılıyor")
             return default_devices
@@ -178,7 +178,7 @@ class ValidationWindow(QWidget):
                             pass
             except Exception as perm_error:
                 print(f"⚠️ Profil dizini izin ayarlama hatası: {perm_error}")
-                
+
             # Kapsamlı temp dosya izin ayarları
             temp_dirs = [
                 '/tmp', '/var/tmp', './temp', './Profiller/.temp', 
@@ -186,7 +186,7 @@ class ValidationWindow(QWidget):
                 os.path.expanduser('~/tmp'), os.path.expanduser('~/.cache'),
                 os.environ.get('TMPDIR', '/tmp'), os.environ.get('TEMP', '/tmp')
             ]
-            
+
             for temp_dir in temp_dirs:
                 if temp_dir:
                     try:
@@ -194,7 +194,7 @@ class ValidationWindow(QWidget):
                         os.makedirs(temp_dir, mode=0o777, exist_ok=True)
                         # İzinleri ayarla
                         os.chmod(temp_dir, 0o777)
-                        
+
                         # İçindeki dosyaların izinlerini de ayarla
                         if os.path.exists(temp_dir):
                             for root, dirs, files in os.walk(temp_dir):
@@ -210,7 +210,7 @@ class ValidationWindow(QWidget):
                                         pass
                     except Exception as temp_error:
                         print(f"⚠️ Temp dizin izin ayarlama hatası {temp_dir}: {temp_error}")
-                        
+
             # Chrome cache ve data klasörleri için özel izinler
             chrome_cache_dirs = [
                 os.path.join(profile_path, 'Default', 'Cache'),
@@ -221,7 +221,7 @@ class ValidationWindow(QWidget):
                 os.path.join(profile_path, 'Default', 'Local Storage'),
                 os.path.join(profile_path, 'Default', 'Session Storage')
             ]
-            
+
             for cache_dir in chrome_cache_dirs:
                 try:
                     os.makedirs(cache_dir, mode=0o777, exist_ok=True)
@@ -244,7 +244,7 @@ class ValidationWindow(QWidget):
                     'screen_height': device_specs['screen_height'],
                     'device_pixel_ratio': device_specs['device_pixel_ratio']
                 }
-                
+
                 # Mobil cihaz simülasyonu
                 mobile_emulation = {
                     "deviceMetrics": {
@@ -258,13 +258,13 @@ class ValidationWindow(QWidget):
                     "userAgent": user_agent
                 }
                 options.add_experimental_option("mobileEmulation", mobile_emulation)
-                
+
                 # Chrome pencere boyutunu mobil emülasyon boyutuyla eşitle
                 options.add_argument(f"--window-size={device_specs['screen_width']},{device_specs['screen_height']}")
-                
+
                 self.log_message(f"📱 {profile_name} için mevcut cihaz kullanılıyor: {device_specs['device_name']}")
                 self.log_message(f"🔧 Ekran: {device_specs['screen_width']}x{device_specs['screen_height']}, DPR: {device_specs['device_pixel_ratio']}")
-                
+
                 selected_device = {
                     'user_agent': user_agent,
                     'screen_width': device_specs['screen_width'],
@@ -275,7 +275,7 @@ class ValidationWindow(QWidget):
                 selected_device = random.choice(self.android_devices)
                 user_manager.update_user_agent(profile_name, selected_device['user_agent'])
                 user_manager.update_device_specs(profile_name, selected_device)
-                
+
                 # Mobil cihaz simülasyonu
                 mobile_emulation = {
                     "deviceMetrics": {
@@ -289,32 +289,29 @@ class ValidationWindow(QWidget):
                     "userAgent": selected_device['user_agent']
                 }
                 options.add_experimental_option("mobileEmulation", mobile_emulation)
-                
+
                 # Chrome pencere boyutunu mobil emülasyon boyutuyla eşitle
                 options.add_argument(f"--window-size={selected_device['device_metrics']['width']},{selected_device['device_metrics']['height']}")
-                
+
                 self.log_message(f"📱 {profile_name} için yeni cihaz atandı: {selected_device['name']}")
                 self.log_message(f"🔧 Ekran: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}, DPR: {selected_device['device_metrics']['device_scale_factor']}")
 
-            options.add_argument(f"--user-agent={selected_device['user_agent']}")
+                options.add_argument(f"--user-agent={selected_device['user_agent']}")
 
-            # 🔒 Anti-Bot Gelişmiş Ayarlar
-            options.add_argument("--lang=tr-TR,tr")
-            options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
+                # 🔒 Anti-Bot Gelişmiş Ayarlar
+                options.add_argument("--lang=tr-TR,tr")
+                options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
 
-            # Chrome pencere boyutunu mobil emülasyonla eşitle
-            options.add_argument(f"--window-size={selected_device['screen_width']},{selected_device['screen_height']}")
+                # Zaman dilimi ayarı
+                options.add_argument("--timezone=Europe/Istanbul")
 
-            # Zaman dilimi ayarı
-            options.add_argument("--timezone=Europe/Istanbul")
+                # Canvas fingerprint koruması
+                options.add_argument("--disable-canvas-aa")
+                options.add_argument("--disable-2d-canvas-clip-aa")
 
-            # Canvas fingerprint koruması
-            options.add_argument("--disable-canvas-aa")
-            options.add_argument("--disable-2d-canvas-clip-aa")
-
-            # WebGL fingerprint koruması  
-            options.add_argument("--disable-gl-drawing-for-tests")
-            options.add_argument("--disable-accelerated-2d-canvas")
+                # WebGL fingerprint koruması  
+                options.add_argument("--disable-gl-drawing-for-tests")
+                options.add_argument("--disable-accelerated-2d-canvas")
 
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
@@ -809,6 +806,7 @@ class ValidationWindow(QWidget):
             color: {self.colors['text_primary']};
         }}
 
+        ```python
         #settingsInput:focus {{
             border-color: {self.colors['primary']};
             outline: none;
@@ -862,18 +860,18 @@ class ValidationWindow(QWidget):
             except Exception as e:
                 self.show_error(f"Profiller klasörü oluşturulamadı: {str(e)}")
                 return
-        
+
         # Tüm proje klasörlerinin izinlerini ayarla
         project_dirs = [
             './config', './database', './ui', './utils', './assets',
             './logs', './cache', './temp', './downloads', './uploads'
         ]
-        
+
         for project_dir in project_dirs:
             try:
                 os.makedirs(project_dir, mode=0o777, exist_ok=True)
                 os.chmod(project_dir, 0o777)
-                
+
                 # İçindeki dosyaların izinlerini de ayarla
                 if os.path.exists(project_dir):
                     for root, dirs, files in os.walk(project_dir):
@@ -889,13 +887,13 @@ class ValidationWindow(QWidget):
                                 pass
             except Exception as project_error:
                 print(f"⚠️ Proje klasör izin hatası {project_dir}: {project_error}")
-                
+
         # Ana dosyaların izinlerini ayarla
         main_files = [
             'main.py', 'requirements.txt', 'kategoriler.json',
             '.replit', 'replit.nix'
         ]
-        
+
         for main_file in main_files:
             try:
                 if os.path.exists(main_file):
@@ -907,7 +905,7 @@ class ValidationWindow(QWidget):
             try:
                 # Klasör izinlerini ayarla
                 os.chmod(profiles_dir, 0o777)
-                
+
                 for item in os.listdir(profiles_dir):
                     item_path = os.path.join(profiles_dir, item)
                     if os.path.isdir(item_path):

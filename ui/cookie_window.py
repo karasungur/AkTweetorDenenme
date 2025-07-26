@@ -8,6 +8,7 @@ import threading
 import time
 import requests
 import os
+import json
 import random
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -236,53 +237,80 @@ class CookieWorkerThread(QThread):
                 self.log_signal.emit(f"🔧 Ekran: {device_specs['screen_width']}x{device_specs['screen_height']}, DPR: {device_specs['device_pixel_ratio']}")
             else:
                 # Varsayılan cihaz yükle
-                import os
-                import json
                 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 devices_file = os.path.join(BASE_DIR, "config", "android_devices.json")
                 
-                try:
-                    with open(devices_file, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        android_devices = data.get('devices', [])
-                        
-                    if android_devices:
-                        import random
-                        selected_device = random.choice(android_devices)
-                        
-                        # Yeni cihaz bilgilerini kaydet
-                        user_manager.update_user_agent(profile, selected_device['user_agent'])
-                        user_manager.update_device_specs(profile, selected_device)
-                        
-                        options.add_argument(f"--user-agent={selected_device['user_agent']}")
-                        
-                        # Mobil cihaz simülasyonu
-                        mobile_emulation = {
-                            "deviceMetrics": {
-                                "width": selected_device['device_metrics']['width'],
-                                "height": selected_device['device_metrics']['height'],
-                                "pixelRatio": selected_device['device_metrics']['device_scale_factor'],
-                                "mobile": True,
-                                "fitWindow": False,
-                                "textAutosizing": False
-                            },
-                            "userAgent": selected_device['user_agent'],
-                            "clientHints": {
-                                "platform": "Android",
-                                "mobile": True
-                            }
+                # Varsayılan cihaz listesi
+                default_devices = [
+                    {
+                        'name': 'Samsung Galaxy S24',
+                        'user_agent': 'Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36',
+                        'device_metrics': {
+                            'width': 360,
+                            'height': 780,
+                            'device_scale_factor': 3,
+                            'mobile': True
                         }
-                        options.add_experimental_option("mobileEmulation", mobile_emulation)
-                        
-                        # Chrome pencere boyutunu mobil emülasyon boyutuyla eşitle
-                        options.add_argument(f"--window-size={selected_device['device_metrics']['width']},{selected_device['device_metrics']['height']}")
-                        
-                        self.log_signal.emit(f"📱 {profile} için yeni cihaz atandı: {selected_device['name']}")
-                        self.log_signal.emit(f"🔧 Ekran: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}, DPR: {selected_device['device_metrics']['device_scale_factor']}")
-                    else:
-                        self.log_signal.emit(f"⚠️ {profile} için cihaz listesi boş, varsayılan ayarlar kullanılacak")
+                    },
+                    {
+                        'name': 'Oppo Reno11 FS',
+                        'user_agent': 'Mozilla/5.0 (Linux; Android 13; CPH2363) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+                        'device_metrics': {
+                            'width': 412,
+                            'height': 915,
+                            'device_scale_factor': 2.625,
+                            'mobile': True
+                        }
+                    }
+                ]
+                
+                android_devices = default_devices
+                
+                try:
+                    if os.path.exists(devices_file):
+                        with open(devices_file, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                            if isinstance(data, dict) and 'devices' in data:
+                                loaded_devices = data.get('devices', [])
+                                if loaded_devices:
+                                    android_devices = loaded_devices
                 except Exception as e:
-                    self.log_signal.emit(f"⚠️ {profile} için cihaz dosyası okunamadı: {e}, varsayılan ayarlar kullanılacak")
+                    self.log_signal.emit(f"⚠️ {profile} cihaz dosyası okunamadı: {e}, varsayılan liste kullanılıyor")
+                
+                if android_devices:
+                    selected_device = random.choice(android_devices)
+                    
+                    # Yeni cihaz bilgilerini kaydet
+                    user_manager.update_user_agent(profile, selected_device['user_agent'])
+                    user_manager.update_device_specs(profile, selected_device)
+                    
+                    options.add_argument(f"--user-agent={selected_device['user_agent']}")
+                    
+                    # Mobil cihaz simülasyonu
+                    mobile_emulation = {
+                        "deviceMetrics": {
+                            "width": selected_device['device_metrics']['width'],
+                            "height": selected_device['device_metrics']['height'],
+                            "pixelRatio": selected_device['device_metrics']['device_scale_factor'],
+                            "mobile": True,
+                            "fitWindow": False,
+                            "textAutosizing": False
+                        },
+                        "userAgent": selected_device['user_agent'],
+                        "clientHints": {
+                            "platform": "Android",
+                            "mobile": True
+                        }
+                    }
+                    options.add_experimental_option("mobileEmulation", mobile_emulation)
+                    
+                    # Chrome pencere boyutunu mobil emülasyon boyutuyla eşitle
+                    options.add_argument(f"--window-size={selected_device['device_metrics']['width']},{selected_device['device_metrics']['height']}")
+                    
+                    self.log_signal.emit(f"📱 {profile} için yeni cihaz atandı: {selected_device['name']}")
+                    self.log_signal.emit(f"🔧 Ekran: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}, DPR: {selected_device['device_metrics']['device_scale_factor']}")
+                else:
+                    self.log_signal.emit(f"⚠️ {profile} için cihaz listesi boş, varsayılan ayarlar kullanılacak")
 
             # Proxy ayarı
             if self.settings['proxy_enabled'] and self.settings['proxy_address']:
