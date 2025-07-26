@@ -829,8 +829,7 @@ class ValidationWindow(QWidget):
                         print(f"✅ Profil klasörü silindi: {profile}")
 
                     # 2. MySQL'den kullanıcıyı sil
-                    # MySQL'den de sil
-                    if user_manager.delete_user(profile):```python
+                    if user_manager.delete_user(profile):
                         mysql_deleted_count += 1
                         print(f"✅ MySQL kaydı silindi: {profile}")
                     else:
