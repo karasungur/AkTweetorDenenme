@@ -39,14 +39,11 @@ class ValidationWindow(QWidget):
         self.start_ip_monitoring()
 
     def load_devices_from_file(self):
-        """JSON dosyasından cihaz listesini yükle"""
+        """JSON dosyasından cihaz listesini yükle - Güvenli hata yönetimi ile"""
         import os
         import json
         
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        devices_file = os.path.join(BASE_DIR, "config", "android_devices.json")
-        
-        # Varsayılan cihaz listesi (JSON dosyası yoksa)
+        # Varsayılan cihaz listesi (JSON dosyası yoksa veya hatalıysa)
         default_devices = [
             {
                 'name': 'Samsung Galaxy S24',
@@ -75,26 +72,81 @@ class ValidationWindow(QWidget):
                     'platform': 'Android',
                     'mobile': True
                 }
+            },
+            {
+                'name': 'Xiaomi Redmi Note 12',
+                'user_agent': 'Mozilla/5.0 (Linux; Android 12; Redmi Note 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+                'device_metrics': {
+                    'width': 393,
+                    'height': 851,
+                    'device_scale_factor': 2.75,
+                    'mobile': True
+                },
+                'client_hints': {
+                    'platform': 'Android',
+                    'mobile': True
+                }
             }
         ]
         
         try:
+            BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            devices_file = os.path.join(BASE_DIR, "config", "android_devices.json")
+            
+            # Config klasörünün izinlerini ayarla
+            config_dir = os.path.dirname(devices_file)
+            try:
+                os.makedirs(config_dir, mode=0o777, exist_ok=True)
+                os.chmod(config_dir, 0o777)
+            except Exception as perm_error:
+                print(f"⚠️ Config klasör izin hatası: {perm_error}")
+            
             if os.path.exists(devices_file):
-                with open(devices_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    devices = data.get('devices', default_devices)
-                    print(f"✅ {len(devices)} cihaz JSON dosyasından yüklendi")
-                    return devices
-            else:
-                # Dosya yoksa config klasörünü oluştur ve dosyayı kaydet
-                os.makedirs(os.path.dirname(devices_file), exist_ok=True)
+                try:
+                    # Dosya izinlerini ayarla
+                    os.chmod(devices_file, 0o666)
+                    
+                    with open(devices_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        
+                    # JSON yapısını kontrol et
+                    if isinstance(data, dict) and 'devices' in data:
+                        devices = data['devices']
+                        if isinstance(devices, list) and len(devices) > 0:
+                            # Her cihazın gerekli alanlarını kontrol et
+                            valid_devices = []
+                            for device in devices:
+                                if (isinstance(device, dict) and 
+                                    'name' in device and 
+                                    'user_agent' in device and 
+                                    'device_metrics' in device):
+                                    valid_devices.append(device)
+                            
+                            if valid_devices:
+                                print(f"✅ {len(valid_devices)} geçerli cihaz JSON dosyasından yüklendi")
+                                return valid_devices
+                    
+                    print("⚠️ JSON dosyası geçersiz format içeriyor, varsayılan liste kullanılacak")
+                    
+                except (json.JSONDecodeError, UnicodeDecodeError) as json_error:
+                    print(f"⚠️ JSON okuma hatası: {json_error}, varsayılan liste kullanılacak")
+                except Exception as file_error:
+                    print(f"⚠️ Dosya okuma hatası: {file_error}, varsayılan liste kullanılacak")
+            
+            # Dosya yoksa veya hatalıysa yeni dosya oluştur
+            try:
+                device_data = {"devices": default_devices}
                 with open(devices_file, 'w', encoding='utf-8') as f:
-                    json.dump({"devices": default_devices}, f, indent=2, ensure_ascii=False)
-                print(f"ℹ️ Cihaz dosyası oluşturuldu: {devices_file}")
-                return default_devices
+                    json.dump(device_data, f, indent=2, ensure_ascii=False)
+                os.chmod(devices_file, 0o666)
+                print(f"ℹ️ Yeni cihaz dosyası oluşturuldu: {devices_file}")
+            except Exception as create_error:
+                print(f"⚠️ Dosya oluşturma hatası: {create_error}")
+                
+            return default_devices
                 
         except Exception as e:
-            print(f"⚠️ Cihaz dosyası okuma hatası: {e}, varsayılan liste kullanılıyor")
+            print(f"❌ Kritik cihaz dosyası hatası: {e}, varsayılan liste kullanılıyor")
             return default_devices
 
     def create_driver(self, profile_name):
@@ -127,14 +179,55 @@ class ValidationWindow(QWidget):
             except Exception as perm_error:
                 print(f"⚠️ Profil dizini izin ayarlama hatası: {perm_error}")
                 
-            # Temp dosyaları için de izin ayarları
-            temp_dirs = ['/tmp', './temp', './Profiller/.temp']
+            # Kapsamlı temp dosya izin ayarları
+            temp_dirs = [
+                '/tmp', '/var/tmp', './temp', './Profiller/.temp', 
+                './cache', './logs', './downloads', './uploads',
+                os.path.expanduser('~/tmp'), os.path.expanduser('~/.cache'),
+                os.environ.get('TMPDIR', '/tmp'), os.environ.get('TEMP', '/tmp')
+            ]
+            
             for temp_dir in temp_dirs:
-                if os.path.exists(temp_dir):
+                if temp_dir:
                     try:
+                        # Klasör yoksa oluştur
+                        os.makedirs(temp_dir, mode=0o777, exist_ok=True)
+                        # İzinleri ayarla
                         os.chmod(temp_dir, 0o777)
-                    except Exception:
-                        pass
+                        
+                        # İçindeki dosyaların izinlerini de ayarla
+                        if os.path.exists(temp_dir):
+                            for root, dirs, files in os.walk(temp_dir):
+                                for dir_name in dirs:
+                                    try:
+                                        os.chmod(os.path.join(root, dir_name), 0o777)
+                                    except Exception:
+                                        pass
+                                for file_name in files:
+                                    try:
+                                        os.chmod(os.path.join(root, file_name), 0o666)
+                                    except Exception:
+                                        pass
+                    except Exception as temp_error:
+                        print(f"⚠️ Temp dizin izin ayarlama hatası {temp_dir}: {temp_error}")
+                        
+            # Chrome cache ve data klasörleri için özel izinler
+            chrome_cache_dirs = [
+                os.path.join(profile_path, 'Default', 'Cache'),
+                os.path.join(profile_path, 'Default', 'Code Cache'),
+                os.path.join(profile_path, 'Default', 'GPUCache'),
+                os.path.join(profile_path, 'ShaderCache'),
+                os.path.join(profile_path, 'Default', 'IndexedDB'),
+                os.path.join(profile_path, 'Default', 'Local Storage'),
+                os.path.join(profile_path, 'Default', 'Session Storage')
+            ]
+            
+            for cache_dir in chrome_cache_dirs:
+                try:
+                    os.makedirs(cache_dir, mode=0o777, exist_ok=True)
+                    os.chmod(cache_dir, 0o777)
+                except Exception:
+                    pass
 
             options.add_argument(f"--user-data-dir={profile_path}")
 
@@ -760,15 +853,55 @@ class ValidationWindow(QWidget):
         self.profiles = []
         profiles_dir = "./Profiller"
 
-        # Profiller klasörü yoksa oluştur
+        # Profiller klasörü yoksa oluştur ve izinleri ayarla
         if not os.path.exists(profiles_dir):
             try:
-                os.makedirs(profiles_dir, exist_ok=True)
+                os.makedirs(profiles_dir, mode=0o777, exist_ok=True)
                 os.chmod(profiles_dir, 0o777)
                 print(f"✅ Profiller klasörü oluşturuldu: {profiles_dir}")
             except Exception as e:
                 self.show_error(f"Profiller klasörü oluşturulamadı: {str(e)}")
                 return
+        
+        # Tüm proje klasörlerinin izinlerini ayarla
+        project_dirs = [
+            './config', './database', './ui', './utils', './assets',
+            './logs', './cache', './temp', './downloads', './uploads'
+        ]
+        
+        for project_dir in project_dirs:
+            try:
+                os.makedirs(project_dir, mode=0o777, exist_ok=True)
+                os.chmod(project_dir, 0o777)
+                
+                # İçindeki dosyaların izinlerini de ayarla
+                if os.path.exists(project_dir):
+                    for root, dirs, files in os.walk(project_dir):
+                        for dir_name in dirs:
+                            try:
+                                os.chmod(os.path.join(root, dir_name), 0o777)
+                            except Exception:
+                                pass
+                        for file_name in files:
+                            try:
+                                os.chmod(os.path.join(root, file_name), 0o666)
+                            except Exception:
+                                pass
+            except Exception as project_error:
+                print(f"⚠️ Proje klasör izin hatası {project_dir}: {project_error}")
+                
+        # Ana dosyaların izinlerini ayarla
+        main_files = [
+            'main.py', 'requirements.txt', 'kategoriler.json',
+            '.replit', 'replit.nix'
+        ]
+        
+        for main_file in main_files:
+            try:
+                if os.path.exists(main_file):
+                    os.chmod(main_file, 0o666)
+            except Exception:
+                pass
 
         if os.path.exists(profiles_dir):
             try:
