@@ -923,17 +923,20 @@ class LoginWindow(QWidget):
 
             # User-agent'ı güncelle/kaydet
             if not existing_user_agent or existing_user_agent != selected_device['user_agent']:
-                user_agent_updated = user_manager.update_user_agent(user['username'], selected_device['user_agent'])
-                device_specs_updated = user_manager.update_device_specs(user['username'], selected_device)
+                try:
+                    user_agent_updated = user_manager.update_user_agent(user['username'], selected_device['user_agent'])
+                    device_specs_updated = user_manager.update_device_specs(user['username'], selected_device)
 
-                if user_agent_updated and device_specs_updated:
-                    self.log_message(f"✅ {user['username']} - {selected_device['name']} user-agent ve cihaz özellikleri kaydedildi")
-                    self.log_message(f"🔧 Ekran: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}, DPR: {selected_device['device_metrics']['device_scale_factor']}")
-                elif user_agent_updated:
-                    self.log_message(f"✅ {user['username']} user-agent kaydedildi")
-                    self.log_message(f"⚠️ {user['username']} cihaz özellikleri kaydedilemedi")
-                else:
-                    self.log_message(f"⚠️ {user['username']} user-agent kaydedilemedi")
+                    if user_agent_updated and device_specs_updated:
+                        self.log_message(f"✅ {user['username']} - {selected_device['name']} user-agent ve cihaz özellikleri kaydedildi")
+                        self.log_message(f"🔧 Ekran: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}, DPR: {selected_device['device_metrics']['device_scale_factor']}")
+                    elif user_agent_updated:
+                        self.log_message(f"✅ {user['username']} user-agent kaydedildi")
+                        self.log_message(f"⚠️ {user['username']} cihaz özellikleri kaydedilemedi")
+                    else:
+                        self.log_message(f"⚠️ {user['username']} user-agent kaydedilemedi")
+                except Exception as ua_error:
+                    self.log_message(f"❌ {user['username']} user-agent kaydetme hatası: {str(ua_error)}")
 
             # Chrome options - Replit ortamı için optimize edilmiş
             chrome_options = Options()
@@ -1024,20 +1027,7 @@ class LoginWindow(QWidget):
 
                 self.log_message(f"✅ Chrome driver başarıyla başlatıldı")
 
-                # Tarayıcı açılır açılmaz kullanıcı bilgilerini ve cihaz özelliklerini kaydet
-                if not existing_user_agent or existing_user_agent != selected_device['user_agent']:
-                    # User-agent'ı kaydet
-                    user_agent_success = user_manager.update_user_agent(user['username'], selected_device['user_agent'])
-                    # Cihaz özelliklerini kaydet
-                    device_specs_success = user_manager.update_device_specs(user['username'], selected_device)
-
-                    if user_agent_success and device_specs_success:
-                        self.log_message(f"✅ {user['username']} tarayıcı açıldıktan sonra user-agent ve cihaz özellikleri kaydedildi")
-                    elif user_agent_success:
-                        self.log_message(f"✅ {user['username']} user-agent kaydedildi")
-                        self.log_message(f"⚠️ {user['username']} cihaz özellikleri kaydedilemedi")
-                    else:
-                        self.log_message(f"⚠️ {user['username']} user-agent kaydedilemedi")
+                # Driver başarıyla oluşturuldu mesajı
 
             except Exception as e:
                 self.log_message(f"❌ Chrome driver başlatma hatası: {str(e)}")
@@ -1486,11 +1476,28 @@ class LoginWindow(QWidget):
 
             if final_cookie_dict:
                 # Final çerezleri MySQL'e kaydet
-                cookie_success = user_manager.update_user_cookies(username, final_cookie_dict)
-                if cookie_success:
-                    self.log_message(f"✅ {username} final çerezleri kaydedildi ({len(final_cookie_dict)} çerez)")
-                else:
-                    self.log_message(f"⚠️ {username} final çerezleri kaydedilemedi")
+                try:
+                    cookie_success = user_manager.update_user_cookies(username, final_cookie_dict)
+                    if cookie_success:
+                        self.log_message(f"✅ {username} final çerezleri kaydedildi ({len(final_cookie_dict)} çerez)")
+                    else:
+                        # Alternatif kaydetme yöntemi dene
+                        alt_success = user_manager.save_user(
+                            username,
+                            user_manager.get_user(username)['sifre'],
+                            final_cookie_dict,
+                            None,
+                            None,
+                            user_manager.get_user_agent(username),
+                            None,
+                            None
+                        )
+                        if alt_success:
+                            self.log_message(f"✅ {username} final çerezleri alternatif yöntemle kaydedildi")
+                        else:
+                            self.log_message(f"⚠️ {username} final çerezleri kaydedilemedi")
+                except Exception as cookie_error:
+                    self.log_message(f"❌ {username} final çerez kaydetme hatası: {str(cookie_error)}")
             
             # Tarayıcı kapanmadan önce profil yolunu al
             temp_profile = driver.capabilities['chrome']['userDataDir']
@@ -1516,8 +1523,25 @@ class LoginWindow(QWidget):
                         shutil.rmtree(permanent_profile)
                         self.log_message(f"🗑️ {username} eski profili silindi")
 
-                    # Yeni profili kopyala
-                    shutil.copytree(temp_profile, permanent_profile, ignore_dangling_symlinks=True)
+                    # Yeni profili kopyala - tüm dosyaları dahil et
+                    def copy_with_permissions(src, dst):
+                        shutil.copytree(src, dst, ignore_dangling_symlinks=True)
+                        # Özel dosyaları kontrol et ve kopyala
+                        important_files = [
+                            'Default/Cookies',
+                            'Default/Local Storage',
+                            'Default/Preferences',
+                            'Default/History',
+                            'Default/Web Data'
+                        ]
+                        for file_path in important_files:
+                            src_file = os.path.join(src, file_path)
+                            dst_file = os.path.join(dst, file_path)
+                            if os.path.exists(src_file) and not os.path.exists(dst_file):
+                                os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+                                shutil.copy2(src_file, dst_file)
+                    
+                    copy_with_permissions(temp_profile, permanent_profile)
                     self.log_message(f"💾 {username} profili kalıcı olarak kaydedildi")
 
                     # Geçici profili temizle
