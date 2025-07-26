@@ -96,14 +96,54 @@ class ValidationWindow(QWidget):
                     'name': device_specs['device_name'],
                     'user_agent': user_agent,
                     'screen_width': device_specs['screen_width'],
-                    'screen_height': device_specs['screen_pixel_ratio'],
+                    'screen_height': device_specs['screen_height'],
                     'device_pixel_ratio': device_specs['device_pixel_ratio']
                 }
+                
+                # Mobil cihaz simülasyonu
+                mobile_emulation = {
+                    "deviceMetrics": {
+                        "width": device_specs['screen_width'],
+                        "height": device_specs['screen_height'],
+                        "pixelRatio": device_specs['device_pixel_ratio'],
+                        "mobile": True,
+                        "fitWindow": False,
+                        "textAutosizing": False
+                    },
+                    "userAgent": user_agent
+                }
+                options.add_experimental_option("mobileEmulation", mobile_emulation)
+                
+                # Chrome pencere boyutunu mobil emülasyon boyutuyla eşitle
+                options.add_argument(f"--window-size={device_specs['screen_width']},{device_specs['screen_height']}")
+                
+                self.log_message(f"📱 {profile_name} için mevcut cihaz kullanılıyor: {device_specs['device_name']}")
+                self.log_message(f"🔧 Ekran: {device_specs['screen_width']}x{device_specs['screen_height']}, DPR: {device_specs['device_pixel_ratio']}")
             else:
                 # Yeni cihaz seç ve kaydet
                 selected_device = random.choice(self.android_devices)
                 user_manager.update_user_agent(profile_name, selected_device['user_agent'])
                 user_manager.update_device_specs(profile_name, selected_device)
+                
+                # Mobil cihaz simülasyonu
+                mobile_emulation = {
+                    "deviceMetrics": {
+                        "width": selected_device['device_metrics']['width'],
+                        "height": selected_device['device_metrics']['height'],
+                        "pixelRatio": selected_device['device_metrics']['device_scale_factor'],
+                        "mobile": True,
+                        "fitWindow": False,
+                        "textAutosizing": False
+                    },
+                    "userAgent": selected_device['user_agent']
+                }
+                options.add_experimental_option("mobileEmulation", mobile_emulation)
+                
+                # Chrome pencere boyutunu mobil emülasyon boyutuyla eşitle
+                options.add_argument(f"--window-size={selected_device['device_metrics']['width']},{selected_device['device_metrics']['height']}")
+                
+                self.log_message(f"📱 {profile_name} için yeni cihaz atandı: {selected_device['name']}")
+                self.log_message(f"🔧 Ekran: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}, DPR: {selected_device['device_metrics']['device_scale_factor']}")
 
             options.add_argument(f"--user-agent={selected_device['user_agent']}")
 

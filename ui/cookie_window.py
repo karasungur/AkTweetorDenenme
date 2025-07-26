@@ -211,7 +211,10 @@ class CookieWorkerThread(QThread):
                     "deviceMetrics": {
                         "width": device_specs['screen_width'],
                         "height": device_specs['screen_height'],
-                        "pixelRatio": device_specs['device_pixel_ratio']
+                        "pixelRatio": device_specs['device_pixel_ratio'],
+                        "mobile": True,
+                        "fitWindow": False,
+                        "textAutosizing": False
                     },
                     "userAgent": user_agent,
                     "clientHints": {
@@ -221,15 +224,65 @@ class CookieWorkerThread(QThread):
                 }
                 options.add_experimental_option("mobileEmulation", mobile_emulation)
 
+                # Chrome pencere boyutunu mobil emülasyon boyutuyla eşitle
+                options.add_argument(f"--window-size={device_specs['screen_width']},{device_specs['screen_height']}")
+
                 # Anti-bot ayarları
                 options.add_argument("--lang=tr-TR,tr")
                 options.add_argument("--accept-lang=tr-TR,tr;q=0.9,en;q=0.8")
                 options.add_argument("--timezone=Europe/Istanbul")
 
                 self.log_signal.emit(f"📱 {profile} için {device_specs['device_name']} cihaz özellikleri kullanılıyor")
-                self.log_signal.emit(f"🔧 Ekran: {device_specs['screen_width']}x{device_specs['screen_height']}")
+                self.log_signal.emit(f"🔧 Ekran: {device_specs['screen_width']}x{device_specs['screen_height']}, DPR: {device_specs['device_pixel_ratio']}")
             else:
-                self.log_signal.emit(f"⚠️ {profile} için cihaz özellikleri bulunamadı, varsayılan kullanılacak")
+                # Varsayılan cihaz yükle
+                import os
+                import json
+                BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                devices_file = os.path.join(BASE_DIR, "config", "android_devices.json")
+                
+                try:
+                    with open(devices_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        android_devices = data.get('devices', [])
+                        
+                    if android_devices:
+                        import random
+                        selected_device = random.choice(android_devices)
+                        
+                        # Yeni cihaz bilgilerini kaydet
+                        user_manager.update_user_agent(profile, selected_device['user_agent'])
+                        user_manager.update_device_specs(profile, selected_device)
+                        
+                        options.add_argument(f"--user-agent={selected_device['user_agent']}")
+                        
+                        # Mobil cihaz simülasyonu
+                        mobile_emulation = {
+                            "deviceMetrics": {
+                                "width": selected_device['device_metrics']['width'],
+                                "height": selected_device['device_metrics']['height'],
+                                "pixelRatio": selected_device['device_metrics']['device_scale_factor'],
+                                "mobile": True,
+                                "fitWindow": False,
+                                "textAutosizing": False
+                            },
+                            "userAgent": selected_device['user_agent'],
+                            "clientHints": {
+                                "platform": "Android",
+                                "mobile": True
+                            }
+                        }
+                        options.add_experimental_option("mobileEmulation", mobile_emulation)
+                        
+                        # Chrome pencere boyutunu mobil emülasyon boyutuyla eşitle
+                        options.add_argument(f"--window-size={selected_device['device_metrics']['width']},{selected_device['device_metrics']['height']}")
+                        
+                        self.log_signal.emit(f"📱 {profile} için yeni cihaz atandı: {selected_device['name']}")
+                        self.log_signal.emit(f"🔧 Ekran: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}, DPR: {selected_device['device_metrics']['device_scale_factor']}")
+                    else:
+                        self.log_signal.emit(f"⚠️ {profile} için cihaz listesi boş, varsayılan ayarlar kullanılacak")
+                except Exception as e:
+                    self.log_signal.emit(f"⚠️ {profile} için cihaz dosyası okunamadı: {e}, varsayılan ayarlar kullanılacak")
 
             # Proxy ayarı
             if self.settings['proxy_enabled'] and self.settings['proxy_address']:
