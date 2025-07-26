@@ -831,7 +831,7 @@ class ValidationWindow(QWidget):
                         mysql_deleted_count += 1
                         print(f"✅ MySQL kaydı silindi: {profile}")
                     else:
-                        print(f"⚠️ MySQL kaydı bulunamadı veya silinemedi: {profile}")<replit_final_file>
+                        print(f"⚠️ MySQL kaydı bulunamadı veya silinemedi: {profile}")
                 except Exception as e:
                     self.show_error(f"{profile} silinirken hata: {str(e)}")
 
