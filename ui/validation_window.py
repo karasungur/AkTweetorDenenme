@@ -831,8 +831,7 @@ class ValidationWindow(QWidget):
                         mysql_deleted_count += 1
                         print(f"✅ MySQL kaydı silindi: {profile}")
                     else:
-                        print(f"⚠️ MySQL kaydı bulunamadı veya silinemedi: {profile}")
-
+                        print(f"⚠️ MySQL kaydı bulunamadı veya silinemedi: {profile}")<replit_final_file>
                 except Exception as e:
                     self.show_error(f"{profile} silinirken hata: {str(e)}")
 
@@ -1124,7 +1123,7 @@ class ValidationWindow(QWidget):
         """MySQL'den kaydedilmiş çerezleri tarayıcıya uygula"""
         try:
             print(f"🍪 {profile} için kaydedilmiş çerezler tarayıcıya uygulanıyor...")
-            
+
             # MySQL'den çerezleri al
             saved_cookies = user_manager.get_user_cookies(profile)
             if not saved_cookies:
@@ -1169,10 +1168,13 @@ class ValidationWindow(QWidget):
         try:
             print(f"🍪 {profile} için çerezler güncelleniyor...")
 
-            # Önce kaydedilmiş çerezleri tarayıcıya uygula
-            self.apply_saved_cookies_to_browser(driver, profile)
+            # X.com'da olduğundan emin ol
+            current_url = driver.current_url
+            if "x.com" not in current_url:
+                driver.get("https://x.com")
+                time.sleep(3)
 
-            # Şimdi güncel çerezleri al
+            # Güncel çerezleri al
             cookies = driver.get_cookies()
 
             # İstenen çerezleri filtrele
@@ -1195,7 +1197,7 @@ class ValidationWindow(QWidget):
                 else:
                     print(f"⚠️ {profile} çerezleri MySQL'de güncellenemedi")
             else:
-                print(f"⚠️ {profile} için çerez bulunamadı")
+                print(f"⚠️ {profile} için güncel çerez bulunamadı")
 
         except Exception as e:
             print(f"❌ {profile} çerez güncelleme hatası: {str(e)}")

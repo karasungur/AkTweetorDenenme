@@ -850,8 +850,19 @@ class LoginWindow(QWidget):
                 if success:
                     self.log_message(f"✅ {user['username']} başarıyla giriş yaptı.")
 
-                    # Scroll simülasyonu
-                    self.simulate_scroll(driver)
+                    # Ana sayfada 5 saniye gezinme
+                    self.log_message(f"📱 {user['username']} ana sayfada 5 saniye geziniyor...")
+                    self.simulate_scroll_duration(driver, 5)
+
+                    # RTErdogan profiline git ve 10 saniye gezin
+                    self.log_message(f"👤 {user['username']} RTErdogan profiline gidiyor...")
+                    try:
+                        driver.get("https://x.com/RTErdogan")
+                        time.sleep(3)  # Sayfa yüklenme beklemesi
+                        self.log_message(f"📱 {user['username']} RTErdogan profilinde 10 saniye geziniyor...")
+                        self.simulate_scroll_duration(driver, 10)
+                    except Exception as e:
+                        self.log_message(f"⚠️ {user['username']} RTErdogan profiline gidilirken hata: {e}")
 
                     # Çerezleri MySQL'e kaydet (tarayıcı kapanmadan önce)
                     self.save_cookies_to_mysql(driver, user)
@@ -1320,6 +1331,17 @@ class LoginWindow(QWidget):
             scroll_amount = random.randint(300, 600)
             driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
             time.sleep(random.randint(1000, 3000) / 1000)
+
+    def simulate_scroll_duration(self, driver, duration):
+        """Belirli süre scroll simülasyonu"""
+        start_time = time.time()
+        while time.time() - start_time < duration:
+            # Rastgele scroll yönü ve miktarı
+            scroll_amount = random.randint(200, 500)
+            direction = random.choice([1, -1])  # Yukarı veya aşağı
+            
+            driver.execute_script(f"window.scrollBy(0, {scroll_amount * direction});")
+            time.sleep(random.uniform(0.8, 2.0))  # Rastgele bekleme
 
     def check_browser_ip(self, driver):
         """Tarayıcının IP adresini kontrol et"""
