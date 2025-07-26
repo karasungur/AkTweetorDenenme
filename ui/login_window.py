@@ -1462,28 +1462,91 @@ class LoginWindow(QWidget):
     def save_profile_permanently(self, username, driver):
         """Profili kalıcı klasöre kaydet"""
         try:
+            # Çerezleri kaydetmek için son bir kez daha al
+            self.log_message(f"🔄 {username} için final çerez kontrolü yapılıyor...")
+            
+            # X.com'a git ve çerezleri al
+            current_url = driver.current_url
+            if "x.com" not in current_url:
+                driver.get("https://x.com/")
+                time.sleep(3)
+
+            # Son çerez durumunu kontrol et ve kaydet
+            cookies = driver.get_cookies()
+            target_cookies = [
+                'auth_token', 'gt', 'guest_id', 'twid', 'lang', '__cf_bm',
+                'att', 'ct0', 'd_prefs', 'dnt', 'guest_id_ads', 
+                'guest_id_marketing', 'kdt', 'personalization_id'
+            ]
+
+            final_cookie_dict = {}
+            for cookie in cookies:
+                if cookie['name'] in target_cookies:
+                    final_cookie_dict[cookie['name']] = cookie['value']
+
+            if final_cookie_dict:
+                # Final çerezleri MySQL'e kaydet
+                cookie_success = user_manager.update_user_cookies(username, final_cookie_dict)
+                if cookie_success:
+                    self.log_message(f"✅ {username} final çerezleri kaydedildi ({len(final_cookie_dict)} çerez)")
+                else:
+                    self.log_message(f"⚠️ {username} final çerezleri kaydedilemedi")
+            
+            # Tarayıcı kapanmadan önce profil yolunu al
             temp_profile = driver.capabilities['chrome']['userDataDir']
             permanent_profile = f"./Profiller/{username}"
 
+            # Tarayıcıyı nazikçe kapat
+            try:
+                # Tüm sekmeleri kapat
+                for handle in driver.window_handles:
+                    driver.switch_to.window(handle)
+                    driver.close()
+            except:
+                pass
+            
             driver.quit()
-            time.sleep(3)
+            time.sleep(5)  # Daha uzun bekleme
 
-            if os.path.exists(temp_profile) and not os.path.exists(permanent_profile):
+            # Profil kopyalama işlemi
+            if os.path.exists(temp_profile):
                 try:
-                    shutil.copytree(temp_profile, permanent_profile, ignore_dangling_symlinks=True)
-                    self.log_message(f"💾 {username} profili kalıcı olarak kaydedildi.")
+                    # Eğer kalıcı profil zaten varsa, önce sil
+                    if os.path.exists(permanent_profile):
+                        shutil.rmtree(permanent_profile)
+                        self.log_message(f"🗑️ {username} eski profili silindi")
 
+                    # Yeni profili kopyala
+                    shutil.copytree(temp_profile, permanent_profile, ignore_dangling_symlinks=True)
+                    self.log_message(f"💾 {username} profili kalıcı olarak kaydedildi")
+
+                    # Geçici profili temizle
                     try:
                         shutil.rmtree(temp_profile)
-                        self.log_message(f"🧹 {username} geçici profili temizlendi.")
-                    except:
-                        pass
+                        self.log_message(f"🧹 {username} geçici profili temizlendi")
+                    except Exception as cleanup_error:
+                        self.log_message(f"⚠️ Geçici profil temizleme hatası: {cleanup_error}")
+
+                    # Profil içindeki önemli dosyaları kontrol et
+                    important_files = ['Default/Cookies', 'Default/Local Storage', 'Default/Preferences']
+                    missing_files = []
+                    for file_path in important_files:
+                        full_path = os.path.join(permanent_profile, file_path)
+                        if not os.path.exists(full_path):
+                            missing_files.append(file_path)
+                    
+                    if missing_files:
+                        self.log_message(f"⚠️ {username} profilinde eksik dosyalar: {missing_files}")
+                    else:
+                        self.log_message(f"✅ {username} profil dosyaları tam")
 
                 except Exception as copy_error:
-                    self.log_message(f"⚠️ Profil kopyalama hatası: {str(copy_error)}")
+                    self.log_message(f"❌ Profil kopyalama hatası: {str(copy_error)}")
+            else:
+                self.log_message(f"⚠️ {username} geçici profil bulunamadı: {temp_profile}")
 
         except Exception as e:
-            self.log_message(f"⚠️ Profil kaydetme hatası: {str(e)}")
+            self.log_message(f"❌ Profil kaydetme hatası: {str(e)}")
 
         # Son giriş zamanını güncelle
         try:
@@ -1491,9 +1554,9 @@ class LoginWindow(QWidget):
             if user:
                 # Sadece son giriş zamanını güncelle (kullanıcı zaten kaydedildi)
                 user_manager.update_user(username, user['password'], None)
-                self.log_message(f"✅ {username} son giriş zamanı güncellendi.")
+                self.log_message(f"✅ {username} son giriş zamanı güncellendi")
             else:
-                self.log_message(f"⚠️ {username} kullanıcı bilgisi bulunamadı.")
+                self.log_message(f"⚠️ {username} kullanıcı bilgisi bulunamadı")
         except Exception as e:
             self.log_message(f"⚠️ Son giriş güncelleme hatası: {str(e)}")
 

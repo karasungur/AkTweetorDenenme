@@ -188,6 +188,63 @@ class UserManager:
                 cursor.close()
                 connection.close()
 
+    def get_user_cookies(self, username):
+        """Kullanıcının çerezlerini getir"""
+        connection = self.get_connection()
+        if not connection:
+            return None
+
+        try:
+            cursor = connection.cursor()
+            query = "SELECT cerezler FROM kullanicilar WHERE kullanici_adi = %s"
+            cursor.execute(query, (username,))
+            result = cursor.fetchone()
+            
+            if result and result[0]:
+                import json
+                try:
+                    return json.loads(result[0])
+                except json.JSONDecodeError:
+                    return None
+            return None
+
+        except Error as e:
+            print(f"❌ Çerez getirme hatası: {e}")
+            return None
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
+    def update_user_cookies(self, username, cookie_dict):
+        """Kullanıcının çerezlerini güncelle"""
+        connection = self.get_connection()
+        if not connection:
+            return False
+
+        try:
+            cursor = connection.cursor()
+            import json
+            
+            query = """
+            UPDATE kullanicilar 
+            SET cerezler = %s, guncelleme_tarihi = CURRENT_TIMESTAMP 
+            WHERE kullanici_adi = %s
+            """
+            cursor.execute(query, (json.dumps(cookie_dict), username))
+            connection.commit()
+            
+            return cursor.rowcount > 0
+
+        except Error as e:
+            print(f"❌ Çerez güncelleme hatası: {e}")
+            connection.rollback()
+            return False
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
     def get_user_twitter_creation_date(self, username):
         """Kullanıcının Twitter oluşturma tarihini getir"""
         connection = self.get_connection()

@@ -1120,12 +1120,59 @@ class ValidationWindow(QWidget):
             # Hata durumunda minimum bekleme
             time.sleep(8)
 
+    def apply_saved_cookies_to_browser(self, driver, profile):
+        """MySQL'den kaydedilmiş çerezleri tarayıcıya uygula"""
+        try:
+            print(f"🍪 {profile} için kaydedilmiş çerezler tarayıcıya uygulanıyor...")
+            
+            # MySQL'den çerezleri al
+            saved_cookies = user_manager.get_user_cookies(profile)
+            if not saved_cookies:
+                print(f"⚠️ {profile} için kaydedilmiş çerez bulunamadı")
+                return False
+
+            # X.com'a git
+            driver.get("https://x.com")
+            time.sleep(2)
+
+            # Kaydedilmiş çerezleri tarayıcıya ekle
+            cookies_added = 0
+            for cookie_name, cookie_value in saved_cookies.items():
+                if cookie_value:  # Boş değilse
+                    try:
+                        driver.add_cookie({
+                            'name': cookie_name,
+                            'value': cookie_value,
+                            'domain': '.x.com',
+                            'path': '/'
+                        })
+                        cookies_added += 1
+                    except Exception as cookie_error:
+                        print(f"⚠️ {cookie_name} çerezi eklenemedi: {cookie_error}")
+
+            if cookies_added > 0:
+                print(f"✅ {profile} için {cookies_added} çerez tarayıcıya eklendi")
+                # Sayfayı yenile
+                driver.refresh()
+                time.sleep(3)
+                return True
+            else:
+                print(f"⚠️ {profile} için hiç çerez eklenemedi")
+                return False
+
+        except Exception as e:
+            print(f"❌ {profile} çerez uygulama hatası: {str(e)}")
+            return False
+
     def update_cookies_in_mysql(self, driver, profile):
         """X.com çerezlerini MySQL'de güncelle"""
         try:
             print(f"🍪 {profile} için çerezler güncelleniyor...")
 
-            # Tüm çerezleri al
+            # Önce kaydedilmiş çerezleri tarayıcıya uygula
+            self.apply_saved_cookies_to_browser(driver, profile)
+
+            # Şimdi güncel çerezleri al
             cookies = driver.get_cookies()
 
             # İstenen çerezleri filtrele
@@ -1142,7 +1189,7 @@ class ValidationWindow(QWidget):
 
             # MySQL'de güncelle
             if cookie_dict:
-                success = user_manager.update_user(profile, None, cookie_dict)
+                success = user_manager.update_user_cookies(profile, cookie_dict)
                 if success:
                     print(f"✅ {profile} çerezleri MySQL'de güncellendi ({len(cookie_dict)} çerez)")
                 else:
