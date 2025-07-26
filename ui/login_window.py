@@ -809,7 +809,8 @@ class LoginWindow(QWidget):
             })
 
             # Basit Chrome driver başlatma
-            try:driver = webdriver.Chrome(options=chrome_options)
+            try:
+                driver = webdriver.Chrome(options=chrome_options)
                 driver.set_page_load_timeout(60)
                 driver.implicitly_wait(15)
 
