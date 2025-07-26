@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QSplitter,
 )
 from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import QScrollArea, QListWidget, QListWidgetItem
 from PyQt5.QtGui import QFont
 import threading
 import time
@@ -188,45 +189,50 @@ class LoginWindow(QWidget):
         format_group = QGroupBox("📝 Dosya Formatı")
         format_group.setObjectName("settingsGroup")
         format_layout = QVBoxLayout()
+        format_layout.setSpacing(8)
 
-        format_info_label = QLabel("Temel format: kullaniciadi:sifre\nEk alanları seçin:")
+        format_info_label = QLabel("Temel format: kullaniciadi:sifre\nEk alanları seçin ve sıralarını belirleyin:")
         format_info_label.setObjectName("settingsLabel")
         format_layout.addWidget(format_info_label)
 
-        self.auth_token_enabled = QCheckBox("auth_token (Twitter çerezi)")
-        self.auth_token_enabled.setObjectName("settingsCheckbox")
+        # Format alanları için scrollable widget
+        from PyQt5.QtWidgets import QScrollArea, QListWidget, QListWidgetItem
         
-        self.ct0_enabled = QCheckBox("ct0 (Twitter çerezi)")
-        self.ct0_enabled.setObjectName("settingsCheckbox")
+        # Format sıralama listesi
+        order_label = QLabel("Alan Sıralaması (sürükle-bırak):")
+        order_label.setObjectName("settingsLabel")
+        format_layout.addWidget(order_label)
         
-        self.proxy_ip_enabled = QCheckBox("Proxy IP")
-        self.proxy_ip_enabled.setObjectName("settingsCheckbox")
+        self.format_order_list = QListWidget()
+        self.format_order_list.setObjectName("formatOrderList")
+        self.format_order_list.setDragDropMode(QListWidget.InternalMove)
+        self.format_order_list.setMaximumHeight(120)
+        self.format_order_list.itemChanged.connect(self.update_format_preview)
         
-        self.proxy_port_enabled = QCheckBox("Proxy Port")
-        self.proxy_port_enabled.setObjectName("settingsCheckbox")
+        # Varsayılan format sırası
+        self.format_fields = [
+            {"key": "auth_token", "name": "auth_token (Twitter çerezi)", "enabled": False},
+            {"key": "ct0", "name": "ct0 (Twitter çerezi)", "enabled": False},
+            {"key": "proxy_ip", "name": "Proxy IP", "enabled": False},
+            {"key": "proxy_port", "name": "Proxy Port", "enabled": False},
+            {"key": "phone", "name": "Telefon Numarası", "enabled": False},
+            {"key": "email", "name": "E-mail Adresi", "enabled": False}
+        ]
         
-        self.phone_enabled = QCheckBox("Telefon Numarası")
-        self.phone_enabled.setObjectName("settingsCheckbox")
+        # List widget'a öğeleri ekle
+        for field in self.format_fields:
+            item = QListWidgetItem(field["name"])
+            item.setData(Qt.UserRole, field["key"])
+            item.setCheckState(Qt.Unchecked)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            self.format_order_list.addItem(item)
         
-        self.email_enabled = QCheckBox("E-mail Adresi")
-        self.email_enabled.setObjectName("settingsCheckbox")
-
-        format_layout.addWidget(self.auth_token_enabled)
-        format_layout.addWidget(self.ct0_enabled)
-        format_layout.addWidget(self.proxy_ip_enabled)
-        format_layout.addWidget(self.proxy_port_enabled)
-        format_layout.addWidget(self.phone_enabled)
-        format_layout.addWidget(self.email_enabled)
+        format_layout.addWidget(self.format_order_list)
 
         # Format önizleme
         self.format_preview = QLabel("Önizleme: kullaniciadi:sifre")
         self.format_preview.setObjectName("formatPreview")
         format_layout.addWidget(self.format_preview)
-
-        # Format değişikliklerini dinle
-        for checkbox in [self.auth_token_enabled, self.ct0_enabled, self.proxy_ip_enabled, 
-                        self.proxy_port_enabled, self.phone_enabled, self.email_enabled]:
-            checkbox.toggled.connect(self.update_format_preview)
 
         format_group.setLayout(format_layout)
 
@@ -282,6 +288,9 @@ class LoginWindow(QWidget):
         layout.addWidget(browser_group)
         layout.addStretch()
         layout.addWidget(start_btn)
+        
+        # Panel genişliğini artır
+        panel.setMinimumWidth(320)
 
         panel.setLayout(layout)
         return panel
@@ -578,6 +587,31 @@ class LoginWindow(QWidget):
             border-radius: 6px;
             margin-top: 10px;
         }}
+
+        #formatOrderList {{
+            border: 1px solid {self.colors['border']};
+            border-radius: 8px;
+            background-color: white;
+            alternate-background-color: {self.colors['card_bg']};
+            selection-background-color: {self.colors['primary']};
+            font-size: 12px;
+            padding: 4px;
+        }}
+
+        #formatOrderList::item {{
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 1px;
+        }}
+
+        #formatOrderList::item:selected {{
+            background-color: {self.colors['primary']};
+            color: white;
+        }}
+
+        #formatOrderList::item:hover {{
+            background-color: {self.colors['card_bg']};
+        }}
         """
 
         self.setStyleSheet(style)
@@ -592,18 +626,12 @@ class LoginWindow(QWidget):
         """Format önizlemesini güncelle"""
         format_parts = ["kullaniciadi", "sifre"]
         
-        if self.auth_token_enabled.isChecked():
-            format_parts.append("auth_token")
-        if self.ct0_enabled.isChecked():
-            format_parts.append("ct0")
-        if self.proxy_ip_enabled.isChecked():
-            format_parts.append("proxy_ip")
-        if self.proxy_port_enabled.isChecked():
-            format_parts.append("proxy_port")
-        if self.phone_enabled.isChecked():
-            format_parts.append("telefon")
-        if self.email_enabled.isChecked():
-            format_parts.append("email")
+        # Liste sırasına göre aktif alanları ekle
+        for i in range(self.format_order_list.count()):
+            item = self.format_order_list.item(i)
+            if item.checkState() == Qt.Checked:
+                field_key = item.data(Qt.UserRole)
+                format_parts.append(field_key)
             
         preview_text = f"Önizleme: {':'.join(format_parts)}"
         self.format_preview.setText(preview_text)
@@ -625,20 +653,13 @@ class LoginWindow(QWidget):
                 self.users = []
                 self.user_list.clear()
 
-                # Format sırasını belirle
+                # Format sırasını liste widget'tan al
                 format_order = ['username', 'password']
-                if self.auth_token_enabled.isChecked():
-                    format_order.append('auth_token')
-                if self.ct0_enabled.isChecked():
-                    format_order.append('ct0')
-                if self.proxy_ip_enabled.isChecked():
-                    format_order.append('proxy_ip')
-                if self.proxy_port_enabled.isChecked():
-                    format_order.append('proxy_port')
-                if self.phone_enabled.isChecked():
-                    format_order.append('phone')
-                if self.email_enabled.isChecked():
-                    format_order.append('email')
+                for i in range(self.format_order_list.count()):
+                    item = self.format_order_list.item(i)
+                    if item.checkState() == Qt.Checked:
+                        field_key = item.data(Qt.UserRole)
+                        format_order.append(field_key)
 
                 for line in lines:
                     line = line.strip()
