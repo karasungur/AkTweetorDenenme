@@ -52,16 +52,16 @@ class LoginWindow(QWidget):
 
         self.init_ui()
         self.setup_style()
-        
+
         # Cihaz listesini JSON dosyasından yükle (UI elemanları hazır olduktan sonra)
         self.android_devices = self.load_devices_from_file()
-        
+
         self.start_ip_monitoring()
 
     def load_devices_from_file(self):
         """JSON dosyasından cihaz listesini yükle"""
         devices_file = os.path.join(BASE_DIR, "config", "android_devices.json")
-        
+
         # Varsayılan cihaz listesi (dosya yoksa)
         default_devices = [
             {
@@ -107,7 +107,7 @@ class LoginWindow(QWidget):
                 }
             }
         ]
-        
+
         try:
             if os.path.exists(devices_file):
                 with open(devices_file, 'r', encoding='utf-8') as f:
@@ -122,7 +122,7 @@ class LoginWindow(QWidget):
                     json.dump({"devices": default_devices}, f, indent=2, ensure_ascii=False)
                 self.log_message(f"ℹ️ Cihaz dosyası oluşturuldu: {devices_file}")
                 return default_devices
-                
+
         except Exception as e:
             self.log_message(f"⚠️ Cihaz dosyası okuma hatası: {e}, varsayılan liste kullanılıyor")
             return default_devices
@@ -743,23 +743,23 @@ class LoginWindow(QWidget):
             profile_path = os.path.join(TEMP_PROFILES_DIR, user['username'])
             os.makedirs(profile_path, exist_ok=True)
 
-            # Mobil emülasyon - Yeni cihaz formatına uygun
+            # Mobil cihaz simülasyonu - viewport düzeltildi
             mobile_emulation = {
                 "deviceMetrics": {
                     "width": selected_device['device_metrics']['width'],
                     "height": selected_device['device_metrics']['height'],
-                    "deviceScaleFactor": selected_device['device_metrics']['device_scale_factor'],
-                    "mobile": bool(selected_device['device_metrics']['mobile'])
+                    "pixelRatio": selected_device['device_metrics']['device_scale_factor'],
+                    "mobile": True,
+                    "fitWindow": False,
+                    "textAutosizing": False
                 },
-                "userAgent": selected_device['user_agent'],
-                "clientHints": {
-                    "platform": selected_device['client_hints']['platform'],
-                    "mobile": bool(selected_device['client_hints']['mobile'])
-                }
+                "userAgent": selected_device['user_agent']
             }
-            
             chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
-            
+
+            # Pencere boyutunu mobil cihaza uygun ayarla
+            chrome_options.add_argument(f"--window-size={selected_device['device_metrics']['width']},{selected_device['device_metrics']['height']}")
+
             self.log_message(f"📱 {user['username']} için mobil emülasyon: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}")
 
             # Profil yolu
@@ -769,10 +769,10 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--disable-extensions")
             chrome_options.add_argument("--disable-plugins")
             chrome_options.add_argument("--lang=tr-TR")
-            
+
             # Tarayıcı boyutu
             chrome_options.add_argument("--window-size=1280,800")
-            
+
             # Headless modu test için kapalı (GUI modda çalıştır)
             # if not self.browser_visible.isChecked():
             #     chrome_options.add_argument("--headless=new")
@@ -809,13 +809,12 @@ class LoginWindow(QWidget):
             })
 
             # Basit Chrome driver başlatma
-            try:
-                driver = webdriver.Chrome(options=chrome_options)
+            try:driver = webdriver.Chrome(options=chrome_options)
                 driver.set_page_load_timeout(60)
                 driver.implicitly_wait(15)
-                
+
                 self.log_message(f"✅ Chrome driver başarıyla başlatıldı")
-                
+
             except Exception as e:
                 self.log_message(f"❌ Chrome driver başlatma hatası: {str(e)}")
                 return None
@@ -834,72 +833,187 @@ class LoginWindow(QWidget):
             self.log_message(f"❌ Tarayıcı başlatma hatası: {str(e)}")
             return None
 
+    def human_type(self, element, text):
+        """İnsan benzeri yazma simülasyonu"""
+        element.clear()
+        for char in text:
+            element.send_keys(char)
+            # Her karakter arası rastgele bekleme (50-200ms)
+            time.sleep(random.uniform(0.05, 0.2))
+
     def perform_login(self, driver, user):
-        """Giriş işlemini gerçekleştir"""
+        """Girişteki bu işlem birden fazla basamaktan oluşuyor ve her basamakta başarısızlık durumu kontrol edilmelidir"""
+
         try:
+            # X.com'a git
             self.log_message(f"🌐 {user['username']} için X.com'a gidiliyor...")
-            
-            # Ana sayfaya git
-            driver.get("https://x.com/")
-            
-            # Sayfa yüklenmesini bekle (WebDriverWait kullan)
-            from selenium.webdriver.support.ui import WebDriverWait
-            from selenium.webdriver.support import expected_conditions as EC
-            from selenium.webdriver.common.by import By
-            
-            wait = WebDriverWait(driver, 30)
-            
-            # Sayfa tamamen yüklenene kadar bekle
-            wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
-            self.log_message(f"✅ Ana sayfa yüklendi")
-            
-            # Sayfa içeriğini kontrol et (gri ekran tespiti)
-            page_source = driver.page_source
-            if len(page_source) < 1000 or "loading" in page_source.lower():
-                self.log_message(f"⚠️ Sayfa içeriği yetersiz, 10 saniye daha bekleniyor...")
-                time.sleep(10)
-                page_source = driver.page_source
-                
-            if len(page_source) < 1000:
-                self.log_message(f"❌ Sayfa yüklenemedi - kaynak uzunluğu: {len(page_source)}")
-                return False
-            
-            # Login sayfasına git
-            self.log_message(f"🔐 Login sayfasına yönlendiriliyor...")
             driver.get("https://x.com/i/flow/login?lang=tr")
-            
-            # Login formu yüklenmesini bekle
-            wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
-            
-            try:
-                username_input = wait.until(EC.presence_of_element_located((By.XPATH, "//*[@autocomplete='username']")))
-                self.log_message(f"✅ Login formu bulundu")
-            except:
-                self.log_message(f"❌ Login formu bulunamadı")
-                return False
 
-            # Giriş işlemleri
-            self.wait_and_type(driver, "//*[@autocomplete='username']", user['username'])
-            self.wait_and_click(driver, "//button[.//span[text()='İleri']]")
-            self.wait_and_type(driver, "//*[@autocomplete='current-password']", user['password'])
-            self.wait_and_click(driver, "//button[.//span[text()='Giriş yap']]")
-
-            # Giriş sonrası bekleme
-            self.log_message(f"⏳ Giriş işlemi tamamlanması bekleniyor...")
-            wait.until(lambda d: "home" in d.current_url.lower() or "login" not in d.current_url.lower())
-            
+            # Sayfa yüklenme kontrolü - daha uzun bekleme
+            time.sleep(5)
             current_url = driver.current_url
-            self.log_message(f"🌐 Mevcut URL: {current_url}")
-            
-            if "home" in current_url.lower() or ("x.com" in current_url and "login" not in current_url):
-                self.log_message(f"✅ {user['username']} başarıyla giriş yaptı")
+            if "login" not in current_url.lower():
+                self.log_message(f"✅ {user['username']} zaten giriş yapmış")
                 return True
-            else:
-                self.log_message(f"❌ {user['username']} giriş başarısız")
+
+            # Ana sayfa yüklendi
+            self.log_message(f"✅ Ana sayfa yüklendi")
+
+            # Sayfa içeriği kontrolü - daha akıllı kontrol
+            try:
+                # Login form elementlerinin yüklenmesini bekle
+                WebDriverWait(driver, 10).until(
+                    EC.any_of(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "input[autocomplete='username']")),
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='text']")),
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='text']"))
+                    )
+                )
+                self.log_message(f"✅ Login formu yüklendi")
+            except:
+                self.log_message(f"⚠️ Login formu yüklenmedi, 5 saniye daha bekleniyor...")
+                time.sleep(5)
+
+            # Kullanıcı adı alanını bul ve doldur
+            try:
+                self.log_message(f"👤 {user['username']} kullanıcı adı giriliyor...")
+
+                # Çeşitli selector'ları dene
+                username_selectors = [
+                    "input[autocomplete='username']",
+                    "input[name='text']",
+                    "input[data-testid='ocfEnterTextTextInput']",
+                    ".r-30o5oe input",
+                    "input[type='text']"
+                ]
+
+                username_element = None
+                for selector in username_selectors:
+                    try:
+                        username_element = WebDriverWait(driver, 5).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+                        )
+                        break
+                    except:
+                        continue
+
+                if not username_element:
+                    raise Exception("Kullanıcı adı alanı bulunamadı")
+
+                # İnsan benzeri yazma
+                self.human_type(username_element, user['username'])
+
+                # İleri butonunu bul ve tıkla
+                self.log_message(f"➡️ İleri butonuna tıklanıyor...")
+                time.sleep(random.uniform(1.5, 3.0))  # Rastgele bekleme
+
+                next_button_selectors = [
+                    "button[role='button']:has-text('İleri')",
+                    "[data-testid='LoginForm_Login_Button']",
+                    "button:contains('İleri')",
+                    ".r-19u6a5r button"
+                ]
+
+                next_button = None
+                for selector in next_button_selectors:
+                    try:
+                        next_button = driver.find_element(By.CSS_SELECTOR, selector)
+                        break
+                    except:
+                        continue
+
+                if not next_button:
+                    # JavaScript ile buton ara
+                    buttons = driver.find_elements(By.TAG_NAME, "button") 
+                    for button in buttons:
+                        if "İleri" in button.text or "Next" in button.text:
+                            next_button = button
+                            break
+
+                if next_button:
+                    next_button.click()
+                else:
+                    raise Exception("İleri butonu bulunamadı")
+
+                # Şifre alanının yüklenmesini bekle
+                time.sleep(random.uniform(2.0, 4.0))
+
+                # Şifre alanını bul ve doldur
+                self.log_message(f"🔑 {user['username']} şifresi giriliyor...")
+
+                password_selectors = [
+                    "input[autocomplete='current-password']",
+                    "input[name='password']",
+                    "input[type='password']",
+                    "[data-testid='LoginForm_Password']"
+                ]
+
+                password_element = None
+                for selector in password_selectors:
+                    try:
+                        password_element = WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+                        )
+                        break
+                    except:
+                        continue
+
+                if not password_element:
+                    raise Exception("Şifre alanı bulunamadı")
+
+                # İnsan benzeri şifre yazma
+                self.human_type(password_element, user['password'])
+
+                # Giriş yap butonunu bul ve tıkla
+                self.log_message(f"🚪 Giriş yap butonuna tıklanıyor...")
+                time.sleep(random.uniform(1.0, 2.5))
+
+                login_button_selectors = [
+                    "button[data-testid='LoginForm_Login_Button']",
+                    "button:contains('Giriş yap')",
+                    "button:contains('Log in')",
+                    ".r-19u6a5r button[role='button']"
+                ]
+
+                login_button = None
+                for selector in login_button_selectors:
+                    try:
+                        login_button = driver.find_element(By.CSS_SELECTOR, selector)
+                        break
+                    except:
+                        continue
+
+                if not login_button:
+                    # JavaScript ile buton ara
+                    buttons = driver.find_elements(By.TAG_NAME, "button")
+                    for button in buttons:
+                        if "Giriş yap" in button.text or "Log in" in button.text:
+                            login_button = button
+                            break
+
+                if login_button:
+                    login_button.click()
+                else:
+                    raise Exception("Giriş yap butonu bulunamadı")
+
+                # Giriş sonucunu bekle ve kontrol et
+                self.log_message(f"⏳ Giriş sonucu bekleniyor...")
+                time.sleep(8)  # Daha uzun bekleme
+
+                current_url = driver.current_url
+                if "home" in current_url.lower() or ("x.com" in current_url and "login" not in current_url.lower()):
+                    self.log_message(f"✅ {user['username']} başarıyla giriş yaptı")
+                    return True
+                else:
+                    self.log_message(f"❌ {user['username']} giriş başarısız - URL: {current_url}")
+                    return False
+
+            except Exception as e:
+                self.log_message(f"❌ {user['username']} giriş hatası: {str(e)}")
                 return False
 
         except Exception as e:
-            self.log_message(f"❌ Giriş hatası: {str(e)}")
+            self.log_message(f"❌ {user['username']} genel hata: {str(e)}")
             return False
 
     def wait_and_type(self, driver, xpath, text):
