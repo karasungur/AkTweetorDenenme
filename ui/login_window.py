@@ -199,13 +199,13 @@ class LoginWindow(QWidget):
         order_label = QLabel("Alan Sıralaması (tıklama sırasına göre):")
         order_label.setObjectName("settingsLabel")
         format_layout.addWidget(order_label)
-        
+
         # Checkboxlar için container widget
         checkbox_container = QFrame()
         checkbox_container.setObjectName("checkboxContainer")
         checkbox_layout = QVBoxLayout()
         checkbox_layout.setSpacing(4)
-        
+
         # Varsayılan format sırası
         self.format_fields = [
             {"key": "auth_token", "name": "auth_token (Twitter çerezi)", "enabled": False, "order": 0},
@@ -215,10 +215,10 @@ class LoginWindow(QWidget):
             {"key": "phone", "name": "Telefon Numarası", "enabled": False, "order": 0},
             {"key": "email", "name": "E-mail Adresi", "enabled": False, "order": 0}
         ]
-        
+
         self.format_checkboxes = {}
         self.format_order_counter = 0
-        
+
         # Checkbox'ları oluştur
         for field in self.format_fields:
             checkbox = QCheckBox(field["name"])
@@ -226,17 +226,17 @@ class LoginWindow(QWidget):
             checkbox.stateChanged.connect(lambda state, key=field["key"]: self.on_format_checkbox_changed(key, state))
             self.format_checkboxes[field["key"]] = checkbox
             checkbox_layout.addWidget(checkbox)
-        
+
         checkbox_container.setLayout(checkbox_layout)
-        
+
         # Scrollable area ekle
         scroll_area = QScrollArea()
         scroll_area.setWidget(checkbox_container)
         scroll_area.setMaximumHeight(130)
         scroll_area.setWidgetResizable(True)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarNever)
-        
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
         format_layout.addWidget(scroll_area)
 
         # Format önizleme
@@ -298,7 +298,7 @@ class LoginWindow(QWidget):
         layout.addWidget(browser_group)
         layout.addStretch()
         layout.addWidget(start_btn)
-        
+
         # Panel genişliğini artır
         panel.setMinimumWidth(320)
 
@@ -674,13 +674,13 @@ class LoginWindow(QWidget):
         field = next((f for f in self.format_fields if f["key"] == field_key), None)
         if not field:
             return
-            
+
         if state == Qt.Checked:
             # Aktif edildi - sıra numarası ver
             self.format_order_counter += 1
             field["order"] = self.format_order_counter
             field["enabled"] = True
-            
+
             # Checkbox text'ine sıra numarasını ekle
             checkbox = self.format_checkboxes[field_key]
             checkbox.setText(f"{field['order']}. {field['name']}")
@@ -688,42 +688,42 @@ class LoginWindow(QWidget):
             # Pasif edildi - sıra numarasını kaldır
             field["order"] = 0
             field["enabled"] = False
-            
+
             # Checkbox text'ini normale döndür
             checkbox = self.format_checkboxes[field_key]
             checkbox.setText(field["name"])
-            
+
             # Diğer elementlerin sıra numaralarını güncelle
             self.reorder_format_fields()
-        
+
         self.update_format_preview()
-    
+
     def reorder_format_fields(self):
         """Aktif alanların sıra numaralarını yeniden düzenle"""
         # Aktif alanları sıraya göre sırala
         active_fields = [f for f in self.format_fields if f["enabled"]]
         active_fields.sort(key=lambda x: x["order"])
-        
+
         # Sıra numaralarını yeniden ata
         for i, field in enumerate(active_fields, 1):
             field["order"] = i
             checkbox = self.format_checkboxes[field["key"]]
             checkbox.setText(f"{i}. {field['name']}")
-        
+
         # Counter'ı güncelle
         self.format_order_counter = len(active_fields)
 
     def update_format_preview(self):
         """Format önizlemesini güncelle"""
         format_parts = ["kullaniciadi", "sifre"]
-        
+
         # Aktif alanları sıraya göre ekle
         active_fields = [f for f in self.format_fields if f["enabled"]]
         active_fields.sort(key=lambda x: x["order"])
-        
+
         for field in active_fields:
             format_parts.append(field["key"])
-            
+
         preview_text = f"Önizleme: {':'.join(format_parts)}"
         self.format_preview.setText(preview_text)
 
@@ -746,11 +746,11 @@ class LoginWindow(QWidget):
 
                 # Format sırasını checkbox'lardan al
                 format_order = ['username', 'password']
-                
+
                 # Aktif alanları sıraya göre ekle
                 active_fields = [f for f in self.format_fields if f["enabled"]]
                 active_fields.sort(key=lambda x: x["order"])
-                
+
                 for field in active_fields:
                     format_order.append(field["key"])
 
@@ -761,7 +761,7 @@ class LoginWindow(QWidget):
                             parts = line.split(':')
                             if len(parts) >= 2:
                                 user_data = {}
-                                
+
                                 # Format sırasına göre değerleri ata
                                 for i, field in enumerate(format_order):
                                     if i < len(parts):
@@ -774,7 +774,7 @@ class LoginWindow(QWidget):
 
                                 # Display text'i oluştur
                                 display_parts = [user_data['username']]
-                                
+
                                 if user_data.get('auth_token') or user_data.get('ct0'):
                                     display_parts.append("(Çerezli Giriş)")
                                 elif user_data.get('proxy_ip') and user_data.get('proxy_port'):
@@ -786,7 +786,7 @@ class LoginWindow(QWidget):
 
                                 self.users.append(user_data)
                                 self.user_list.addItem(display_text)
-                                
+
                         except Exception as e:
                             self.log_message(f"⚠️ Satır işleme hatası: {line} - {e}")
 
@@ -925,7 +925,7 @@ class LoginWindow(QWidget):
             if not existing_user_agent or existing_user_agent != selected_device['user_agent']:
                 user_agent_updated = user_manager.update_user_agent(user['username'], selected_device['user_agent'])
                 device_specs_updated = user_manager.update_device_specs(user['username'], selected_device)
-                
+
                 if user_agent_updated and device_specs_updated:
                     self.log_message(f"✅ {user['username']} - {selected_device['name']} user-agent ve cihaz özellikleri kaydedildi")
                     self.log_message(f"🔧 Ekran: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}, DPR: {selected_device['device_metrics']['device_scale_factor']}")
@@ -1030,7 +1030,7 @@ class LoginWindow(QWidget):
                     user_agent_success = user_manager.update_user_agent(user['username'], selected_device['user_agent'])
                     # Cihaz özelliklerini kaydet
                     device_specs_success = user_manager.update_device_specs(user['username'], selected_device)
-                    
+
                     if user_agent_success and device_specs_success:
                         self.log_message(f"✅ {user['username']} tarayıcı açıldıktan sonra user-agent ve cihaz özellikleri kaydedildi")
                     elif user_agent_success:
@@ -1062,36 +1062,36 @@ class LoginWindow(QWidget):
         try:
             auth_token = user.get('auth_token')
             ct0 = user.get('ct0')
-            
+
             if not auth_token or not ct0:
                 return False
-                
+
             self.log_message(f"🍪 {user['username']} için çerezli giriş deneniyor...")
-            
+
             # Önce X.com'a git
             driver.get("https://x.com")
             time.sleep(3)
-            
+
             # Çerezleri ekle
             cookies_to_add = [
                 {'name': 'auth_token', 'value': auth_token, 'domain': '.x.com'},
                 {'name': 'ct0', 'value': ct0, 'domain': '.x.com'}
             ]
-            
+
             # Ek çerezler varsa ekle
             if user.get('guest_id'):
                 cookies_to_add.append({'name': 'guest_id', 'value': user['guest_id'], 'domain': '.x.com'})
-            
+
             for cookie in cookies_to_add:
                 try:
                     driver.add_cookie(cookie)
                 except Exception as e:
                     self.log_message(f"⚠️ Çerez ekleme hatası: {e}")
-            
+
             # Sayfayı yenile
             driver.refresh()
             time.sleep(5)
-            
+
             # Giriş kontrolü
             current_url = driver.current_url
             if "login" not in current_url.lower() and ("home" in current_url.lower() or "x.com" in current_url):
@@ -1100,7 +1100,7 @@ class LoginWindow(QWidget):
             else:
                 self.log_message(f"❌ {user['username']} çerezli giriş başarısız")
                 return False
-                
+
         except Exception as e:
             self.log_message(f"❌ {user['username']} çerezli giriş hatası: {str(e)}")
             return False
@@ -1123,7 +1123,7 @@ class LoginWindow(QWidget):
                     return True
                 else:
                     self.log_message(f"🔄 {user['username']} çerezli giriş başarısız, normal giriş deneniyor...")
-            
+
             # X.com'a git
             self.log_message(f"🌐 {user['username']} için X.com'a gidiliyor...")
             driver.get("https://x.com/i/flow/login?lang=tr")
