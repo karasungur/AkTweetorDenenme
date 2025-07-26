@@ -960,9 +960,17 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--disable-default-apps")
             chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 
-            # Basit profil yolu ayarı
-            profile_path = os.path.join(TEMP_PROFILES_DIR, user['username'])
-            os.makedirs(profile_path, exist_ok=True)
+            # Profil yolu ayarı - çerezli giriş için kalıcı profil kullan
+            if user.get('auth_token') and user.get('ct0'):
+                # Çerezli giriş - kalıcı profili direkt kullan
+                profile_path = os.path.abspath(f"./Profiller/{user['username']}")
+                os.makedirs(profile_path, exist_ok=True)
+                self.log_message(f"🍪 {user['username']} için kalıcı profil kullanılıyor: {profile_path}")
+            else:
+                # Normal giriş - geçici profil kullan
+                profile_path = os.path.join(TEMP_PROFILES_DIR, user['username'])
+                os.makedirs(profile_path, exist_ok=True)
+                self.log_message(f"🔑 {user['username']} için geçici profil kullanılıyor: {profile_path}")
 
             # Mobil cihaz simülasyonu - viewport düzeltildi
             mobile_emulation = {
@@ -978,13 +986,13 @@ class LoginWindow(QWidget):
             }
             chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
 
-            # Chrome pencere boyutunu mobil cihaz boyutundan biraz daha büyük yap
-            window_width = max(selected_device['device_metrics']['width'] + 50, 800)
-            window_height = max(selected_device['device_metrics']['height'] + 100, 600)
+            # Chrome pencere boyutunu mobil emülasyon boyutuyla aynı yap
+            window_width = selected_device['device_metrics']['width']
+            window_height = selected_device['device_metrics']['height']
             chrome_options.add_argument(f"--window-size={window_width},{window_height}")
 
             self.log_message(f"📱 {user['username']} için mobil emülasyon: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}")
-            self.log_message(f"🖥️ Chrome pencere boyutu: {window_width}x{window_height}")
+            self.log_message(f"🖥️ Chrome pencere boyutu: {window_width}x{window_height} (mobil emülasyonla eşit)")
 
             # Profil yolu
             chrome_options.add_argument(f"--user-data-dir={profile_path}")
@@ -1473,182 +1481,262 @@ class LoginWindow(QWidget):
     def save_profile_permanently(self, username, driver):
         """Profili kalıcı klasöre kaydet"""
         try:
-            # Çerezleri kaydetmek için son bir kez daha al
-            self.log_message(f"🔄 {username} için final çerez kontrolü yapılıyor...")
-            
-            # X.com'a git ve çerezleri al
-            current_url = driver.current_url
-            if "x.com" not in current_url:
-                driver.get("https://x.com/")
-                time.sleep(3)
-
-            # Son çerez durumunu kontrol et ve kaydet
-            cookies = driver.get_cookies()
-            target_cookies = [
-                'auth_token', 'gt', 'guest_id', 'twid', 'lang', '__cf_bm',
-                'att', 'ct0', 'd_prefs', 'dnt', 'guest_id_ads', 
-                'guest_id_marketing', 'kdt', 'personalization_id'
-            ]
-
-            final_cookie_dict = {}
-            for cookie in cookies:
-                if cookie['name'] in target_cookies:
-                    final_cookie_dict[cookie['name']] = cookie['value']
-
-            if final_cookie_dict:
-                # Final çerezleri MySQL'e kaydet
-                try:
-                    cookie_success = user_manager.update_user_cookies(username, final_cookie_dict)
-                    if cookie_success:
-                        self.log_message(f"✅ {username} final çerezleri kaydedildi ({len(final_cookie_dict)} çerez)")
-                    else:
-                        # Alternatif kaydetme yöntemi dene
-                        user_data = user_manager.get_user(username)
-                        if user_data:
-                            alt_success = user_manager.save_user(
-                                username,
-                                user_data['sifre'],
-                                final_cookie_dict,
-                                user_data.get('proxy_ip'),
-                                user_data.get('proxy_port'),
-                                user_data.get('user_agent'),
-                                user_data.get('telefon'),
-                                user_data.get('email')
-                            )
-                            if alt_success:
-                                self.log_message(f"✅ {username} final çerezleri alternatif yöntemle kaydedildi")
-                            else:
-                                self.log_message(f"⚠️ {username} final çerezleri kaydedilemedi")
-                except Exception as cookie_error:
-                    self.log_message(f"❌ {username} final çerez kaydetme hatası: {str(cookie_error)}")
-            
             # Tarayıcı kapanmadan önce profil yolunu al
             temp_profile = driver.capabilities['chrome']['userDataDir']
             permanent_profile = f"./Profiller/{username}"
 
-            # Chrome'un dosyaları temiz kapatması için ek işlemler
-            try:
-                # Sync işlemini zorla
-                driver.execute_script("window.chrome && window.chrome.runtime && window.chrome.runtime.reload();")
-            except:
-                pass
-
-            # Tarayıcıyı nazikçe kapat
-            try:
-                # Tüm sekmeleri kapat
-                for handle in driver.window_handles:
-                    driver.switch_to.window(handle)
-                    driver.close()
-            except:
-                pass
+            # Çerezli giriş kullanıldıysa, geçici profil ile kalıcı profil aynıdır
+            is_cookie_login = temp_profile == os.path.abspath(permanent_profile)
             
-            driver.quit()
-            time.sleep(8)  # Chrome'un dosyaları kapatması için daha uzun bekleme
+            if is_cookie_login:
+                self.log_message(f"🍪 {username} çerezli giriş tespit edildi - kalıcı profil zaten kullanılıyor")
+                
+                # Çerezleri kaydetmek için son bir kez daha al
+                self.log_message(f"🔄 {username} için final çerez kontrolü yapılıyor...")
+                
+                # X.com'a git ve çerezleri al
+                current_url = driver.current_url
+                if "x.com" not in current_url:
+                    driver.get("https://x.com/")
+                    time.sleep(3)
 
-            # Profil kopyalama işlemi
-            if os.path.exists(temp_profile):
-                try:
-                    # Eğer kalıcı profil zaten varsa, önce sil
-                    if os.path.exists(permanent_profile):
-                        shutil.rmtree(permanent_profile)
-                        self.log_message(f"🗑️ {username} eski profili silindi")
+                # Son çerez durumunu kontrol et ve kaydet
+                cookies = driver.get_cookies()
+                target_cookies = [
+                    'auth_token', 'gt', 'guest_id', 'twid', 'lang', '__cf_bm',
+                    'att', 'ct0', 'd_prefs', 'dnt', 'guest_id_ads', 
+                    'guest_id_marketing', 'kdt', 'personalization_id'
+                ]
 
-                    # Yeni profili kopyala - gelişmiş kopyalama
-                    def copy_chrome_profile(src, dst):
-                        """Chrome profili için özel kopyalama fonksiyonu"""
-                        try:
-                            # Ana klasörü kopyala
-                            shutil.copytree(src, dst, ignore_dangling_symlinks=True)
-                            
-                            # Kritik dosyaları tekrar kontrol et ve kopyala
-                            critical_files = [
-                                'Default/Cookies',
-                                'Default/Local Storage',
-                                'Default/Preferences', 
-                                'Default/History',
-                                'Default/Web Data',
-                                'Default/Current Session',
-                                'Default/Current Tabs',
-                                'Default/Last Session',
-                                'Default/Last Tabs',
-                                'Default/Login Data',
-                                'Default/Sessions'
-                            ]
-                            
-                            copied_files = []
-                            for file_path in critical_files:
-                                src_file = os.path.join(src, file_path)
-                                dst_file = os.path.join(dst, file_path)
-                                
-                                if os.path.exists(src_file):
-                                    try:
-                                        os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-                                        shutil.copy2(src_file, dst_file)
-                                        copied_files.append(file_path)
-                                    except Exception as copy_err:
-                                        self.log_message(f"⚠️ {file_path} kopyalanamadı: {copy_err}")
-                                        
-                            # Dizin içindeki tüm LocalStorage klasörlerini kopyala
-                            local_storage_dir = os.path.join(src, 'Default', 'Local Storage')
-                            if os.path.exists(local_storage_dir):
-                                dst_local_storage = os.path.join(dst, 'Default', 'Local Storage')
-                                try:
-                                    if os.path.exists(dst_local_storage):
-                                        shutil.rmtree(dst_local_storage)
-                                    shutil.copytree(local_storage_dir, dst_local_storage)
-                                    copied_files.append('Default/Local Storage/*')
-                                except Exception as ls_err:
-                                    self.log_message(f"⚠️ Local Storage kopyalanamadı: {ls_err}")
-                                    
-                            self.log_message(f"📁 Kopyalanan dosyalar: {copied_files}")
-                            return True
-                            
-                        except Exception as e:
-                            self.log_message(f"❌ Profil kopyalama hatası: {str(e)}")
-                            return False
-                    
-                    # Kopyalama işlemini gerçekleştir
-                    if copy_chrome_profile(temp_profile, permanent_profile):
-                        self.log_message(f"💾 {username} profili kalıcı olarak kaydedildi")
-                        
-                        # Dosya izinlerini ayarla
-                        try:
-                            for root, dirs, files in os.walk(permanent_profile):
-                                for d in dirs:
-                                    os.chmod(os.path.join(root, d), 0o755)
-                                for f in files:
-                                    os.chmod(os.path.join(root, f), 0o644)
-                        except Exception as perm_error:
-                            self.log_message(f"⚠️ İzin ayarlama hatası: {perm_error}")
+                final_cookie_dict = {}
+                for cookie in cookies:
+                    if cookie['name'] in target_cookies:
+                        final_cookie_dict[cookie['name']] = cookie['value']
 
-                    # Geçici profili temizle
+                if final_cookie_dict:
+                    # Final çerezleri MySQL'e kaydet
                     try:
-                        shutil.rmtree(temp_profile)
-                        self.log_message(f"🧹 {username} geçici profili temizlendi")
-                    except Exception as cleanup_error:
-                        self.log_message(f"⚠️ Geçici profil temizleme hatası: {cleanup_error}")
-
-                    # Profil içindeki önemli dosyaları kontrol et
-                    important_files = ['Default/Cookies', 'Default/Local Storage', 'Default/Preferences']
-                    missing_files = []
-                    existing_files = []
-                    
-                    for file_path in important_files:
-                        full_path = os.path.join(permanent_profile, file_path)
-                        if not os.path.exists(full_path):
-                            missing_files.append(file_path)
+                        cookie_success = user_manager.update_user_cookies(username, final_cookie_dict)
+                        if cookie_success:
+                            self.log_message(f"✅ {username} final çerezleri kaydedildi ({len(final_cookie_dict)} çerez)")
                         else:
-                            existing_files.append(file_path)
-                    
-                    if missing_files:
-                        self.log_message(f"⚠️ {username} profilinde eksik dosyalar: {missing_files}")
-                    if existing_files:
-                        self.log_message(f"✅ {username} mevcut dosyalar: {existing_files}")
+                            # Alternatif kaydetme yöntemi dene
+                            user_data = user_manager.get_user(username)
+                            if user_data:
+                                alt_success = user_manager.save_user(
+                                    username,
+                                    user_data['sifre'],
+                                    final_cookie_dict,
+                                    user_data.get('proxy_ip'),
+                                    user_data.get('proxy_port'),
+                                    user_data.get('user_agent'),
+                                    user_data.get('telefon'),
+                                    user_data.get('email')
+                                )
+                                if alt_success:
+                                    self.log_message(f"✅ {username} final çerezleri alternatif yöntemle kaydedildi")
+                                else:
+                                    self.log_message(f"⚠️ {username} final çerezleri kaydedilemedi")
+                    except Exception as cookie_error:
+                        self.log_message(f"❌ {username} final çerez kaydetme hatası: {str(cookie_error)}")
+                
+                # Chrome'un dosyaları temiz kapatması için ek işlemler
+                try:
+                    # Sync işlemini zorla
+                    driver.execute_script("window.chrome && window.chrome.runtime && window.chrome.runtime.reload();")
+                except:
+                    pass
 
-                except Exception as copy_error:
-                    self.log_message(f"❌ Profil kopyalama hatası: {str(copy_error)}")
+                # Tarayıcıyı nazikçe kapat
+                try:
+                    # Tüm sekmeleri kapat
+                    for handle in driver.window_handles:
+                        driver.switch_to.window(handle)
+                        driver.close()
+                except:
+                    pass
+                
+                driver.quit()
+                time.sleep(3)  # Çerezli giriş için daha kısa bekleme
+                
+                self.log_message(f"💾 {username} kalıcı profili güncellendi (çerezli giriş)")
+                
             else:
-                self.log_message(f"⚠️ {username} geçici profil bulunamadı: {temp_profile}")
+                # Normal giriş - geçici profilden kalıcı profile kopyalama
+                self.log_message(f"🔑 {username} normal giriş tespit edildi - profil kopyalanacak")
+                
+                # Çerezleri kaydetmek için son bir kez daha al
+                self.log_message(f"🔄 {username} için final çerez kontrolü yapılıyor...")
+                
+                # X.com'a git ve çerezleri al
+                current_url = driver.current_url
+                if "x.com" not in current_url:
+                    driver.get("https://x.com/")
+                    time.sleep(3)
+
+                # Son çerez durumunu kontrol et ve kaydet
+                cookies = driver.get_cookies()
+                target_cookies = [
+                    'auth_token', 'gt', 'guest_id', 'twid', 'lang', '__cf_bm',
+                    'att', 'ct0', 'd_prefs', 'dnt', 'guest_id_ads', 
+                    'guest_id_marketing', 'kdt', 'personalization_id'
+                ]
+
+                final_cookie_dict = {}
+                for cookie in cookies:
+                    if cookie['name'] in target_cookies:
+                        final_cookie_dict[cookie['name']] = cookie['value']
+
+                if final_cookie_dict:
+                    # Final çerezleri MySQL'e kaydet
+                    try:
+                        cookie_success = user_manager.update_user_cookies(username, final_cookie_dict)
+                        if cookie_success:
+                            self.log_message(f"✅ {username} final çerezleri kaydedildi ({len(final_cookie_dict)} çerez)")
+                        else:
+                            # Alternatif kaydetme yöntemi dene
+                            user_data = user_manager.get_user(username)
+                            if user_data:
+                                alt_success = user_manager.save_user(
+                                    username,
+                                    user_data['sifre'],
+                                    final_cookie_dict,
+                                    user_data.get('proxy_ip'),
+                                    user_data.get('proxy_port'),
+                                    user_data.get('user_agent'),
+                                    user_data.get('telefon'),
+                                    user_data.get('email')
+                                )
+                                if alt_success:
+                                    self.log_message(f"✅ {username} final çerezleri alternatif yöntemle kaydedildi")
+                                else:
+                                    self.log_message(f"⚠️ {username} final çerezleri kaydedilemedi")
+                    except Exception as cookie_error:
+                        self.log_message(f"❌ {username} final çerez kaydetme hatası: {str(cookie_error)}")
+                
+                # Chrome'un dosyaları temiz kapatması için ek işlemler
+                try:
+                    # Sync işlemini zorla
+                    driver.execute_script("window.chrome && window.chrome.runtime && window.chrome.runtime.reload();")
+                except:
+                    pass
+
+                # Tarayıcıyı nazikçe kapat
+                try:
+                    # Tüm sekmeleri kapat
+                    for handle in driver.window_handles:
+                        driver.switch_to.window(handle)
+                        driver.close()
+                except:
+                    pass
+                
+                driver.quit()
+                time.sleep(8)  # Chrome'un dosyaları kapatması için daha uzun bekleme
+
+                # Profil kopyalama işlemi
+                if os.path.exists(temp_profile):
+                    try:
+                        # Eğer kalıcı profil zaten varsa, önce sil
+                        if os.path.exists(permanent_profile):
+                            shutil.rmtree(permanent_profile)
+                            self.log_message(f"🗑️ {username} eski profili silindi")
+
+                        # Yeni profili kopyala - gelişmiş kopyalama
+                        def copy_chrome_profile(src, dst):
+                            """Chrome profili için özel kopyalama fonksiyonu"""
+                            try:
+                                # Ana klasörü kopyala
+                                shutil.copytree(src, dst, ignore_dangling_symlinks=True)
+                                
+                                # Kritik dosyaları tekrar kontrol et ve kopyala
+                                critical_files = [
+                                    'Default/Cookies',
+                                    'Default/Local Storage',
+                                    'Default/Preferences', 
+                                    'Default/History',
+                                    'Default/Web Data',
+                                    'Default/Current Session',
+                                    'Default/Current Tabs',
+                                    'Default/Last Session',
+                                    'Default/Last Tabs',
+                                    'Default/Login Data',
+                                    'Default/Sessions'
+                                ]
+                                
+                                copied_files = []
+                                for file_path in critical_files:
+                                    src_file = os.path.join(src, file_path)
+                                    dst_file = os.path.join(dst, file_path)
+                                    
+                                    if os.path.exists(src_file):
+                                        try:
+                                            os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+                                            shutil.copy2(src_file, dst_file)
+                                            copied_files.append(file_path)
+                                        except Exception as copy_err:
+                                            self.log_message(f"⚠️ {file_path} kopyalanamadı: {copy_err}")
+                                            
+                                # Dizin içindeki tüm LocalStorage klasörlerini kopyala
+                                local_storage_dir = os.path.join(src, 'Default', 'Local Storage')
+                                if os.path.exists(local_storage_dir):
+                                    dst_local_storage = os.path.join(dst, 'Default', 'Local Storage')
+                                    try:
+                                        if os.path.exists(dst_local_storage):
+                                            shutil.rmtree(dst_local_storage)
+                                        shutil.copytree(local_storage_dir, dst_local_storage)
+                                        copied_files.append('Default/Local Storage/*')
+                                    except Exception as ls_err:
+                                        self.log_message(f"⚠️ Local Storage kopyalanamadı: {ls_err}")
+                                        
+                                self.log_message(f"📁 Kopyalanan dosyalar: {copied_files}")
+                                return True
+                                
+                            except Exception as e:
+                                self.log_message(f"❌ Profil kopyalama hatası: {str(e)}")
+                                return False
+                        
+                        # Kopyalama işlemini gerçekleştir
+                        if copy_chrome_profile(temp_profile, permanent_profile):
+                            self.log_message(f"💾 {username} profili kalıcı olarak kaydedildi")
+                            
+                            # Dosya izinlerini ayarla
+                            try:
+                                for root, dirs, files in os.walk(permanent_profile):
+                                    for d in dirs:
+                                        os.chmod(os.path.join(root, d), 0o755)
+                                    for f in files:
+                                        os.chmod(os.path.join(root, f), 0o644)
+                            except Exception as perm_error:
+                                self.log_message(f"⚠️ İzin ayarlama hatası: {perm_error}")
+
+                        # Geçici profili temizle
+                        try:
+                            shutil.rmtree(temp_profile)
+                            self.log_message(f"🧹 {username} geçici profili temizlendi")
+                        except Exception as cleanup_error:
+                            self.log_message(f"⚠️ Geçici profil temizleme hatası: {cleanup_error}")
+
+                        # Profil içindeki önemli dosyaları kontrol et
+                        important_files = ['Default/Cookies', 'Default/Local Storage', 'Default/Preferences']
+                        missing_files = []
+                        existing_files = []
+                        
+                        for file_path in important_files:
+                            full_path = os.path.join(permanent_profile, file_path)
+                            if not os.path.exists(full_path):
+                                missing_files.append(file_path)
+                            else:
+                                existing_files.append(file_path)
+                        
+                        if missing_files:
+                            self.log_message(f"⚠️ {username} profilinde eksik dosyalar: {missing_files}")
+                        if existing_files:
+                            self.log_message(f"✅ {username} mevcut dosyalar: {existing_files}")
+
+                    except Exception as copy_error:
+                        self.log_message(f"❌ Profil kopyalama hatası: {str(copy_error)}")
+                else:
+                    self.log_message(f"⚠️ {username} geçici profil bulunamadı: {temp_profile}")
 
         except Exception as e:
             self.log_message(f"❌ Profil kaydetme hatası: {str(e)}")

@@ -125,6 +125,9 @@ class ValidationWindow(QWidget):
                 }
             }
             options.add_experimental_option("mobileEmulation", mobile_emulation)
+            
+            # Chrome pencere boyutunu mobil emülasyonla eşitle
+            options.add_argument(f"--window-size={selected_device['screen_width']},{selected_device['screen_height']}")
 
             # Zaman dilimi ayarı
             options.add_argument("--timezone=Europe/Istanbul")
