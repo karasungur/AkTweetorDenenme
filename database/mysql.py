@@ -207,6 +207,7 @@ class MySQLManager:
                 ('kullanicilar', 'cerezler', 'TEXT'),
                 ('kullanicilar', 'user_agent', 'TEXT'),
                 ('kullanicilar', 'cihaz_ozellikleri', 'JSON'),
+                ('kullanicilar', 'giris_turu', "ENUM('normal', 'cerezli') DEFAULT 'normal'"),
                 ('hedef_hesaplar', 'kat_sayisi', 'INT DEFAULT 1'),
                 ('hedef_hesaplar', 'twitter_olusturma_tarihi', 'DATETIME'),
                 ('hedef_hesaplar', 'proxy_ip', 'VARCHAR(255)'),

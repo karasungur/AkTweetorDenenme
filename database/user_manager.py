@@ -11,7 +11,7 @@ class UserManager:
         """MySQL bağlantısı al"""
         return self.mysql_manager.get_connection()
 
-    def save_user(self, username, password, cookie_dict=None, proxy_ip=None, proxy_port=None, user_agent=None, phone=None, email=None):
+    def save_user(self, username, password, cookie_dict=None, proxy_ip=None, proxy_port=None, user_agent=None, phone=None, email=None, giris_turu=None):
         """Kullanıcıyı veritabanına kaydet"""
         connection = self.get_connection()
         if not connection:
@@ -25,10 +25,17 @@ class UserManager:
             cursor.execute(check_query, (username,))
             existing_user = cursor.fetchone()
 
+            # Giriş türünü otomatik belirle
+            if giris_turu is None:
+                if cookie_dict and ('auth_token' in cookie_dict or 'ct0' in cookie_dict):
+                    giris_turu = 'cerezli'
+                else:
+                    giris_turu = 'normal'
+
             if existing_user:
                 # Kullanıcı var, güncelle
-                update_parts = ["sifre = %s", "proxy_ip = %s", "proxy_port = %s", "user_agent = %s", "telefon = %s", "email = %s", "guncelleme_tarihi = CURRENT_TIMESTAMP"]
-                update_values = [password, proxy_ip, proxy_port, user_agent, phone, email]
+                update_parts = ["sifre = %s", "proxy_ip = %s", "proxy_port = %s", "user_agent = %s", "telefon = %s", "email = %s", "giris_turu = %s", "guncelleme_tarihi = CURRENT_TIMESTAMP"]
+                update_values = [password, proxy_ip, proxy_port, user_agent, phone, email, giris_turu]
                 
                 if cookie_dict:
                     import json
@@ -45,9 +52,9 @@ class UserManager:
                 cursor.execute(update_query, update_values)
             else:
                 # Yeni kullanıcı ekle
-                insert_parts = ["kullanici_adi", "sifre", "proxy_ip", "proxy_port", "user_agent", "telefon", "email", "durum", "olusturma_tarihi"]
-                insert_values = [username, password, proxy_ip, proxy_port, user_agent, phone, email, 'aktif']
-                insert_placeholders = ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "CURRENT_TIMESTAMP"]
+                insert_parts = ["kullanici_adi", "sifre", "proxy_ip", "proxy_port", "user_agent", "telefon", "email", "durum", "giris_turu", "olusturma_tarihi"]
+                insert_values = [username, password, proxy_ip, proxy_port, user_agent, phone, email, 'aktif', giris_turu]
+                insert_placeholders = ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "CURRENT_TIMESTAMP"]
                 
                 if cookie_dict:
                     import json
@@ -554,6 +561,77 @@ class UserManager:
         except Error as e:
             print(f"❌ Kullanıcı cihaz özellikleri getirme hatası: {e}")
             return None
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
+    def get_user_login_type(self, username):
+        """Kullanıcının giriş türünü getir"""
+        connection = self.get_connection()
+        if not connection:
+            return 'normal'
+
+        try:
+            cursor = connection.cursor()
+            query = "SELECT giris_turu FROM kullanicilar WHERE kullanici_adi = %s"
+            cursor.execute(query, (username,))
+            result = cursor.fetchone()
+
+            return result[0] if result and result[0] else 'normal'
+
+        except Error as e:
+            print(f"❌ Kullanıcı giriş türü getirme hatası: {e}")
+            return 'normal'
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
+    def update_user_login_type(self, username, giris_turu):
+        """Kullanıcının giriş türünü güncelle"""
+        connection = self.get_connection()
+        if not connection:
+            return False
+
+        try:
+            cursor = connection.cursor()
+            
+            query = "UPDATE kullanicilar SET giris_turu = %s WHERE kullanici_adi = %s"
+            cursor.execute(query, (giris_turu, username))
+            connection.commit()
+
+            return cursor.rowcount > 0
+
+        except Error as e:
+            print(f"❌ Kullanıcı giriş türü güncelleme hatası: {e}")
+            connection.rollback()
+            return False
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
+    def get_cookie_login_users(self):
+        """Çerezli giriş yapan kullanıcıları getir"""
+        connection = self.get_connection()
+        if not connection:
+            return []
+
+        try:
+            cursor = connection.cursor(dictionary=True)
+            query = """
+            SELECT * FROM kullanicilar 
+            WHERE giris_turu = 'cerezli' AND durum = 'aktif' AND cerezler IS NOT NULL
+            ORDER BY kullanici_adi
+            """
+            cursor.execute(query)
+            results = cursor.fetchall()
+            return results
+
+        except Error as e:
+            print(f"❌ Çerezli giriş kullanıcıları getirme hatası: {e}")
+            return []
         finally:
             if connection.is_connected():
                 cursor.close()

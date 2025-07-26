@@ -96,7 +96,7 @@ class ValidationWindow(QWidget):
                     'name': device_specs['device_name'],
                     'user_agent': user_agent,
                     'screen_width': device_specs['screen_width'],
-                    'screen_height': device_specs['screen_height'],
+                    'screen_height': device_specs['screen_pixel_ratio'],
                     'device_pixel_ratio': device_specs['device_pixel_ratio']
                 }
             else:
@@ -125,7 +125,7 @@ class ValidationWindow(QWidget):
                 }
             }
             options.add_experimental_option("mobileEmulation", mobile_emulation)
-            
+
             # Chrome pencere boyutunu mobil emülasyonla eşitle
             options.add_argument(f"--window-size={selected_device['screen_width']},{selected_device['screen_height']}")
 
@@ -830,7 +830,7 @@ class ValidationWindow(QWidget):
 
                     # 2. MySQL'den kullanıcıyı sil
                     # MySQL'den de sil
-                    if user_manager.delete_user(profile):
+                    if user_manager.delete_user(profile):```python
                         mysql_deleted_count += 1
                         print(f"✅ MySQL kaydı silindi: {profile}")
                     else:
@@ -933,7 +933,7 @@ class ValidationWindow(QWidget):
             current_url = driver.current_url
             if "logout" in current_url or "login" in current_url:
                 self.show_warning(f"{profile} profilinde oturum kaybı tespit edildi!\nÇerezler geçersiz olabilir.")
-            
+
             # Çerezleri güncelle (x.com tam yüklendikten sonra)
             self.update_cookies_in_mysql(driver, profile)
 
@@ -1271,3 +1271,105 @@ class ValidationWindow(QWidget):
         msg.setWindowTitle("Bilgi")
         msg.setText(message)
         msg.exec_()
+
+    def process_profile(self, profile):
+            """Tek profil işleme"""
+            driver = None
+            try:
+                self.log_message(f"🔍 {profile} profili işleniyor...")
+
+                # Kullanıcının giriş türünü kontrol et
+                login_type = user_manager.get_user_login_type(profile)
+                self.log_message(f"📋 {profile} giriş türü: {login_type}")
+
+                # Tarayıcı oluştur
+                driver = self.create_driver(profile)
+                if not driver:
+                    return False
+
+                # Giriş türüne göre işlem yap
+                if login_type == 'cerezli':
+                    # Çerezli giriş - MySQL'den çerezleri al ve uygula
+                    self.log_message(f"🍪 {profile} için çerezli giriş yapılıyor...")
+                    cookies_data = user_manager.get_user_cookies(profile)
+
+                    if not cookies_data:
+                        self.log_message(f"❌ {profile} için çerezler bulunamadı!")
+                        return False
+
+                    # X.com'a git ve çerezleri uygula
+                    driver.get("https://x.com/")
+                    time.sleep(3)
+
+                    # MySQL'den gelen çerezleri tarayıcıya ekle
+                    for cookie_name, cookie_value in cookies_data.items():
+                        if cookie_value:  # Boş değilse
+                            try:
+                                driver.add_cookie({
+                                    'name': cookie_name,
+                                    'value': cookie_value,
+                                    'domain': '.x.com'
+                                })
+                            except Exception as e:
+                                self.log_message(f"⚠️ {profile} çerez ekleme hatası {cookie_name}: {e}")
+
+                    # Sayfayı yenile
+                    driver.refresh()
+                    time.sleep(5)
+
+                else:
+                    # Normal giriş - profil klasörünü kontrol et
+                    profile_path = f"./Profiller/{profile}"
+                    if not os.path.exists(profile_path):
+                        self.log_message(f"❌ {profile} profil klasörü bulunamadı!")
+                        return False
+
+                    self.log_message(f"🔑 {profile} için normal profil giriş yapılıyor...")
+
+                    # Twitter'a git
+                    driver.get("https://x.com/")
+
+                # Sayfanın tam yüklenmesini bekle
+                self.wait_for_page_load(driver)
+
+                # Giriş durumunu kontrol et
+                current_url = driver.current_url
+                if "logout" in current_url or "login" in current_url:
+                    self.log_message(f"⚠️ {profile} profilinde oturum kaybı tespit edildi!")
+                    if login_type == 'cerezli':
+                        self.log_message(f"🔄 {profile} çerezli giriş başarısız, normal giriş türüne çevriliyor...")
+                        user_manager.update_user_login_type(profile, 'normal')
+                    return False
+
+                # Başarılı giriş - çerezleri güncelle
+                self.update_cookies_in_mysql(driver, profile)
+
+                # Driver'ı listeye ekle
+                self.drivers.append({
+                    'driver': driver,
+                    'profile': profile,
+                    'temp_path': None
+                })
+
+                # MySQL'de son giriş zamanını güncelle
+                user_data = user_manager.get_user(profile)
+                if user_data:
+                    user_manager.update_user(profile)
+
+                self.log_message(f"✅ {profile} profili başarıyla işlendi!")
+                return True
+
+            except Exception as e:
+                self.log_message(f"❌ {profile} profil işlenirken hata: {str(e)}")
+                return False
+
+            finally:
+                if driver:
+                    try:
+                        driver.quit()
+                    except:
+                        pass
+
+    def log_message(self, message):
+        """Log mesajını yazdır"""
+        print(message)

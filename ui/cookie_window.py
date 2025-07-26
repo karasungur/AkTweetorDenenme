@@ -87,6 +87,10 @@ class CookieWorkerThread(QThread):
         """Tek profil işlemi"""
         driver = None
         try:
+            # Kullanıcının giriş türünü kontrol et
+            login_type = user_manager.get_user_login_type(profile)
+            self.log_signal.emit(f"📋 {profile} giriş türü: {login_type}")
+            
             # Chrome driver oluştur
             driver = self.create_driver(profile)
             if not driver:
@@ -104,9 +108,49 @@ class CookieWorkerThread(QThread):
                     self.log_signal.emit(f"⚠️ {profile} proxy çalışmıyor, atlanıyor")
                     return False
 
-            # X.com'a git
-            driver.get("https://x.com/")
-            time.sleep(3)
+            # Giriş türüne göre işlem yap
+            if login_type == 'cerezli':
+                # Çerezli giriş - MySQL'den çerezleri al ve uygula
+                self.log_signal.emit(f"🍪 {profile} için çerezli giriş yapılıyor...")
+                cookies_data = user_manager.get_user_cookies(profile)
+                
+                if not cookies_data:
+                    self.log_signal.emit(f"❌ {profile} için çerezler bulunamadı!")
+                    return False
+                
+                # X.com'a git ve çerezleri uygula
+                driver.get("https://x.com/")
+                time.sleep(3)
+                
+                # MySQL'den gelen çerezleri tarayıcıya ekle
+                for cookie_name, cookie_value in cookies_data.items():
+                    if cookie_value:  # Boş değilse
+                        try:
+                            driver.add_cookie({
+                                'name': cookie_name,
+                                'value': cookie_value,
+                                'domain': '.x.com'
+                            })
+                        except Exception as e:
+                            self.log_signal.emit(f"⚠️ {profile} çerez ekleme hatası {cookie_name}: {e}")
+                
+                # Sayfayı yenile
+                driver.refresh()
+                time.sleep(5)
+                
+                # Giriş kontrolü
+                current_url = driver.current_url
+                if "login" in current_url or "logout" in current_url:
+                    self.log_signal.emit(f"⚠️ {profile} çerezli giriş başarısız!")
+                    return False
+                    
+            else:
+                # Normal giriş - profil klasörü kullan
+                self.log_signal.emit(f"🔑 {profile} için normal profil kullanılıyor...")
+                
+                # X.com'a git
+                driver.get("https://x.com/")
+                time.sleep(3)
 
             # Scroll simülasyonu
             scroll_duration = random.randint(
@@ -115,8 +159,6 @@ class CookieWorkerThread(QThread):
             )
 
             self.simulate_scroll(driver, profile, scroll_duration)
-
-
 
             # Çerezleri kaydet
             self.save_cookies_to_mysql(driver, profile)

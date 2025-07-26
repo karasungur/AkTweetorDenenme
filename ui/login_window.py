@@ -867,6 +867,16 @@ class LoginWindow(QWidget):
                     # Çerezleri MySQL'e kaydet (tarayıcı kapanmadan önce)
                     self.save_cookies_to_mysql(driver, user)
 
+                    # Giriş türünü belirle ve kaydet
+                    if user.get('auth_token') and user.get('ct0'):
+                        # Çerezli giriş
+                        user_manager.update_user_login_type(user['username'], 'cerezli')
+                        self.log_message(f"📋 {user['username']} çerezli giriş olarak kaydedildi")
+                    else:
+                        # Normal giriş
+                        user_manager.update_user_login_type(user['username'], 'normal')
+                        self.log_message(f"📋 {user['username']} normal giriş olarak kaydedildi")
+
                     # Profili kalıcı olarak kaydet
                     self.save_profile_permanently(user['username'], driver)
 
