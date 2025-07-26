@@ -46,15 +46,16 @@ class LoginWindow(QWidget):
         self.current_ip = "Kontrol ediliyor..."
         self.ip_thread_running = True
 
-        # Cihaz listesini JSON dosyasından yükle
-        self.android_devices = self.load_devices_from_file()
-
         # IP monitoring timer
         self.ip_timer = QTimer()
         self.ip_timer.timeout.connect(self.update_ip)
 
         self.init_ui()
         self.setup_style()
+        
+        # Cihaz listesini JSON dosyasından yükle (UI elemanları hazır olduktan sonra)
+        self.android_devices = self.load_devices_from_file()
+        
         self.start_ip_monitoring()
 
     def load_devices_from_file(self):
@@ -1140,9 +1141,13 @@ class LoginWindow(QWidget):
         timestamp = time.strftime("%H:%M:%S")
         log_entry = f"[{timestamp}] {message}"
 
-        # Thread-safe log ekleme
-        self.log_text.append(log_entry)
-        self.log_text.ensureCursorVisible()
+        # Thread-safe log ekleme - log_text varsa
+        if hasattr(self, 'log_text') and self.log_text is not None:
+            self.log_text.append(log_entry)
+            self.log_text.ensureCursorVisible()
+        else:
+            # log_text henüz hazır değilse konsola yazdır
+            print(log_entry)
 
     def return_to_main(self):
         """Ana menüye dön"""
