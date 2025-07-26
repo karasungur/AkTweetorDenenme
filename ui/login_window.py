@@ -184,6 +184,52 @@ class LoginWindow(QWidget):
         title.setObjectName("sectionTitle")
         layout.addWidget(title)
 
+        # Dosya formatı ayarları
+        format_group = QGroupBox("📝 Dosya Formatı")
+        format_group.setObjectName("settingsGroup")
+        format_layout = QVBoxLayout()
+
+        format_info_label = QLabel("Temel format: kullaniciadi:sifre\nEk alanları seçin:")
+        format_info_label.setObjectName("settingsLabel")
+        format_layout.addWidget(format_info_label)
+
+        self.auth_token_enabled = QCheckBox("auth_token (Twitter çerezi)")
+        self.auth_token_enabled.setObjectName("settingsCheckbox")
+        
+        self.ct0_enabled = QCheckBox("ct0 (Twitter çerezi)")
+        self.ct0_enabled.setObjectName("settingsCheckbox")
+        
+        self.proxy_ip_enabled = QCheckBox("Proxy IP")
+        self.proxy_ip_enabled.setObjectName("settingsCheckbox")
+        
+        self.proxy_port_enabled = QCheckBox("Proxy Port")
+        self.proxy_port_enabled.setObjectName("settingsCheckbox")
+        
+        self.phone_enabled = QCheckBox("Telefon Numarası")
+        self.phone_enabled.setObjectName("settingsCheckbox")
+        
+        self.email_enabled = QCheckBox("E-mail Adresi")
+        self.email_enabled.setObjectName("settingsCheckbox")
+
+        format_layout.addWidget(self.auth_token_enabled)
+        format_layout.addWidget(self.ct0_enabled)
+        format_layout.addWidget(self.proxy_ip_enabled)
+        format_layout.addWidget(self.proxy_port_enabled)
+        format_layout.addWidget(self.phone_enabled)
+        format_layout.addWidget(self.email_enabled)
+
+        # Format önizleme
+        self.format_preview = QLabel("Önizleme: kullaniciadi:sifre")
+        self.format_preview.setObjectName("formatPreview")
+        format_layout.addWidget(self.format_preview)
+
+        # Format değişikliklerini dinle
+        for checkbox in [self.auth_token_enabled, self.ct0_enabled, self.proxy_ip_enabled, 
+                        self.proxy_port_enabled, self.phone_enabled, self.email_enabled]:
+            checkbox.toggled.connect(self.update_format_preview)
+
+        format_group.setLayout(format_layout)
+
         # Proxy ayarları
         proxy_group = QGroupBox("🌐 Proxy Ayarları")
         proxy_group.setObjectName("settingsGroup")
@@ -231,6 +277,7 @@ class LoginWindow(QWidget):
         start_btn.clicked.connect(self.start_login_process)
         start_btn.setCursor(Qt.PointingHandCursor)
 
+        layout.addWidget(format_group)
         layout.addWidget(proxy_group)
         layout.addWidget(browser_group)
         layout.addStretch()
@@ -521,6 +568,16 @@ class LoginWindow(QWidget):
             font-weight: 500;
             margin-left: 10px;
         }}
+
+        #formatPreview {{
+            font-size: 12px;
+            color: {self.colors['secondary']};
+            font-family: 'SF Mono', 'Consolas', monospace;
+            background-color: {self.colors['background_alt']};
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }}
         """
 
         self.setStyleSheet(style)
@@ -530,6 +587,26 @@ class LoginWindow(QWidget):
         enabled = self.proxy_enabled.isChecked()
         self.proxy_entry.setEnabled(enabled)
         self.reset_url_entry.setEnabled(enabled)
+
+    def update_format_preview(self):
+        """Format önizlemesini güncelle"""
+        format_parts = ["kullaniciadi", "sifre"]
+        
+        if self.auth_token_enabled.isChecked():
+            format_parts.append("auth_token")
+        if self.ct0_enabled.isChecked():
+            format_parts.append("ct0")
+        if self.proxy_ip_enabled.isChecked():
+            format_parts.append("proxy_ip")
+        if self.proxy_port_enabled.isChecked():
+            format_parts.append("proxy_port")
+        if self.phone_enabled.isChecked():
+            format_parts.append("telefon")
+        if self.email_enabled.isChecked():
+            format_parts.append("email")
+            
+        preview_text = f"Önizleme: {':'.join(format_parts)}"
+        self.format_preview.setText(preview_text)
 
     def load_user_list(self):
         """Kullanıcı listesini yükle"""
@@ -548,45 +625,59 @@ class LoginWindow(QWidget):
                 self.users = []
                 self.user_list.clear()
 
+                # Format sırasını belirle
+                format_order = ['username', 'password']
+                if self.auth_token_enabled.isChecked():
+                    format_order.append('auth_token')
+                if self.ct0_enabled.isChecked():
+                    format_order.append('ct0')
+                if self.proxy_ip_enabled.isChecked():
+                    format_order.append('proxy_ip')
+                if self.proxy_port_enabled.isChecked():
+                    format_order.append('proxy_port')
+                if self.phone_enabled.isChecked():
+                    format_order.append('phone')
+                if self.email_enabled.isChecked():
+                    format_order.append('email')
+
                 for line in lines:
                     line = line.strip()
-                    if line:
+                    if line and not line.startswith('#'):
                         try:
-                            parts = line.strip().split(':')
+                            parts = line.split(':')
                             if len(parts) >= 2:
-                                user_data = {
-                                    'username': parts[0],
-                                    'password': parts[1]
-                                }
+                                user_data = {}
+                                
+                                # Format sırasına göre değerleri ata
+                                for i, field in enumerate(format_order):
+                                    if i < len(parts):
+                                        value = parts[i].strip() if parts[i].strip() else None
+                                        user_data[field] = value
 
-                            # Format: kullaniciadi:sifre:yil:ay:proxy:port
-                            if len(parts) >= 4:
-                                try:
-                                    user_data['year'] = int(parts[2]) if parts[2] else None
-                                    user_data['month'] = int(parts[3]) if parts[3] else None
-                                except ValueError:
-                                    user_data['year'] = None
-                                    user_data['month'] = None
+                                # Zorunlu alanları kontrol et
+                                if not user_data.get('username') or not user_data.get('password'):
+                                    continue
 
-                            if len(parts) >= 6:
-                                user_data['proxy'] = parts[4] if parts[4] else None
-                                try:
-                                    user_data['proxy_port'] = int(parts[5]) if parts[5] else None
-                                except ValueError:
-                                    user_data['proxy_port'] = None
+                                # Display text'i oluştur
+                                display_parts = [user_data['username']]
+                                
+                                if user_data.get('auth_token') or user_data.get('ct0'):
+                                    display_parts.append("(Çerezli Giriş)")
+                                elif user_data.get('proxy_ip') and user_data.get('proxy_port'):
+                                    display_parts.append(f"(Proxy: {user_data['proxy_ip']}:{user_data['proxy_port']})")
+                                else:
+                                    display_parts.append("(Normal Giriş)")
 
-                            # Display text'i düzelt
-                            if user_data.get('proxy') and user_data.get('proxy_port'):
-                                display_text = f"{user_data['username']} (Proxy: {user_data['proxy']}:{user_data['proxy_port']})"
-                            else:
-                                display_text = f"{user_data['username']} (Proxy: Yok)"
+                                display_text = " ".join(display_parts)
 
-                            self.users.append(user_data)
-                            self.user_list.addItem(display_text)
+                                self.users.append(user_data)
+                                self.user_list.addItem(display_text)
+                                
                         except Exception as e:
-                            print(f"Error processing line: {line} - {e}")
+                            self.log_message(f"⚠️ Satır işleme hatası: {line} - {e}")
 
                 self.log_message(f"✅ {len(self.users)} kullanıcı yüklendi.")
+                self.log_message(f"📝 Kullanılan format: {':'.join(format_order)}")
 
             except Exception as e:
                 self.show_error(f"Dosya okuma hatası: {str(e)}")
@@ -705,11 +796,11 @@ class LoginWindow(QWidget):
                     user['username'],
                     user['password'],
                     None,  # cookie_dict
-                    user.get('year'),
-                    user.get('month'),
-                    user.get('proxy'),
+                    user.get('proxy_ip'),
                     user.get('proxy_port'),
-                    selected_device['user_agent']  # user_agent
+                    selected_device['user_agent'],  # user_agent
+                    user.get('phone'),
+                    user.get('email')
                 )
                 if basic_save_success:
                     self.log_message(f"✅ {user['username']} temel bilgileri MySQL'e kaydedildi")
@@ -782,8 +873,8 @@ class LoginWindow(QWidget):
 
             # Proxy ayarı
             proxy_to_use = None
-            if user.get('proxy') and user.get('proxy_port'):
-                proxy_to_use = f"{user['proxy']}:{user['proxy_port']}"
+            if user.get('proxy_ip') and user.get('proxy_port'):
+                proxy_to_use = f"{user['proxy_ip']}:{user['proxy_port']}"
                 self.log_message(f"🌐 Özel proxy kullanılıyor: {proxy_to_use}")
             elif self.proxy_enabled.isChecked() and self.proxy_entry.text():
                 proxy_to_use = self.proxy_entry.text()
@@ -852,6 +943,54 @@ class LoginWindow(QWidget):
             self.log_message(f"❌ Tarayıcı başlatma hatası: {str(e)}")
             return None
 
+    def login_with_cookies(self, driver, user):
+        """Çerezlerle giriş yap"""
+        try:
+            auth_token = user.get('auth_token')
+            ct0 = user.get('ct0')
+            
+            if not auth_token or not ct0:
+                return False
+                
+            self.log_message(f"🍪 {user['username']} için çerezli giriş deneniyor...")
+            
+            # Önce X.com'a git
+            driver.get("https://x.com")
+            time.sleep(3)
+            
+            # Çerezleri ekle
+            cookies_to_add = [
+                {'name': 'auth_token', 'value': auth_token, 'domain': '.x.com'},
+                {'name': 'ct0', 'value': ct0, 'domain': '.x.com'}
+            ]
+            
+            # Ek çerezler varsa ekle
+            if user.get('guest_id'):
+                cookies_to_add.append({'name': 'guest_id', 'value': user['guest_id'], 'domain': '.x.com'})
+            
+            for cookie in cookies_to_add:
+                try:
+                    driver.add_cookie(cookie)
+                except Exception as e:
+                    self.log_message(f"⚠️ Çerez ekleme hatası: {e}")
+            
+            # Sayfayı yenile
+            driver.refresh()
+            time.sleep(5)
+            
+            # Giriş kontrolü
+            current_url = driver.current_url
+            if "login" not in current_url.lower() and ("home" in current_url.lower() or "x.com" in current_url):
+                self.log_message(f"✅ {user['username']} çerezli giriş başarılı")
+                return True
+            else:
+                self.log_message(f"❌ {user['username']} çerezli giriş başarısız")
+                return False
+                
+        except Exception as e:
+            self.log_message(f"❌ {user['username']} çerezli giriş hatası: {str(e)}")
+            return False
+
     def human_type(self, element, text):
         """İnsan benzeri yazma simülasyonu"""
         element.clear()
@@ -864,6 +1003,13 @@ class LoginWindow(QWidget):
         """Girişteki bu işlem birden fazla basamaktan oluşuyor ve her basamakta başarısızlık durumu kontrol edilmelidir"""
 
         try:
+            # Önce çerezli giriş dene
+            if user.get('auth_token') and user.get('ct0'):
+                if self.login_with_cookies(driver, user):
+                    return True
+                else:
+                    self.log_message(f"🔄 {user['username']} çerezli giriş başarısız, normal giriş deneniyor...")
+            
             # X.com'a git
             self.log_message(f"🌐 {user['username']} için X.com'a gidiliyor...")
             driver.get("https://x.com/i/flow/login?lang=tr")
@@ -1232,11 +1378,6 @@ class LoginWindow(QWidget):
                 # Sadece son giriş zamanını güncelle (kullanıcı zaten kaydedildi)
                 user_manager.update_user(username, user['password'], None)
                 self.log_message(f"✅ {username} son giriş zamanı güncellendi.")
-
-                # Hedef hesaplara da ekle (yıl ay bilgisi varsa)
-                if user.get('year') or user.get('month'):
-                    # target_manager import eksik, bu kısmı kaldırıyoruz
-                    self.log_message(f"ℹ️ {username} hedef hesap ekleme atlandı")
             else:
                 self.log_message(f"⚠️ {username} kullanıcı bilgisi bulunamadı.")
         except Exception as e:

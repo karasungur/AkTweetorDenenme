@@ -11,7 +11,7 @@ class UserManager:
         """MySQL bağlantısı al"""
         return self.mysql_manager.get_connection()
 
-    def save_user(self, username, password, cookie_dict=None, year=None, month=None, proxy_ip=None, proxy_port=None, user_agent=None):
+    def save_user(self, username, password, cookie_dict=None, proxy_ip=None, proxy_port=None, user_agent=None, phone=None, email=None):
         """Kullanıcıyı veritabanına kaydet"""
         connection = self.get_connection()
         if not connection:
@@ -27,8 +27,8 @@ class UserManager:
 
             if existing_user:
                 # Kullanıcı var, güncelle
-                update_parts = ["sifre = %s", "proxy_ip = %s", "proxy_port = %s", "user_agent = %s", "guncelleme_tarihi = CURRENT_TIMESTAMP"]
-                update_values = [password, proxy_ip, proxy_port, user_agent]
+                update_parts = ["sifre = %s", "proxy_ip = %s", "proxy_port = %s", "user_agent = %s", "telefon = %s", "email = %s", "guncelleme_tarihi = CURRENT_TIMESTAMP"]
+                update_values = [password, proxy_ip, proxy_port, user_agent, phone, email]
                 
                 if cookie_dict:
                     import json
@@ -45,9 +45,9 @@ class UserManager:
                 cursor.execute(update_query, update_values)
             else:
                 # Yeni kullanıcı ekle
-                insert_parts = ["kullanici_adi", "sifre", "proxy_ip", "proxy_port", "user_agent", "durum", "olusturma_tarihi"]
-                insert_values = [username, password, proxy_ip, proxy_port, user_agent, 'aktif']
-                insert_placeholders = ["%s", "%s", "%s", "%s", "%s", "%s", "CURRENT_TIMESTAMP"]
+                insert_parts = ["kullanici_adi", "sifre", "proxy_ip", "proxy_port", "user_agent", "telefon", "email", "durum", "olusturma_tarihi"]
+                insert_values = [username, password, proxy_ip, proxy_port, user_agent, phone, email, 'aktif']
+                insert_placeholders = ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "CURRENT_TIMESTAMP"]
                 
                 if cookie_dict:
                     import json
