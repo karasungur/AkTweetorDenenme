@@ -1,0 +1,424 @@
+{
+  "devices": [
+    {
+      "name": "Apple iPhone 15 Pro Max",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+      "device_metrics": {
+        "width": 430,
+        "height": 932,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "iOS",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Apple iPhone 15 Plus",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+      "device_metrics": {
+        "width": 430,
+        "height": 932,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "iOS",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Apple iPhone 15 Pro",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+      "device_metrics": {
+        "width": 393,
+        "height": 852,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "iOS",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Apple iPhone 15",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+      "device_metrics": {
+        "width": 393,
+        "height": 852,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "iOS",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Apple iPhone 14 Pro Max",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+      "device_metrics": {
+        "width": 430,
+        "height": 932,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "iOS",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Apple iPhone 14 Pro",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+      "device_metrics": {
+        "width": 393,
+        "height": 852,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "iOS",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Apple iPhone 14",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+      "device_metrics": {
+        "width": 390,
+        "height": 844,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "iOS",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Apple iPhone 13 Pro",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+      "device_metrics": {
+        "width": 390,
+        "height": 844,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "iOS",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Apple iPhone 12",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+      "device_metrics": {
+        "width": 390,
+        "height": 844,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "iOS",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Samsung Galaxy S24 Ultra",
+      "user_agent": "Mozilla/5.0 (Linux; Android 14; SM-S928U Build/QL1A.230918.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 384,
+        "height": 824,
+        "device_scale_factor": 3.75,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Samsung Galaxy S24",
+      "user_agent": "Mozilla/5.0 (Linux; Android 14; SM-S921B Build/QL1A.230918.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 360,
+        "height": 780,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Samsung Galaxy S23 Ultra",
+      "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-S918B Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 384,
+        "height": 824,
+        "device_scale_factor": 3.75,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Samsung Galaxy S23",
+      "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-S911B Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 360,
+        "height": 780,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Samsung Galaxy A35 5G",
+      "user_agent": "Mozilla/5.0 (Linux; Android 14; SM-A356U Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.5938.92 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 360,
+        "height": 780,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Samsung Galaxy A25 5G",
+      "user_agent": "Mozilla/5.0 (Linux; Android 14; SM-A256U Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.5938.92 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 360,
+        "height": 780,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Samsung Galaxy A15 5G",
+      "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-A157U Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.5938.92 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 360,
+        "height": 780,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Samsung Galaxy A15 (4G)",
+      "user_agent": "Mozilla/5.0 (Linux; Android 12; SM-A157U Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.5938.92 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 360,
+        "height": 780,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Samsung Galaxy A05",
+      "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-A053F Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.5938.92 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 412,
+        "height": 915,
+        "device_scale_factor": 2.625,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Samsung Galaxy A54 5G",
+      "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-A546B Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.5938.92 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 360,
+        "height": 780,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Samsung Galaxy S22 Ultra",
+      "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-S908U Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.5790.179 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 384,
+        "height": 824,
+        "device_scale_factor": 3.75,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Samsung Galaxy A14 5G",
+      "user_agent": "Mozilla/5.0 (Linux; Android 12; SM-A146U Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.5790.179 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 412,
+        "height": 915,
+        "device_scale_factor": 2.625,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Xiaomi 15 Ultra",
+      "user_agent": "Mozilla/5.0 (Linux; Android 14; Mi 13 Pro Build/TKQ1.220716.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 393,
+        "height": 852,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Xiaomi 15 Pro",
+      "user_agent": "Mozilla/5.0 (Linux; Android 14; Mi 13 Lite Build/TKQ1.220716.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 393,
+        "height": 852,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Xiaomi 15",
+      "user_agent": "Mozilla/5.0 (Linux; Android 14; M2101K6G Build/TKQ1.220716.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 393,
+        "height": 852,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Xiaomi 14 Ultra",
+      "user_agent": "Mozilla/5.0 (Linux; Android 13; Mi 11X Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.5615.138 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 393,
+        "height": 852,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Xiaomi 14",
+      "user_agent": "Mozilla/5.0 (Linux; Android 13; Mi 11X Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.5615.138 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 393,
+        "height": 852,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Xiaomi Redmi 13C 4G",
+      "user_agent": "Mozilla/5.0 (Linux; Android 12; Redmi Note 11 Build/SKQ1.220216.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.205 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 360,
+        "height": 800,
+        "device_scale_factor": 2.625,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Xiaomi Redmi Note 12 5G",
+      "user_agent": "Mozilla/5.0 (Linux; Android 12; Redmi Note 11 Build/SKQ1.220216.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.205 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 360,
+        "height": 780,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Oppo Reno11 FS",
+      "user_agent": "Mozilla/5.0 (Linux; Android 13; CPH2363 Build/TKQ1.220716.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 412,
+        "height": 915,
+        "device_scale_factor": 2.625,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    },
+    {
+      "name": "Huawei P60 Pro",
+      "user_agent": "Mozilla/5.0 (Linux; Android 14; Huawei P60 Pro Build/HarmonyOS 3.1.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.3.8213.144 Mobile Safari/537.36",
+      "device_metrics": {
+        "width": 360,
+        "height": 780,
+        "device_scale_factor": 3,
+        "mobile": True
+      },
+      "client_hints": {
+        "platform": "Android",
+        "mobile": True
+      }
+    }
+  ]
+}

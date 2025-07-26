@@ -1,0 +1,103 @@
+
+{
+  "profil_kategorileri": [
+    {
+      "kategori_turu": "profil",
+      "ana_kategori": "Yaş Grubu",
+      "alt_kategoriler": null,
+      "aciklama": "Kullanıcının yaş grubu: Genç (18-30), Orta yaş (31-50), Yaşlı (50+)"
+    },
+    {
+      "kategori_turu": "profil",
+      "ana_kategori": "Cinsiyet",
+      "alt_kategoriler": null,
+      "aciklama": "Kullanıcının cinsiyeti: Erkek, Kadın, Belirtmeyen/Diğer"
+    },
+    {
+      "kategori_turu": "profil",
+      "ana_kategori": "Profil Fotoğrafı",
+      "alt_kategoriler": null,
+      "aciklama": "Profil fotoğrafının varlığı: Var, Yok"
+    }
+  ],
+  "icerik_kategorileri": [
+    {
+      "kategori_turu": "icerik",
+      "ana_kategori": "Fotoğraf İçeriği",
+      "alt_kategoriler": "Parti Logosu,Dini Sembol,Selfie,Manzara,Avatar,Aile Fotoğrafı,Doğa,Hayvan,Yemek,Spor,Sanat",
+      "aciklama": "Profil fotoğrafının içeriği"
+    },
+    {
+      "kategori_turu": "icerik",
+      "ana_kategori": "Siyasi Eğilim",
+      "alt_kategoriler": "Muhafazakar,Liberal,Milliyetçi,Sosyal Demokrat,Kemalist,İslamcı,Solcu,Sağcı",
+      "aciklama": "Siyasi görüş ve ideolojik eğilim paylaşımları"
+    },
+    {
+      "kategori_turu": "icerik",
+      "ana_kategori": "Dini Paylaşımlar",
+      "alt_kategoriler": "Ayet,Hadis,Dua,Vaaz,Bayram,Cami,Hac,Umre,Namaz,Oruç",
+      "aciklama": "Dini içerik, ayet, dua ve bayram paylaşımları"
+    },
+    {
+      "kategori_turu": "icerik",
+      "ana_kategori": "Mizah",
+      "alt_kategoriler": "Caps,Meme,Espri,Karikatür,Komik Video,Stand-up,Vine,TikTok Mizah",
+      "aciklama": "Komik içerik, caps, espri ve mizahi paylaşımlar"
+    },
+    {
+      "kategori_turu": "icerik",
+      "ana_kategori": "Kültürel İçerik",
+      "alt_kategoriler": "Edebiyat,Şiir,Müzik,Sinema,Tiyatro,Tarih,Sanat,Folklor,Gelenek",
+      "aciklama": "Sanat, edebiyat, tarih ve kültürel paylaşımlar"
+    },
+    {
+      "kategori_turu": "icerik",
+      "ana_kategori": "Spor",
+      "alt_kategoriler": "Futbol,Basketbol,Voleybol,Tenis,Formula 1,Atletizm,Yüzme,Milli Takım,Galatasaray,Fenerbahçe,Beşiktaş",
+      "aciklama": "Spor takımları, maçlar ve spor haberleri"
+    },
+    {
+      "kategori_turu": "icerik",
+      "ana_kategori": "Güncel Olaylar",
+      "alt_kategoriler": "Haber,Politika,Ekonomi,Dünya,Türkiye,Yerel,Afet,Sosyal,Çevre",
+      "aciklama": "Haber, gündem ve güncel gelişmeler"
+    },
+    {
+      "kategori_turu": "icerik",
+      "ana_kategori": "Kişisel Yaşam",
+      "alt_kategoriler": "Aile,Çocuk,Evlilik,Arkadaşlık,Seyahat,Yemek,Alışveriş,Hobi,Günlük",
+      "aciklama": "Aile, günlük yaşam ve kişisel paylaşımlar"
+    },
+    {
+      "kategori_turu": "icerik",
+      "ana_kategori": "Eğitim",
+      "alt_kategoriler": "Üniversite,Lise,İlkokul,Kurs,Sınav,Ders,Öğretmen,Öğrenci,Bilim,Araştırma",
+      "aciklama": "Eğitim, bilim ve öğretici içerikler"
+    },
+    {
+      "kategori_turu": "icerik",
+      "ana_kategori": "Teknoloji",
+      "alt_kategoriler": "Telefon,Bilgisayar,Yazılım,Internet,AI,Blockchain,Oyun,Sosyal Medya,Kripto",
+      "aciklama": "Teknoloji, dijital gelişmeler ve inovasyon"
+    },
+    {
+      "kategori_turu": "icerik",
+      "ana_kategori": "Sağlık",
+      "alt_kategoriler": "Fitness,Diyet,Yoga,Koşu,Doktor,Hastane,İlaç,Beslenme,Mental Sağlık",
+      "aciklama": "Sağlık, fitness ve yaşam kalitesi"
+    },
+    {
+      "kategori_turu": "icerik",
+      "ana_kategori": "Ekonomi",
+      "alt_kategoriler": "Borsa,Döviz,Altın,Emlak,Girişim,İş,Maaş,Emeklilik,Vergi,Banka",
+      "aciklama": "Ekonomi, finans ve iş dünyası"
+    },
+    {
+      "kategori_turu": "icerik",
+      "ana_kategori": "Sosyal Sorumluluk",
+      "alt_kategoriler": "Hayırseverlik,Yardım,Çevre,Doğa,Hayvan Hakları,Toplum,Gönüllülük",
+      "aciklama": "Sosyal sorumluluk ve toplumsal fayda"
+    }
+  ]
+}
