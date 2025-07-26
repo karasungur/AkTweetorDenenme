@@ -719,11 +719,14 @@ class LoginWindow(QWidget):
             # User-agent'ı güncelle/kaydet
             if not existing_user_agent or existing_user_agent != selected_device['user_agent']:
                 user_agent_updated = user_manager.update_user_agent(user['username'], selected_device['user_agent'])
-                if user_agent_updated:
-                    # Cihaz özelliklerini de kaydet
-                    user_manager.update_device_specs(user['username'], selected_device)
+                device_specs_updated = user_manager.update_device_specs(user['username'], selected_device)
+                
+                if user_agent_updated and device_specs_updated:
                     self.log_message(f"✅ {user['username']} - {selected_device['name']} user-agent ve cihaz özellikleri kaydedildi")
                     self.log_message(f"🔧 Ekran: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}, DPR: {selected_device['device_metrics']['device_scale_factor']}")
+                elif user_agent_updated:
+                    self.log_message(f"✅ {user['username']} user-agent kaydedildi")
+                    self.log_message(f"⚠️ {user['username']} cihaz özellikleri kaydedilemedi")
                 else:
                     self.log_message(f"⚠️ {user['username']} user-agent kaydedilemedi")
 
@@ -757,10 +760,13 @@ class LoginWindow(QWidget):
             }
             chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
 
-            # Pencere boyutunu mobil cihaza uygun ayarla
-            chrome_options.add_argument(f"--window-size={selected_device['device_metrics']['width']},{selected_device['device_metrics']['height']}")
+            # Chrome pencere boyutunu mobil cihaz boyutundan biraz daha büyük yap
+            window_width = max(selected_device['device_metrics']['width'] + 50, 800)
+            window_height = max(selected_device['device_metrics']['height'] + 100, 600)
+            chrome_options.add_argument(f"--window-size={window_width},{window_height}")
 
             self.log_message(f"📱 {user['username']} için mobil emülasyon: {selected_device['device_metrics']['width']}x{selected_device['device_metrics']['height']}")
+            self.log_message(f"🖥️ Chrome pencere boyutu: {window_width}x{window_height}")
 
             # Profil yolu
             chrome_options.add_argument(f"--user-data-dir={profile_path}")
@@ -769,9 +775,6 @@ class LoginWindow(QWidget):
             chrome_options.add_argument("--disable-extensions")
             chrome_options.add_argument("--disable-plugins")
             chrome_options.add_argument("--lang=tr-TR")
-
-            # Tarayıcı boyutu
-            chrome_options.add_argument("--window-size=1280,800")
 
             # Headless modu test için kapalı (GUI modda çalıştır)
             # if not self.browser_visible.isChecked():
@@ -815,6 +818,21 @@ class LoginWindow(QWidget):
                 driver.implicitly_wait(15)
 
                 self.log_message(f"✅ Chrome driver başarıyla başlatıldı")
+
+                # Tarayıcı açılır açılmaz kullanıcı bilgilerini ve cihaz özelliklerini kaydet
+                if not existing_user_agent or existing_user_agent != selected_device['user_agent']:
+                    # User-agent'ı kaydet
+                    user_agent_success = user_manager.update_user_agent(user['username'], selected_device['user_agent'])
+                    # Cihaz özelliklerini kaydet
+                    device_specs_success = user_manager.update_device_specs(user['username'], selected_device)
+                    
+                    if user_agent_success and device_specs_success:
+                        self.log_message(f"✅ {user['username']} tarayıcı açıldıktan sonra user-agent ve cihaz özellikleri kaydedildi")
+                    elif user_agent_success:
+                        self.log_message(f"✅ {user['username']} user-agent kaydedildi")
+                        self.log_message(f"⚠️ {user['username']} cihaz özellikleri kaydedilemedi")
+                    else:
+                        self.log_message(f"⚠️ {user['username']} user-agent kaydedilemedi")
 
             except Exception as e:
                 self.log_message(f"❌ Chrome driver başlatma hatası: {str(e)}")
