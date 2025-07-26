@@ -1114,12 +1114,36 @@ class LoginWindow(QWidget):
             return False
 
     def human_type(self, element, text):
-        """İnsan benzeri yazma simülasyonu"""
+        """Gelişmiş insan benzeri yazma simülasyonu"""
         element.clear()
-        for char in text:
+        time.sleep(random.uniform(0.1, 0.3))  # Başlangıç beklemesi
+        
+        for i, char in enumerate(text):
             element.send_keys(char)
-            # Her karakter arası rastgele bekleme (50-200ms)
-            time.sleep(random.uniform(0.05, 0.2))
+            
+            # Karakter tipine göre farklı bekleme süreleri
+            if char.isalpha():
+                # Harfler için daha hızlı
+                delay = random.uniform(0.08, 0.15)
+            elif char.isdigit():
+                # Rakamlar için orta hız
+                delay = random.uniform(0.1, 0.18)
+            elif char in ['_', '-', '.', '@']:
+                # Özel karakterler için biraz daha yavaş
+                delay = random.uniform(0.12, 0.22)
+            else:
+                # Diğer karakterler
+                delay = random.uniform(0.1, 0.2)
+            
+            # Bazen daha uzun duraklamalar (düşünme anları)
+            if random.random() < 0.15:  # %15 olasılık
+                delay += random.uniform(0.2, 0.5)
+            
+            # Bazen çok hızlı yazma (akıcılık anları)
+            elif random.random() < 0.1:  # %10 olasılık
+                delay *= 0.5
+            
+            time.sleep(delay)
 
     def perform_login(self, driver, user):
         """Girişteki bu işlem birden fazla basamaktan oluşuyor ve her basamakta başarısızlık durumu kontrol edilmelidir"""
@@ -1192,7 +1216,7 @@ class LoginWindow(QWidget):
 
                 # İleri butonunu bul ve tıkla
                 self.log_message(f"➡️ İleri butonuna tıklanıyor...")
-                time.sleep(random.uniform(1.5, 3.0))  # Rastgele bekleme
+                time.sleep(random.uniform(0.8, 1.5))  # Optimize edilmiş bekleme
 
                 next_button_selectors = [
                     "button[role='button']:has-text('İleri')",
@@ -1223,7 +1247,7 @@ class LoginWindow(QWidget):
                     raise Exception("İleri butonu bulunamadı")
 
                 # Şifre alanının yüklenmesini bekle
-                time.sleep(random.uniform(2.0, 4.0))
+                time.sleep(random.uniform(1.2, 2.5))
 
                 # Şifre alanını bul ve doldur
                 self.log_message(f"🔑 {user['username']} şifresi giriliyor...")
@@ -1253,7 +1277,7 @@ class LoginWindow(QWidget):
 
                 # Giriş yap butonunu bul ve tıkla
                 self.log_message(f"🚪 Giriş yap butonuna tıklanıyor...")
-                time.sleep(random.uniform(1.0, 2.5))
+                time.sleep(random.uniform(0.6, 1.2))
 
                 login_button_selectors = [
                     "button[data-testid='LoginForm_Login_Button']",
@@ -1285,7 +1309,7 @@ class LoginWindow(QWidget):
 
                 # Giriş sonucunu bekle ve kontrol et
                 self.log_message(f"⏳ Giriş sonucu bekleniyor...")
-                time.sleep(8)  # Daha uzun bekleme
+                time.sleep(5)  # Optimize edilmiş bekleme
 
                 current_url = driver.current_url
                 if "home" in current_url.lower() or ("x.com" in current_url and "login" not in current_url.lower()):
